@@ -39,6 +39,12 @@ select ok(not has_table_privilege('app_bidder_reader','public.interview_feedback
 select ok(not has_column_privilege('app_bidder_reader','public.candidates','private_notes','SELECT'),'projection role cannot select private notes');
 select ok(not has_function_privilege('anon','public.create_team(uuid,text,uuid)','EXECUTE'),'anonymous command execution denied');
 select ok(not has_function_privilege('authenticated','public.bootstrap_organization(uuid,uuid,text,uuid)','EXECUTE'),'bootstrap not available to application users');
+select ok(not pg_has_role('authenticated','app_command','MEMBER'),'authenticated cannot assume command role');
+select ok(not has_column_privilege('app_permission_reader','public.candidates','private_notes','SELECT'),'permission helper cannot read profile notes');
+select ok(not has_function_privilege('app_bidder_reader','private.auth_identity(text)','EXECUTE'),'projection reader cannot look up Auth identities');
+select is((select count(*)::int from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_roles r on r.oid=p.proowner
+ where n.nspname='public' and r.rolname='app_command' and p.prosecdef
+  and p.proconfig @> array['search_path=""'] and not has_function_privilege('anon',p.oid,'EXECUTE')),13,'every protected command has restricted ownership, empty search path and no anonymous execution');
 reset role;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"admin"}}',true);
 set local role authenticated;

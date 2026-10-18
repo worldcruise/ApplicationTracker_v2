@@ -2,6 +2,7 @@ name: Foundation checks
 on:
   push:
     branches: [main, Dev, "codex/**"]
+    paths: ["apps/**", "packages/**", "supabase/**", "package*.json", "*.config.*", "tsconfig*.json", ".github/workflows/foundation.yml"]
   pull_request:
   workflow_dispatch:
 permissions:
