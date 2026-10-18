@@ -222,5 +222,18 @@ select is((select count(*)::int from public.audit_logs where organization_id='00
  and action='organization.membership_changed' and redacted_change_summary->>'state'='deactivated'),1,'self-deactivation and audit commit atomically');
 select is((select state from public.organization_memberships where organization_id='00000000-0000-4000-8000-000000000100' and user_id='00000000-0000-4000-8000-000000000001'),'deactivated','other admin retains access to deactivated membership history');
 reset role;
+-- Simulate a later transfer as the migration owner, never as an exposed command.
+-- An old-team assignment cannot turn into new-team authorization.
+insert into public.team_memberships(organization_id,team_id,user_id,role,created_by)
+ values('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000200','00000000-0000-4000-8000-000000000006','team_member','00000000-0000-4000-8000-000000000011');
+insert into public.candidate_assignments(organization_id,candidate_id,team_id,user_id,created_by)
+ values('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000300','00000000-0000-4000-8000-000000000200','00000000-0000-4000-8000-000000000006','00000000-0000-4000-8000-000000000011');
+select lives_ok($$update public.candidates set owning_team_id='00000000-0000-4000-8000-000000000201' where id='00000000-0000-4000-8000-000000000300'$$,'ownership change can preserve old assignment history');
+select ok(exists(select 1 from public.candidate_assignments where candidate_id='00000000-0000-4000-8000-000000000300' and team_id='00000000-0000-4000-8000-000000000200'),'historical assignment retains original team');
+select is((select team_id from public.bids where id='00000000-0000-4000-8000-000000000400'),'00000000-0000-4000-8000-000000000200'::uuid,'candidate ownership change never moves historical bid team');
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000006","role":"authenticated"}',true);
+set local role authenticated;
+select is((select count(*)::int from public.candidates where id='00000000-0000-4000-8000-000000000300'),0,'old-team assignment cannot authorize the new team even with both memberships');
+reset role;
 select * from finish();
 rollback;
