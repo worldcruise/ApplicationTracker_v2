@@ -94,6 +94,16 @@ The user requested the following probes after H001, before the full contract/sch
 
 ## Milestone 1 Foundation
 
+### Explicit foundation increments (current user request)
+
+The requested foundation brings forward the minimum contracts and scope anchors needed by Sections 4–8. Execute FN01, FN02, then FN03. This does not complete T004/T005, full profile editing (T016–T018), the complete bid/company model (T036), interview workflows, or document-reference retrieval (T027). Their remaining fields and gates are retained.
+
+| ID | Scoped increment | Dependencies | Design | Acceptance criteria |
+| --- | --- | --- | --- | --- |
+| FN01 | Tenant/role/assignment/grant migrations and authorization fixtures | H001; foundation subset of T003 | §§4–8; T009–T012/T019 | Active database membership controls scope; non-owner NOLOGIN/NOBYPASSRLS command roles; direct writes denied; bidder projection excludes raw profiles/feedback; synthetic cross-organization/team allow/deny tests. |
+| FN02 | User-context API guards and account flows | FN01 | §§4–5, 8–9; T013–T015 | Cookie/bearer clients preserve user context; current server-side resource checks, CSRF and no-store; sign-in/out/recovery; durable invitation, explicit activation/deactivation, last-admin protection; audited bootstrap runbook. |
+| FN03 | Isolated database CI and operating evidence | FN01–FN02 | §§5, 8, 20–22 | Fresh Supabase migrations and pgTAP in isolated CI; relevant local checks; report actual run evidence and missing credentials/browser checks; update progress and next task. |
+
 Each database task includes migrations and allow/deny evidence for its new relations. A passing UI check cannot replace direct database checks.
 
 Task IDs are stable references, not execution order. T036 establishes the minimal bid/company/grant schema here because bidder projections and immutable document links need it before resume production. Later bid tasks add workflow tables with their command implementations.

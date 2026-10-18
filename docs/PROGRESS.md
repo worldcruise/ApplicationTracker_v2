@@ -20,6 +20,8 @@ Repository status: T001, T002, H001 and the F001A–F001C code increments are co
 
 ## Current work
 
+**FN01 — Database foundation in progress (explicit foundation request).** Added tenant, role, assignment, grant, minimal bid/interview permission anchors and audited command migrations. Synthetic pgTAP coverage and an isolated GitHub Actions job are prepared; execution results are pending. The hosted project has not been migrated. FN02 will add user-context API and account flows after this database increment is checked. The earlier live Chrome gate remains pending.
+
 **F001V — Live Chrome acceptance pending.** Code increments and available checks are complete. No browser is exposed to the tools and no existing test account has been entered through the extension. Follow the manual checklist in [FEASIBILITY.md](FEASIBILITY.md); record actual results before accepting the browser/client/provider gates. No further product task was started.
 
 ## Blockers and dependencies
