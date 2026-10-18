@@ -1,0 +1,2 @@
+-- Synthetic development data only. Business tables and role fixtures arrive in T009–T012.
+-- The scaffold intentionally seeds no candidates, users, grants, or credentials.

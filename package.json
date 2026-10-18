@@ -1,0 +1,45 @@
+{
+  "name": "candidate-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.19.1",
+  "engines": {
+    "node": ">=24.0.0 <25",
+    "npm": ">=11.0.0 <12"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run build:packages && concurrently --kill-others-on-fail --names packages,web \"tsc -b packages/contracts packages/domain packages/resume-engine packages/ui --watch --preserveWatchOutput\" \"npm run dev --workspace @candidate/web\"",
+    "check": "npm run lint && npm run typecheck && npm test",
+    "lint": "eslint . --max-warnings 0",
+    "typecheck": "npm run build:packages && tsc -p tsconfig.tests.json && npm run typecheck --workspace @candidate/web && npm run typecheck --workspace @candidate/extension",
+    "test": "node --test packages/domain/src/operation-progress.test.ts",
+    "build:packages": "tsc -b packages/contracts packages/domain packages/resume-engine packages/ui",
+    "build": "npm run build:packages && npm run build --workspace @candidate/web && npm run build --workspace @candidate/extension",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset --local",
+    "db:test": "supabase test db",
+    "extension:build": "npm run build:packages && npm run build --workspace @candidate/extension"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.3.5",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "concurrently": "10.0.6",
+    "esbuild": "0.28.2",
+    "eslint": "10.13.0",
+    "@next/eslint-plugin-next": "16.4.2",
+    "supabase": "2.121.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.2"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

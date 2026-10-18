@@ -1,0 +1,19 @@
+{
+  "name": "@candidate/extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@candidate/contracts": "0.1.0",
+    "@candidate/domain": "0.1.0",
+    "@candidate/resume-engine": "0.1.0",
+    "@candidate/ui": "0.1.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  }
+}

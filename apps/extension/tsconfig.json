@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "isolatedModules": true,
+    "types": ["chrome", "react", "react-dom"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

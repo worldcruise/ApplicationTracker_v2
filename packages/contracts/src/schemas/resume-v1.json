@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["company", "title", "summary", "skills",
+               "experience", "education"],
+  "properties": {
+    "company": { "type": "string" },
+    "title": { "type": "string" },
+    "summary": { "type": "string" },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object", "minProperties": 1,
+        "additionalProperties": {
+          "type": "array", "items": { "type": "string" }
+        }
+      }
+    },
+    "experience": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title", "company", "sentences"],
+        "properties": {
+          "title": { "type": "string" },
+          "company": { "type": "string" },
+          "sentences": {
+            "type": "array", "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "education": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["degree"],
+        "properties": { "degree": { "type": "string" } }
+      }
+    }
+  }
+}

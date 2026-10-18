@@ -1,0 +1,26 @@
+:root {
+  color-scheme: light;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #162c35;
+  background: #f4f7f8;
+  line-height: 1.6;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input, textarea { font: inherit; }
+a { color: #17604f; }
+:focus-visible { outline: 3px solid #17604f; outline-offset: 4px; }
+.skip-link { position: absolute; left: 1rem; top: -6rem; z-index: 10; background: white; padding: .5rem 1rem; }
+.skip-link:focus { top: 1rem; }
+.workspace-header { padding: 1.25rem clamp(1rem, 4vw, 3rem); display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; border-bottom: 1px solid #d7e0e4; background: white; }
+.workspace-brand { font-size: 1.1rem; font-weight: 700; letter-spacing: -.025em; }
+.workspace-badge { font-size: .8rem; color: #47616b; background: #edf3f4; padding: .2rem .7rem; border-radius: 1rem; }
+.workspace-main { max-width: 68rem; margin: 0 auto; padding: clamp(1.5rem, 5vw, 4rem) clamp(1rem, 4vw, 3rem); }
+.workspace-main h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1.15; letter-spacing: -.04em; margin: 0 0 1rem; }
+.workspace-description { color: #526872; max-width: 42rem; margin: 0 0 2rem; }
+.workspace-card { border: 1px solid #d7e0e4; background: white; border-radius: .75rem; padding: 1.5rem; }
+.workspace-card h2 { font-size: 1.15rem; line-height: 1.4; margin: 0 0 .75rem; }
+.workspace-card p { margin: 0; color: #526872; }
+.workspace-views { display: flex; gap: .5rem; margin: 0 0 1.25rem; }
+.workspace-views button { cursor: pointer; border: 1px solid #b9cbd0; border-radius: .4rem; padding: .5rem 1.25rem; background: white; color: #162c35; }
+.workspace-views button[aria-pressed="true"] { background: #17604f; border-color: #17604f; color: white; }
