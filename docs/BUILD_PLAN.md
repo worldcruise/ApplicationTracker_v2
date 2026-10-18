@@ -98,6 +98,8 @@ The user requested the following probes after H001, before the full contract/sch
 
 The requested foundation brings forward the minimum contracts and scope anchors needed by Sections 4–8. Execute FN01, FN02, then FN03. This does not complete T004/T005, full profile editing (T016–T018), the complete bid/company model (T036), interview workflows, or document-reference retrieval (T027). Their remaining fields and gates are retained.
 
+Foundation scope clarification: one organization role currently determines matching team roles; mixed roles across teams and arbitrary capability overrides remain unimplemented pending an explicit contract. This is a conservative implementation restriction, not a newly accepted permanent requirement. Organization deactivation revokes that organization's scope; global Auth shutdown must not disable unrelated organization memberships implicitly.
+
 | ID | Scoped increment | Dependencies | Design | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | FN01 | Tenant/role/assignment/grant migrations and authorization fixtures | H001; foundation subset of T003 | §§4–8; T009–T012/T019 | Active database membership controls scope; non-owner NOLOGIN/NOBYPASSRLS command roles; direct writes denied; bidder projection excludes raw profiles/feedback; synthetic cross-organization/team allow/deny tests. |

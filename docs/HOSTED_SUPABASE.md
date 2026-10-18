@@ -22,7 +22,7 @@ npm.cmd ci
 npm.cmd run dev
 ```
 
-New clones should install Node 24 LTS normally; `.tools/` is not committed. Use only synthetic candidate data. No sign-in UI, Auth callback route, or application business table is implemented yet.
+New clones should install Node 24 LTS normally; `.tools/` is not committed. Use only synthetic candidate data. The [foundation](FOUNDATION.md) adds sign-in/out/recovery, callbacks, authorization migrations and account administration; hosted migrations and email settings still require an authorized operator.
 
 ## Clients, refresh, and authorization
 
@@ -31,7 +31,7 @@ New clones should install Node 24 LTS normally; `.tools/` is not committed. Use 
 - `src/proxy.ts` calls `updateSession` on all matched routes, including API paths, excluding Next assets and common image files. `getClaims()` runs immediately after client creation. `setAll` updates request cookies, rebuilds the forwarded request, and sets all response cookies plus the SDK's cache headers. Previous response cookies survive repeated updates.
 - All matched responses use private/no-store cache headers. User-context server fetches use `cache: 'no-store'`. The public shell uses `dynamic = 'force-dynamic'`; future authenticated pages must also avoid ISR/shared data caches. Verify deployed CDN cache settings respect no-store and never cache Set-Cookie responses.
 - If adding a redirect/replacement response, use `preserveSessionResponse(sessionResponse, NextResponse.redirect(url))` from `@/lib/supabase/response`. It copies all cookie attributes/deletions and `Cache-Control`, `Pragma`, and `Expires`. Returning a fresh redirect alone loses the refreshed session. No auth redirect is needed by the current public shell.
-- Proxy refresh is not an authorization guard. Every protected API handler must validate identity, resolve current active organization/team membership, check assignment/capability and field scope, and execute ordinary queries in user context. RLS/grants and backend checks are both mandatory. An unexpired token alone is not evidence of current membership or account activation. Future mutations also require CSRF protection.
+- Proxy refresh is not an authorization guard. Every protected API handler must validate identity, resolve current active organization/team membership, check assignment/capability and field scope, and execute ordinary queries in user context. RLS/grants and backend checks are both mandatory. An unexpired token alone is not evidence of current membership or account activation. Foundation cookie mutations now check exact Origin; bearer requests use their verified token context without cookie fallback.
 
 The [recorded cookie conflict](decisions/0002-hosted-supabase-ssr.md) explains why the requested Supabase browser SSR pattern uses JavaScript-readable session cookies despite the design's blanket HttpOnly requirement. Cookies are SameSite=Lax and Secure in production; use HTTPS for deployed authentication.
 
@@ -54,7 +54,7 @@ The diagnostic verifies claims, then issues a HEAD/select-id request with the su
 
 Results distinguish service/network errors, missing authentication, missing table configuration, invalid authentication, missing relations (`PGRST205`/`42P01`), and database permission failures (`42501`/HTTP 403). Missing table configuration means remote existence is **unverified**, not that the table is absent. Missing prerequisites produce a nonzero/incomplete result even when connectivity passes (the script uses exit 2; npm may wrap it as a lifecycle failure).
 
-Current repository migrations contain no application tables, and no test-user credentials/session were supplied. Do not create a `todos` table, enable public signup, bypass the shared API for product features, disable RLS, or use an admin key to make this probe pass.
+Repository migrations now define foundation tables and RLS, but they have not been applied to hosted development by this task. No hosted test-user credentials/session were supplied. Do not create a `todos` table, enable public signup, bypass the shared API for product features, disable RLS, or use an admin key to make this probe pass.
 
 ## Hosted migrations without Docker
 
@@ -90,7 +90,7 @@ For database tests, `npm run db:test` remains **local**. The CLI also supports `
 
 ## Manual session-refresh test plan
 
-Prerequisites: an existing synthetic test account, an approved sign-in flow or trusted SSR test harness for this app origin, and a browser with developer tools. The app's sign-in/callback UI and application membership tables are still pending, so real-account refresh cannot be fully exercised from the current shell. The automated tests use the real SDK with a synthetic mocked Auth server; they do not prove hosted browser rotation.
+Prerequisites: an existing synthetic test account, an approved sign-in flow or trusted SSR test harness for this app origin, and a browser with developer tools. The sign-in/callback UI and membership migrations now exist. Apply the reviewed hosted migrations and configure the account/email prerequisites in [FOUNDATION.md](FOUNDATION.md) before testing hosted account access. The automated tests use the real SDK with a synthetic mocked Auth server; they do not prove hosted browser rotation.
 
 1. Start the app with the configured hosted settings. Open `/` anonymously: expect HTTP 200, the public empty shell, private/no-store response headers, and no invented signed-in state.
 2. Once an authorized sign-in flow/harness is available, sign in as the synthetic user. Inspect cookies privately; never copy tokens/cookie values into logs, screenshots, commits, or chat. Verify SameSite=Lax, path `/`, and Secure on deployed HTTPS. The documented Supabase cookie is deliberately not HttpOnly.
@@ -98,7 +98,7 @@ Prerequisites: an existing synthetic test account, an approved sign-in flow or t
 4. Inspect the response for all renewed cookie chunks and private/no-store `Cache-Control`, `Pragma: no-cache`, and `Expires: 0`. Server rendering should see the renewed request cookies immediately. Navigate again: the refreshed session should persist without another expiry-driven refresh or random sign-out. Restore JavaScript if disabled.
 5. Repeat with a multi-chunk cookie and through an actual authorized redirect once implemented. Verify no chunk/deletion or cache header is lost; redirects must use `preserveSessionResponse`. Do not add a fake login redirect to the public shell for testing.
 6. Test an invalid/expired refresh token and an Auth network failure separately. The public shell may remain anonymous; future protected routes must deny or route to a real login page without exposing data. A network failure must not be reported as a permission failure or successful sign-in.
-7. Use two isolated browser profiles to check session isolation and no caching across users. Once membership/resource APIs exist, revoke membership/assignment and verify backend plus RLS denial even with an unexpired JWT. These permission tests remain gated on T009–T013.
+7. Use two isolated browser profiles to check session isolation and no caching across users. Revoke membership/assignment and verify backend plus RLS denial even with an unexpired JWT. Isolated database/API checks cover these denial paths; hosted/browser acceptance remains pending.
 
 Offline checks: `npm run check`. Production build: `npm run build`. Production HTTP smoke: `npm run start --workspace @candidate/web`. None starts Docker.
 

@@ -1,6 +1,6 @@
 # Candidate Platform
 
-An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. The web shell uses hosted Supabase development with SSR session refresh. The extension includes Phase 0 probes for an existing-account sign-in, directory handles and a synthetic PDF preview/export. Product sign-in, candidate records, production document workflows, submission and application authorization remain later tasks.
+An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. The web app uses hosted Supabase with SSR sessions, organization/team/assignment authorization, safe bidder projections and account administration. The extension includes Phase 0 probes for existing-account sign-in, directory handles and synthetic PDF preview/export. Complete profile editing, document workflows and submission remain later tasks.
 
 ## Local setup
 
@@ -17,7 +17,7 @@ Open [http://localhost:3000](http://localhost:3000). The shared packages compile
 
 Before serving the web app, configure `apps/web/.env.local`. It has already been created for the supplied hosted development project in this working copy. On a fresh clone, copy `apps/web/.env.example` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from the development project's Connect dialog. Preserve an existing local file rather than overwriting it. The examples contain placeholders; real values remain ignored. Restart Next after changing environment settings. Builds and offline tests do not require hosted credentials, but the session-refresh proxy requires the two public settings at request time.
 
-The root `.env.example` is a reference; Next reads the web application's file. The service-role slot remains blank and is not used by these clients. Never prefix a secret with `NEXT_PUBLIC_`. Use only synthetic data. See [hosted Supabase setup, migrations, diagnostics, and manual refresh testing](docs/HOSTED_SUPABASE.md) and the [cookie-design exception](docs/decisions/0002-hosted-supabase-ssr.md).
+The root `.env.example` is a reference; Next reads the web application's file. The service-role slot is optional and server-only: Auth invitations and operator bootstrap use it; ordinary reads and commands always retain the authenticated user context. Never prefix a secret with `NEXT_PUBLIC_`. Use only synthetic data. See [hosted Supabase setup, migrations, diagnostics, and manual refresh testing](docs/HOSTED_SUPABASE.md) and the [cookie-design exception](docs/decisions/0002-hosted-supabase-ssr.md).
 
 If using the task-local portable runtime instead of an installed Node, add its directory to PATH for the terminal session before running npm. `.tools/` is ignored and is not part of the repository setup contract.
 
@@ -33,6 +33,8 @@ If using the task-local portable runtime instead of an installed Node, add its d
 | `npm run db:check:hosted` | Read-only hosted Auth connectivity probe; separately attempt an authenticated existing-table query only when the documented synthetic-user token/table prerequisites are provided. Nonzero if incomplete or failed; no Docker. |
 | `npm run extension:build` | Compile shared packages and rebuild `apps/extension/dist/`. No web build required. |
 | `npm run feasibility:pdf` | Generate the two-page synthetic sample, parse/render it with PDF.js, verify text/bounds/repeated hash, and write `output/pdf/phase0-synthetic-resume.pdf` plus ignored page PNGs. Uses the native canvas development dependency. |
+| `npm run admin:bootstrap -- --organization-id <new UUID> --admin-user-id <confirmed Auth UUID> --name "Synthetic Development"` | Audited new-organization bootstrap; operator-only key in the ignored server environment. See FOUNDATION.md before running. |
+| `npm run test:foundation:http` | Isolated CI-only production build/Auth/API harness; refuses hosted settings and a configured `.env.local`. Requires the CI local Supabase stack. |
 | `npm run db:stop` | Stop this project's local Supabase services, preserving local data. |
 | `npm run db:reset` | Reset the **local** database, reapply migrations and seeds. Destructive to local development data; use intentionally. |
 | `npm run lint` / `npm run typecheck` / `npm test` | Run a single check. Type checking builds package declarations; tests use Node's built-in TypeScript test runner. |
@@ -73,15 +75,15 @@ npm run db:test
 
 The Supabase CLI is pinned as a root development dependency. Local defaults in `supabase/config.toml` use API port 54321, PostgreSQL 54322, Studio 54323 and test mail 54324. Keep these development services local. Local signup, analytics, storage and edge-function settings do not configure the hosted project. Hosted CLI migrations need separate CLI authentication and database credentials as documented in [HOSTED_SUPABASE.md](docs/HOSTED_SUPABASE.md). Do not paste secrets into tracked files, logs or client bundles.
 
-There are no application migrations or candidate seeds yet. `supabase/migrations/` is the required home for timestamped SQL changes, including permissions and policies. `supabase/tests/000_infrastructure.test.sql` checks the local Auth schema/role inside a transaction and rolls back; it does **not** establish or test application RLS. Later tables require backend permission checks, RLS/grants, and positive/negative database tests. New migrations can be created with `npx supabase migration new <name>`; run `db:reset` intentionally to verify from empty local state.
+Versioned migrations now establish the Section 4–8 foundation, protected commands and forced RLS. Transaction-local synthetic fixtures exercise all four roles, multiple teams and two organizations; the seed remains empty. GitHub Actions runs migrations/tests on an isolated Supabase instance without hosted credentials. See [foundation setup, bootstrap, account flows, API and manual acceptance](docs/FOUNDATION.md). New schema changes require migrations and allow/deny tests; use `db:reset` only for intentional local reset.
 
 ## Workspace layout
 
 | Path | Responsibility |
 | --- | --- |
-| `apps/web` | Next.js App Router, React, TypeScript and Tailwind; future `/api/v1` backend. |
+| `apps/web` | Next.js App Router, React, TypeScript, Tailwind, account pages and user-context `/api/v1` foundation. |
 | `apps/extension` | TypeScript MV3 event worker and React workspace; esbuild bundles local artifacts. |
-| `packages/contracts` | Unchanged canonical resume v1 schema, starter API/error/operation types. No validator yet. |
+| `packages/contracts` | Unchanged canonical resume v1, foundation roles/context/commands, API/error/operation types. Canonical validator remains pending. |
 | `packages/domain` | Shared business rules, starting with independent operation progress. |
 | `packages/resume-engine` | Typed rendering boundary plus a fixed synthetic pdf-lib/fontkit feasibility renderer. Production validators/templates are pending. |
 | `packages/ui` | Shared accessible shell components and styles; no server credentials or database imports. |
