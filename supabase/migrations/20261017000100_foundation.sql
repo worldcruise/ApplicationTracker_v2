@@ -12,9 +12,19 @@ create role app_bidder_reader nologin nobypassrls noinherit;
 -- SET ROLE membership and temporary CREATE on the containing schema.
 grant app_permission_reader, app_command, app_bidder_reader to postgres;
 grant create on schema public, private to app_permission_reader, app_command, app_bidder_reader;
-grant usage on schema public, private, auth to app_permission_reader, app_command, app_bidder_reader;
+grant usage on schema public, private to app_permission_reader, app_command, app_bidder_reader;
 grant usage on schema private to authenticated;
-grant execute on function auth.uid(), auth.role() to app_permission_reader, app_command, app_bidder_reader;
+-- Supabase owns the Auth schema; its postgres migration user cannot delegate
+-- schema USAGE. These fixed bridges use auth.uid()/auth.role(), read no tables,
+-- and expose no client-supplied identity or role. Business helpers and every
+-- mutation still use their separate non-owner NOBYPASSRLS roles.
+create function private.actor_id() returns uuid language sql stable security definer set search_path=''
+as $ select auth.uid() $;
+create function private.actor_role() returns text language sql stable security definer set search_path=''
+as $ select auth.role() $;
+revoke all on function private.actor_id(),private.actor_role() from public;
+grant execute on function private.actor_id(),private.actor_role()
+ to authenticated,app_permission_reader,app_command,app_bidder_reader;
 
 create table public.organizations (
   id uuid primary key default gen_random_uuid(),
@@ -285,7 +295,7 @@ grant select on public.organizations, public.users, public.organization_membersh
 grant select (id,organization_id,owning_team_id) on public.candidates to app_permission_reader;
 grant select (id,organization_id,candidate_id,team_id,owner_id) on public.bids to app_permission_reader;
 grant select (id,organization_id,bid_id) on public.interviews to app_permission_reader;
-grant select (id,email,email_confirmed_at) on auth.users to app_permission_reader;
+-- Auth lookup below is a separate fixed, command-only bridge.
 create policy scope_reader on public.organizations for select to app_permission_reader using (true);
 create policy scope_reader on public.users for select to app_permission_reader using (true);
 create policy scope_reader on public.organization_memberships for select to app_permission_reader using (true);
@@ -302,13 +312,13 @@ as $$
   select m.role from public.organization_memberships m
   join public.users u on u.id=m.user_id and u.status='active'
   join public.organizations o on o.id=m.organization_id and o.status='active'
-  where m.organization_id=p_org and m.user_id=auth.uid() and m.state='active'
+  where m.organization_id=p_org and m.user_id=private.actor_id() and m.state='active'
 $$;
 create function private.in_team(p_org uuid,p_team uuid) returns boolean language sql stable security definer set search_path = ''
 as $$
   select exists(select 1 from public.team_memberships m join public.teams t
     on t.organization_id=m.organization_id and t.id=m.team_id and t.status='active'
-    where m.organization_id=p_org and m.team_id=p_team and m.user_id=auth.uid()
+    where m.organization_id=p_org and m.team_id=p_team and m.user_id=private.actor_id()
       and m.active and m.role=private.org_role(p_org))
 $$;
 create function private.manages_team(p_org uuid,p_team uuid) returns boolean language sql stable security definer set search_path = ''
@@ -320,7 +330,7 @@ as $$
    private.manages_team(p_org,c.owning_team_id) or
    (private.org_role(p_org)='team_member' and private.in_team(p_org,c.owning_team_id)
     and exists(select 1 from public.candidate_assignments a where a.organization_id=p_org
-      and a.candidate_id=c.id and a.user_id=auth.uid() and a.ended_at is null and a.active_from<=now()))))
+      and a.candidate_id=c.id and a.user_id=private.actor_id() and a.ended_at is null and a.active_from<=now()))))
 $$;
 create function private.bidder_grants(p_org uuid,p_candidate uuid,p_bid uuid,p_capability text)
 returns table(allow_email boolean,allow_phone boolean) language sql stable security definer set search_path = ''
@@ -328,7 +338,7 @@ as $$
  select g.allow_email,g.allow_phone from public.bid_access_grants g
  join public.candidates c on c.organization_id=g.organization_id and c.id=p_candidate
  left join public.bids b on b.organization_id=p_org and b.id=p_bid and b.candidate_id=c.id
- where g.organization_id=p_org and g.user_id=auth.uid() and private.org_role(p_org)='bidder'
+ where g.organization_id=p_org and g.user_id=private.actor_id() and private.org_role(p_org)='bidder'
   and g.capability=p_capability and g.revoked_at is null and (g.expires_at is null or g.expires_at>now())
   and ((g.candidate_id=c.id and (p_bid is null or b.id is not null)
         and private.in_team(p_org,coalesce(b.team_id,c.owning_team_id)))
@@ -369,7 +379,7 @@ grant execute on function private.reads_bid(uuid,uuid) to app_command, app_bidde
 alter function private.reads_interview(uuid,uuid) owner to app_permission_reader;
 revoke all on function private.reads_interview(uuid,uuid) from public, anon, authenticated;
 grant execute on function private.reads_interview(uuid,uuid) to app_command, app_bidder_reader;
-alter function private.auth_identity(text) owner to app_permission_reader;
+-- Keep this narrow Auth-only lookup owned by the migration role.
 revoke all on function private.auth_identity(text) from public, anon, authenticated;
 grant execute on function private.auth_identity(text) to app_command, app_bidder_reader;
 grant execute on function private.org_role(uuid),private.in_team(uuid,uuid),
@@ -377,19 +387,19 @@ grant execute on function private.org_role(uuid),private.in_team(uuid,uuid),
  private.reads_bid(uuid,uuid),private.reads_interview(uuid,uuid) to authenticated;
 
 create policy visible on public.organizations for select to authenticated using (private.org_role(id) is not null);
-create policy visible on public.users for select to authenticated using (id=auth.uid());
+create policy visible on public.users for select to authenticated using (id=private.actor_id());
 create policy visible on public.organization_memberships for select to authenticated
- using (private.org_role(organization_id)='admin' or (user_id=auth.uid() and private.org_role(organization_id) is not null));
+ using (private.org_role(organization_id)='admin' or (user_id=private.actor_id() and private.org_role(organization_id) is not null));
 create policy visible on public.teams for select to authenticated
  using (private.org_role(organization_id)='admin' or private.in_team(organization_id,id));
 create policy visible on public.team_memberships for select to authenticated
- using (private.manages_team(organization_id,team_id) or (user_id=auth.uid() and private.org_role(organization_id) is not null));
+ using (private.manages_team(organization_id,team_id) or (user_id=private.actor_id() and private.org_role(organization_id) is not null));
 create policy visible on public.candidates for select to authenticated using (private.reads_candidate(organization_id,id));
 create policy visible on public.candidate_assignments for select to authenticated using (private.reads_candidate(organization_id,candidate_id));
 create policy visible on public.candidate_bid_profiles for select to authenticated using (private.reads_candidate(organization_id,candidate_id));
 create policy visible on public.bids for select to authenticated using (private.reads_bid(organization_id,id));
 create policy visible on public.bid_access_grants for select to authenticated
- using (private.org_role(organization_id)='admin' or (user_id=auth.uid() and private.org_role(organization_id) is not null));
+ using (private.org_role(organization_id)='admin' or (user_id=private.actor_id() and private.org_role(organization_id) is not null));
 create policy visible on public.interviews for select to authenticated using (private.reads_interview(organization_id,id));
 create policy visible on public.interview_feedback for select to authenticated using (private.reads_interview(organization_id,interview_id));
 create policy visible on public.administrative_operations for select to authenticated using (private.org_role(organization_id)='admin');
@@ -397,7 +407,7 @@ create policy visible on public.administrative_operations for select to authenti
 create policy visible on public.audit_logs for select to authenticated using (
  private.org_role(organization_id)='admin' or
  (private.org_role(organization_id)='team_leader' and private.in_team(organization_id,team_id)) or
- (private.org_role(organization_id) is not null and actor_id=auth.uid()));
+ (private.org_role(organization_id) is not null and actor_id=private.actor_id()));
 
 -- Protect stored assignment history even against accidental command-role updates.
 create function private.guard_assignment_history() returns trigger language plpgsql set search_path = '' as $$

@@ -1,6 +1,6 @@
 begin;
 create function private.has_admin_org() returns boolean language sql stable security definer set search_path='' as $$
- select exists(select 1 from public.organization_memberships m where m.user_id=auth.uid()
+ select exists(select 1 from public.organization_memberships m where m.user_id=private.actor_id()
    and private.org_role(m.organization_id)='admin')
 $$;
 create function private.identity_confirmed(p_user uuid) returns boolean language sql stable security definer set search_path='' as $$
@@ -25,28 +25,28 @@ grant execute on function private.eligible_assignee(uuid,uuid,uuid,boolean) to a
 alter function private.has_admin_org() owner to app_permission_reader;
 revoke all on function private.has_admin_org() from public;
 grant execute on function private.has_admin_org() to app_command;
-alter function private.identity_confirmed(uuid) owner to app_permission_reader;
+-- Keep this narrow Auth-only lookup owned by the migration role.
 revoke all on function private.identity_confirmed(uuid) from public;
 grant execute on function private.identity_confirmed(uuid) to app_command;
 alter function private.candidate_team(uuid,uuid) owner to app_permission_reader;
 revoke all on function private.candidate_team(uuid,uuid) from public;
 grant execute on function private.candidate_team(uuid,uuid) to app_command;
 grant insert on public.organizations to app_command;
-create policy command_insert on public.organizations for insert to app_command with check (auth.role()='service_role' or private.org_role(id)='admin');
+create policy command_insert on public.organizations for insert to app_command with check (private.actor_role()='service_role' or private.org_role(id)='admin');
 grant update on public.organizations to app_command;
-create policy command_update on public.organizations for update to app_command using (auth.role()='service_role' or private.org_role(id)='admin') with check (auth.role()='service_role' or private.org_role(id)='admin');
+create policy command_update on public.organizations for update to app_command using (private.actor_role()='service_role' or private.org_role(id)='admin') with check (private.actor_role()='service_role' or private.org_role(id)='admin');
 grant select on public.organizations to app_command;
-create policy command_select on public.organizations for select to app_command using (auth.role()='service_role' or private.org_role(id)='admin');
+create policy command_select on public.organizations for select to app_command using (private.actor_role()='service_role' or private.org_role(id)='admin');
 grant insert on public.users to app_command;
-create policy command_insert on public.users for insert to app_command with check (auth.role()='service_role' or private.has_admin_org());
+create policy command_insert on public.users for insert to app_command with check (private.actor_role()='service_role' or private.has_admin_org());
 grant select on public.users to app_command;
-create policy command_select on public.users for select to app_command using (auth.role()='service_role' or private.has_admin_org());
+create policy command_select on public.users for select to app_command using (private.actor_role()='service_role' or private.has_admin_org());
 grant insert on public.organization_memberships to app_command;
-create policy command_insert on public.organization_memberships for insert to app_command with check (auth.role()='service_role' or private.org_role(organization_id)='admin');
+create policy command_insert on public.organization_memberships for insert to app_command with check (private.actor_role()='service_role' or private.org_role(organization_id)='admin');
 grant update on public.organization_memberships to app_command;
-create policy command_update on public.organization_memberships for update to app_command using (auth.role()='service_role' or private.org_role(organization_id)='admin') with check (auth.role()='service_role' or private.org_role(organization_id)='admin');
+create policy command_update on public.organization_memberships for update to app_command using (private.actor_role()='service_role' or private.org_role(organization_id)='admin') with check (private.actor_role()='service_role' or private.org_role(organization_id)='admin');
 grant select on public.organization_memberships to app_command;
-create policy command_select on public.organization_memberships for select to app_command using (auth.role()='service_role' or private.org_role(organization_id)='admin');
+create policy command_select on public.organization_memberships for select to app_command using (private.actor_role()='service_role' or private.org_role(organization_id)='admin');
 grant insert on public.teams to app_command;
 create policy command_insert on public.teams for insert to app_command with check (private.org_role(organization_id)='admin');
 grant update on public.teams to app_command;
@@ -94,12 +94,12 @@ create policy command_update on public.administrative_operations for update to a
 grant select on public.administrative_operations to app_command;
 create policy command_select on public.administrative_operations for select to app_command using (private.org_role(organization_id)='admin');
 grant insert on public.audit_logs to app_command;
-create policy command_insert on public.audit_logs for insert to app_command with check (auth.role()='service_role' or private.org_role(organization_id) is not null);
+create policy command_insert on public.audit_logs for insert to app_command with check (private.actor_role()='service_role' or private.org_role(organization_id) is not null);
 
 create function private.audit(p_org uuid,p_action text,p_subject uuid,p_request uuid,p_team uuid default null,p_summary jsonb default '{}')
 returns void language sql set search_path='' as $$
  insert into public.audit_logs(organization_id,actor_id,action,subject_id,request_id,team_id,redacted_change_summary)
- values(p_org,auth.uid(),p_action,p_subject,p_request,p_team,p_summary)
+ values(p_org,private.actor_id(),p_action,p_subject,p_request,p_team,p_summary)
 $$;
 revoke all on function private.audit(uuid,text,uuid,uuid,uuid,jsonb) from public;
 grant execute on function private.audit(uuid,text,uuid,uuid,uuid,jsonb) to app_command;
@@ -107,7 +107,7 @@ grant execute on function private.audit(uuid,text,uuid,uuid,uuid,jsonb) to app_c
 create function public.bootstrap_organization(p_org uuid,p_admin uuid,p_name text,p_request uuid)
 returns uuid language plpgsql security definer set search_path='' as $$
 begin
- if auth.role() is distinct from 'service_role' or not private.identity_confirmed(p_admin) then
+ if private.actor_role() is distinct from 'service_role' or not private.identity_confirmed(p_admin) then
    raise exception 'FORBIDDEN' using errcode='42501';
  end if;
  -- Existing organizations are never attached or escalated by bootstrap, including retries.
@@ -128,7 +128,7 @@ language plpgsql security definer set search_path='' as $$
 declare v_id uuid;
 begin
  if private.org_role(p_org) is distinct from 'admin' then raise exception 'FORBIDDEN' using errcode='42501'; end if;
- insert into public.teams(organization_id,name,created_by) values(p_org,p_name,auth.uid()) returning id into v_id;
+ insert into public.teams(organization_id,name,created_by) values(p_org,p_name,private.actor_id()) returning id into v_id;
  perform private.audit(p_org,'team.created',v_id,p_request,v_id);
  return v_id;
 end $$;
@@ -146,7 +146,7 @@ begin
  select row_version into v_version from public.team_memberships where organization_id=p_org and team_id=p_team and user_id=p_user for update;
  if coalesce(v_version,0) is distinct from p_expected then raise exception 'VERSION_CONFLICT' using errcode='40001'; end if;
  insert into public.team_memberships(organization_id,team_id,user_id,role,active,created_by)
- values(p_org,p_team,p_user,p_role,p_active,auth.uid())
+ values(p_org,p_team,p_user,p_role,p_active,private.actor_id())
  on conflict(organization_id,team_id,user_id) do update set role=excluded.role,active=excluded.active,
    row_version=public.team_memberships.row_version+1,updated_at=now() returning row_version into v_version;
  if not p_active then
@@ -202,7 +202,7 @@ begin
    raise exception 'INVALID_OWNER' using errcode='22023';
  end if;
  insert into public.candidates(organization_id,owning_team_id,owner_id,full_name,created_by)
- values(p_org,p_team,p_owner,p_full_name,auth.uid()) returning id into v_id;
+ values(p_org,p_team,p_owner,p_full_name,private.actor_id()) returning id into v_id;
  perform private.audit(p_org,'candidate.created',v_id,p_request,p_team);
  return v_id;
 end $$;
@@ -221,7 +221,7 @@ begin
  select id into v_id from public.candidate_assignments where organization_id=p_org and candidate_id=p_candidate and user_id=p_user and ended_at is null;
  if p_assign and v_id is null then
    insert into public.candidate_assignments(organization_id,candidate_id,team_id,user_id,created_by)
-   values(p_org,p_candidate,v_team,p_user,auth.uid()) returning id into v_id;
+   values(p_org,p_candidate,v_team,p_user,private.actor_id()) returning id into v_id;
  elsif not p_assign and v_id is not null then
    update public.candidate_assignments set ended_at=now() where id=v_id;
  end if;
@@ -238,7 +238,7 @@ begin
  select row_version into v_version from public.candidate_bid_profiles where organization_id=p_org and candidate_id=p_candidate;
  if coalesce(v_version,0) is distinct from p_expected then raise exception 'VERSION_CONFLICT' using errcode='40001'; end if;
  insert into public.candidate_bid_profiles(organization_id,candidate_id,approved_summary,approved_by)
- values(p_org,p_candidate,p_summary,auth.uid()) on conflict(organization_id,candidate_id)
+ values(p_org,p_candidate,p_summary,private.actor_id()) on conflict(organization_id,candidate_id)
  do update set approved_summary=excluded.approved_summary,approved_by=excluded.approved_by,approved_at=now(),
  row_version=public.candidate_bid_profiles.row_version+1 returning row_version into v_version;
  perform private.audit(p_org,'candidate.bidder_summary_approved',p_candidate,p_request,v_team);
@@ -255,7 +255,7 @@ begin
   raise exception 'INVALID_BID' using errcode='22023';
  end if;
  insert into public.bids(organization_id,candidate_id,team_id,owner_id,company_name,job_title,created_by)
- values(p_org,p_candidate,v_team,auth.uid(),p_company,p_title,auth.uid()) returning id into v_id;
+ values(p_org,p_candidate,v_team,private.actor_id(),p_company,p_title,private.actor_id()) returning id into v_id;
  perform private.audit(p_org,'bid.draft_created',v_id,p_request,v_team);
  return v_id;
 end $$;
@@ -280,7 +280,7 @@ begin
    raise exception 'INVALID_GRANT_SCOPE' using errcode='22023';
  end if;
  insert into public.bid_access_grants(organization_id,user_id,candidate_id,bid_id,capability,allow_email,allow_phone,expires_at,created_by)
- values(p_org,p_user,p_candidate,p_bid,p_capability,p_allow_email,p_allow_phone,p_expires,auth.uid()) returning id into v_id;
+ values(p_org,p_user,p_candidate,p_bid,p_capability,p_allow_email,p_allow_phone,p_expires,private.actor_id()) returning id into v_id;
  perform private.audit(p_org,'bidder.grant_created',v_id,p_request,v_team,jsonb_build_object('capability',p_capability));
  return v_id;
 end $$;
@@ -308,12 +308,12 @@ begin
  v_hash:=encode(sha256(convert_to(jsonb_build_object('email',v_email,'displayName',btrim(p_display_name),'role',p_role)::text,'UTF8')),'hex');
  select * into v_op from public.administrative_operations where organization_id=p_org and operation_id=p_operation for update;
  if found then
-   if v_op.actor_id<>auth.uid() or v_op.operation_type<>'provision_user' or v_op.request_hash<>v_hash then
+   if v_op.actor_id<>private.actor_id() or v_op.operation_type<>'provision_user' or v_op.request_hash<>v_hash then
     raise exception 'KEY_PAYLOAD_MISMATCH' using errcode='22023';
    end if;
  else
    insert into public.administrative_operations(organization_id,operation_id,actor_id,operation_type,request_hash,email,display_name,desired_role)
-   values(p_org,p_operation,auth.uid(),'provision_user',v_hash,v_email,btrim(p_display_name),p_role) returning * into v_op;
+   values(p_org,p_operation,private.actor_id(),'provision_user',v_hash,v_email,btrim(p_display_name),p_role) returning * into v_op;
    perform private.audit(p_org,'user.provisioning_started',p_operation,p_operation);
  end if;
  return jsonb_build_object('operationId',v_op.operation_id,'state',v_op.state,'email',v_op.email,'targetUserId',v_op.target_user_id);
@@ -326,7 +326,7 @@ begin
  if private.org_role(p_org) is distinct from 'admin' then raise exception 'FORBIDDEN' using errcode='42501'; end if;
  perform 1 from public.organizations where id=p_org for update;
  select * into v_op from public.administrative_operations where organization_id=p_org and operation_id=p_operation for update;
- if not found or v_op.actor_id<>auth.uid() then raise exception 'FORBIDDEN' using errcode='42501'; end if;
+ if not found or v_op.actor_id<>private.actor_id() then raise exception 'FORBIDDEN' using errcode='42501'; end if;
  if v_op.state<>'pending_auth' then
    return jsonb_build_object('operationId',p_operation,'state',v_op.state,'targetUserId',v_op.target_user_id);
  end if;
@@ -335,7 +335,7 @@ begin
  insert into public.users(id,display_name) values(v_user,v_op.display_name) on conflict(id) do nothing;
  -- Never reactivate/overwrite an existing membership as a side effect of invitation.
  insert into public.organization_memberships(organization_id,user_id,role,state,created_by)
- values(p_org,v_user,v_op.desired_role,'invited',auth.uid()) on conflict(organization_id,user_id) do nothing;
+ values(p_org,v_user,v_op.desired_role,'invited',private.actor_id()) on conflict(organization_id,user_id) do nothing;
  if exists(select 1 from public.organization_memberships where organization_id=p_org and user_id=v_user and role<>v_op.desired_role) then
   raise exception 'EXISTING_MEMBERSHIP_ROLE_CONFLICT' using errcode='22023';
  end if;
@@ -354,7 +354,7 @@ begin
   raise exception 'FORBIDDEN' using errcode='42501';
  end if;
  update public.administrative_operations set last_error_code=p_code,updated_at=now()
- where organization_id=p_org and operation_id=p_operation and actor_id=auth.uid() and state='pending_auth';
+ where organization_id=p_org and operation_id=p_operation and actor_id=private.actor_id() and state='pending_auth';
 end $$;
 
 -- All exported commands use the same restricted non-owner role and explicit allowlist.
@@ -400,13 +400,13 @@ grant execute on function public.record_provisioning_failure(uuid,uuid,text) to 
 
 -- Ordinary context reads use invoker RLS and never accept a role from the client.
 create function public.get_my_context() returns jsonb language sql stable security invoker set search_path='' as $$
- select jsonb_build_object('userId',auth.uid(),'organizations',coalesce((
+ select jsonb_build_object('userId',private.actor_id(),'organizations',coalesce((
   select jsonb_agg(jsonb_build_object('organizationId',m.organization_id,'name',o.name,'role',m.role,
    'teams',coalesce((select jsonb_agg(jsonb_build_object('teamId',t.id,'name',t.name,'role',tm.role))
      from public.team_memberships tm join public.teams t on t.organization_id=tm.organization_id and t.id=tm.team_id
-     where tm.organization_id=m.organization_id and tm.user_id=auth.uid() and tm.active and t.status='active' and tm.role=m.role),'[]'::jsonb)))
+     where tm.organization_id=m.organization_id and tm.user_id=private.actor_id() and tm.active and t.status='active' and tm.role=m.role),'[]'::jsonb)))
   from public.organization_memberships m join public.organizations o on o.id=m.organization_id
-  where m.user_id=auth.uid() and m.state='active' and private.org_role(m.organization_id) is not null),'[]'::jsonb))
+  where m.user_id=private.actor_id() and m.state='active' and private.org_role(m.organization_id) is not null),'[]'::jsonb))
 $$;
 revoke all on function public.get_my_context() from public,anon;
 grant execute on function public.get_my_context() to authenticated;
