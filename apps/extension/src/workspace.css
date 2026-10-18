@@ -1,0 +1,13 @@
+.probe-notice { padding: 1rem; border-left: 4px solid #17604f; background: #e9f3ef; }
+.probe-card { margin: 1.25rem 0; }
+.probe-card p { margin: .6rem 0; }
+.probe-form { display: grid; gap: .8rem; max-width: 28rem; margin: 1rem 0; }
+.probe-form label { display: grid; gap: .3rem; }
+.probe-form input { width: 100%; border: 1px solid #9eb4bc; padding: .55rem; border-radius: .3rem; }
+.probe-card button { cursor: pointer; padding: .5rem .8rem; border: 1px solid #17604f; border-radius: .3rem; background: white; color: #17604f; }
+.probe-card button:disabled { opacity: .55; cursor: default; }
+.probe-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin: 1rem 0; }
+.probe-card code { overflow-wrap: anywhere; }
+.probe-card details { margin-top: 1rem; }
+.pdf-preview { padding: 1rem; background: #e8eef0; margin-top: 1rem; }
+.pdf-preview canvas { display: block; max-width: 100%; height: auto; background: white; border: 1px solid #b9cbd0; margin: .8rem auto; }

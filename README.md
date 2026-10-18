@@ -1,6 +1,6 @@
 # Candidate Platform
 
-An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. The web shell uses hosted Supabase development with SSR session-refresh plumbing. Sign-in UI, candidate records, PDF rendering, saving, submission, and application authorization are later build-plan tasks.
+An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. The web shell uses hosted Supabase development with SSR session refresh. The extension includes Phase 0 probes for an existing-account sign-in, directory handles and a synthetic PDF preview/export. Product sign-in, candidate records, production document workflows, submission and application authorization remain later tasks.
 
 ## Local setup
 
@@ -26,12 +26,13 @@ If using the task-local portable runtime instead of an installed Node, add its d
 | Command | Behavior and requirements |
 | --- | --- |
 | `npm run dev` | Compile shared packages, then watch them and serve the web app at port 3000. Reads the hosted public settings in `apps/web/.env.local`; no Docker. |
-| `npm run check` | ESLint with zero warnings, shared-package/application type checks, operation-state tests and synthetic SSR cookie/cache tests. Generates Next.js types before checking a fresh clone. No Docker or hosted credentials needed. |
+| `npm run check` | ESLint with zero warnings, shared/application type checks, domain/SSR/extension/Auth/IndexedDB/PDF tests. Generates Next.js types and package output on a fresh clone. No Docker or hosted credentials needed. |
 | `npm run build` | Compile all four shared packages, build the Next.js production app and bundled MV3 extension. |
 | `npm run db:start` | Start the local Supabase stack. Requires a running Docker-compatible engine; first run downloads images. |
 | `npm run db:test` | Execute rollback-only pgTAP tests against the running local stack. Does not start Docker or apply a reset. |
 | `npm run db:check:hosted` | Read-only hosted Auth connectivity probe; separately attempt an authenticated existing-table query only when the documented synthetic-user token/table prerequisites are provided. Nonzero if incomplete or failed; no Docker. |
 | `npm run extension:build` | Compile shared packages and rebuild `apps/extension/dist/`. No web build required. |
+| `npm run feasibility:pdf` | Generate the two-page synthetic sample, parse/render it with PDF.js, verify text/bounds/repeated hash, and write `output/pdf/phase0-synthetic-resume.pdf` plus ignored page PNGs. Uses the native canvas development dependency. |
 | `npm run db:stop` | Stop this project's local Supabase services, preserving local data. |
 | `npm run db:reset` | Reset the **local** database, reapply migrations and seeds. Destructive to local development data; use intentionally. |
 | `npm run lint` / `npm run typecheck` / `npm test` | Run a single check. Type checking builds package declarations; tests use Node's built-in TypeScript test runner. |
@@ -52,12 +53,14 @@ npm run extension:build
 
 1. Open `chrome://extensions` in desktop Chrome and enable Developer mode.
 2. Choose **Load unpacked** and select `apps/extension/dist`.
-3. Click the extension action to open its full workspace page; switch between Resume and Profile.
+3. Click the extension action to open its full workspace page. The Resume view contains the directory and synthetic PDF probes; Profile remains a placeholder with no candidate data.
 4. After source changes, rebuild and reload the extension on `chrome://extensions`, then reload its workspace tab.
 
-For source watching, run `npm run dev --workspace @candidate/extension` after `npm run build:packages`. Shared-package edits also need the root dev watcher or a new `build:packages` run. HTML/manifest edits require restarting the extension watcher. Builds bundle scripts locally and do not use a development server or remote executable code. The shell requests no host, filesystem, history, or capture permissions. The `chrome120` output target is a conservative syntax target, not a completed browser-compatibility gate.
+For source watching, run `npm run dev --workspace @candidate/extension` after `npm run build:packages`. Shared-package edits also need the root dev watcher or a new `build:packages` run. Restart the watcher for HTML/manifest/config/font/worker-asset edits. Builds bundle scripts, PDF.js worker and licensed fonts locally. The extension requests `storage` plus only configured Supabase/API hosts; it requests no history/capture/identity/downloads permission. Directory picking uses the user-authorized browser API. The `chrome120` syntax target is not a completed browser-support gate.
 
-`apps/extension/.env.example` reserves future **public** API configuration. The current shell makes no API requests and does not load this file or inject arbitrary environment variables. Do not add tokens or privileged keys to extension configuration. Authentication, exact-origin permissions and capture are separate tasks.
+The build reads the two public hosted settings from `apps/web/.env.local`. Optional `EXTENSION_PUBLIC_*` overrides can be set in ignored `apps/extension/.env.local` or the shell; `.env.example` remains placeholders. Only an explicit public configuration allowlist enters the bundle. Never add tokens or privileged keys. For the identity-only API check, set the web app's server-only `FEASIBILITY_API_ENABLED=true` and `EXTENSION_ALLOWED_ORIGIN` to the actual origin shown in the extension, then restart the web dev server. Production always disables this endpoint.
+
+Read [FEASIBILITY.md](docs/FEASIBILITY.md) for results, the synthetic sample, exact Chrome/manual test instructions and unsupported behavior. Automated checks do not establish live sign-in, actual directory-handle persistence, or MV3 PDF.js/CSP support. The user selected existing email/password Auth; the proposed PKCE gate remains unverified.
 
 ## Optional local database
 
@@ -80,7 +83,7 @@ There are no application migrations or candidate seeds yet. `supabase/migrations
 | `apps/extension` | TypeScript MV3 event worker and React workspace; esbuild bundles local artifacts. |
 | `packages/contracts` | Unchanged canonical resume v1 schema, starter API/error/operation types. No validator yet. |
 | `packages/domain` | Shared business rules, starting with independent operation progress. |
-| `packages/resume-engine` | Typed document-rendering boundary. PDF renderer and templates are not implemented. |
+| `packages/resume-engine` | Typed rendering boundary plus a fixed synthetic pdf-lib/fontkit feasibility renderer. Production validators/templates are pending. |
 | `packages/ui` | Shared accessible shell components and styles; no server credentials or database imports. |
 | `supabase` | Local configuration, migration directory, synthetic seed boundary and pgTAP tests. |
 | `docs` | Design transcription, build plan, decisions, progress, and implementation evidence. |

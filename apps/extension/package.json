@@ -6,14 +6,24 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "dev": "node scripts/build.mjs --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "feasibility:pdf": "node scripts/generate-feasibility.mjs"
   },
   "dependencies": {
     "@candidate/contracts": "0.1.0",
     "@candidate/domain": "0.1.0",
     "@candidate/resume-engine": "0.1.0",
     "@candidate/ui": "0.1.0",
+    "@supabase/supabase-js": "2.118.0",
+    "pdfjs-dist": "6.4.299",
     "react": "19.3.1",
     "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "1.0.11",
+    "@types/wicg-file-system-access": "2023.10.7",
+    "fake-indexeddb": "6.2.6",
+    "tsx": "4.23.15"
   }
 }

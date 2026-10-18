@@ -2,23 +2,27 @@ import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { EmptyState, WorkspaceShell } from "@candidate/ui";
 import "@candidate/ui/styles.css";
+import { AuthProbe } from "./components/AuthProbe";
+import { DirectoryProbe } from "./components/DirectoryProbe";
+import { PdfProbe } from "./components/PdfProbe";
+import "./workspace.css";
 
 function ExtensionWorkspace() {
   const [view, setView] = useState<"resume" | "profile">("resume");
 
   return (
     <WorkspaceShell title="Candidate workspace" description="Prepare resumes and review your selected candidate profile.">
+      <p className="probe-notice">Phase 0 checks use synthetic data only. Saving or exporting a sample does not submit an application.</p>
+      <AuthProbe />
       <nav className="workspace-views" aria-label="Workspace views">
         <button type="button" aria-pressed={view === "resume"} onClick={() => setView("resume")}>Resume</button>
         <button type="button" aria-pressed={view === "profile"} onClick={() => setView("profile")}>Profile</button>
       </nav>
       {view === "resume" ? (
-        <EmptyState title="Prepare a resume">
-          <p>Account connection and candidate selection are coming next. Resume preparation will be available after setup.</p>
-        </EmptyState>
+        <><DirectoryProbe /><PdfProbe /></>
       ) : (
         <EmptyState title="No candidate selected">
-          <p>Your authorized candidate profile will appear here after you connect your account.</p>
+          <p>The sign-in probe verifies identity only. Application membership, candidate selection, and profile permissions remain later tasks.</p>
         </EmptyState>
       )}
     </WorkspaceShell>

@@ -17,7 +17,7 @@
     "check": "npm run lint && npm run typecheck && npm test",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "npm run build:packages && tsc -p tsconfig.tests.json && npm run typecheck --workspace @candidate/web && npm run typecheck --workspace @candidate/extension",
-    "test": "node --test packages/domain/src/operation-progress.test.ts && npm test --workspace @candidate/web",
+    "test": "npm run build:packages && node --test packages/domain/src/operation-progress.test.ts && npm test --workspace @candidate/web && npm test --workspace @candidate/extension",
     "build:packages": "tsc -b packages/contracts packages/domain packages/resume-engine packages/ui",
     "build": "npm run build:packages && npm run build --workspace @candidate/web && npm run build --workspace @candidate/extension",
     "db:start": "supabase start",
@@ -25,7 +25,8 @@
     "db:reset": "supabase db reset --local",
     "db:test": "supabase test db",
     "db:check:hosted": "npm run supabase:check --workspace @candidate/web",
-    "extension:build": "npm run build:packages && npm run build --workspace @candidate/extension"
+    "extension:build": "npm run build:packages && npm run build --workspace @candidate/extension",
+    "feasibility:pdf": "npm run build:packages && npm run feasibility:pdf --workspace @candidate/extension"
   },
   "devDependencies": {
     "@types/chrome": "0.3.5",

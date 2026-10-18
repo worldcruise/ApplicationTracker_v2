@@ -81,6 +81,17 @@ The first task is a reviewable decision record. Bootstrap exists only to support
 | T007 | Prove authorized directory access and truthful fallback. | T002 | D§14, 16–17, 24 | On recorded Chrome/Windows versions, user gesture, picker, persisted handle, restart renewal, and cross-tab access are tested. Record actual relative-path/OS-open capability, denied-access states, and D01/D02 disposition. |
 | T008 | Prove typography and PDF preview from shared bytes. | T002, T004 | D§13, 22 | Bundled licensed fonts, Unicode names, long bullets, selectable text, and multipage layout work with pdf-lib and PDF.js; preview/export consume the same bytes. Record feasibility and D06/D11 evidence. |
 
+### Explicit Phase 0 feasibility increments
+
+The user requested the following probes after H001, before the full contract/schema sequence. These are isolated synthetic-data feasibility implementations; they do not waive T006's T003–T005 dependencies, T008's T004 validation gate, or the manual Chrome acceptance evidence. Complete each code increment and record its checks before starting the next. Live gates stay pending until observed.
+
+| ID | Increment | Dependencies | Design sections | Acceptance criteria |
+| --- | --- | --- | --- | --- |
+| F001A | Extension Auth and shared-identity probe. | H001, T002 | D§4–5, 14 | Same hosted project; existing-account email/password sign-in selected by the user; trusted session storage and serialized refresh; authenticated development API identity check without business access; rejection tests; report missing account/browser evidence. Password sign-in does not complete the proposed PKCE/redirect gate in T006. |
+| F001B | Full-page directory-handle probe. | F001A code checks | D§14, 16–17 | Picker only on user gesture; handle persisted in IndexedDB; reopen queries permission without prompting; explicit renewal, denied/cancelled/unsupported states; every write rechecks permission; mocks separated from real Chrome evidence. |
+| F001C | Synthetic PDF rendering/preview/export probe. | F001B code checks | D§11, 13–14, 22 | Canonical v1 unchanged; bundled licensed fonts; Unicode/wrapping/multipage synthetic sample; PDF.js previews a copy of the exact persisted/exported bytes; hash verification and independent local/export status; no submission/database-write claim; visual/render tests and remaining Chrome gates documented. |
+| F001V | Record live Chrome acceptance evidence. | F001A–F001C code checks; available browser and existing synthetic account | D§4–5, 13–14, 24 | Record actual Chrome/Windows versions and observed sign-in/shared UUID, refresh/restart/worker-stop, real directory handle cloning/renewal/cross-tab behavior, PDF.js CSP preview and same-hash exports. Resolve remaining client/provider decisions explicitly; no mocked result substitutes for this gate. |
+
 ## Milestone 1 Foundation
 
 Each database task includes migrations and allow/deny evidence for its new relations. A passing UI check cannot replace direct database checks.

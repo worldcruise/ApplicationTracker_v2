@@ -3,6 +3,7 @@
   "name": "Candidate Platform",
   "version": "0.1.0",
   "description": "Candidate resume and profile workspace.",
+  "permissions": ["storage"],
   "action": { "default_title": "Open candidate workspace" },
   "background": { "service_worker": "service-worker.js", "type": "module" },
   "content_security_policy": {
