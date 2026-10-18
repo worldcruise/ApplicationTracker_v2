@@ -26,7 +26,7 @@ export async function updateSession(request: NextRequest) {
   // Keep this immediately after client creation: it validates/refreshes the JWT.
   await supabase.auth.getClaims();
 
-  // Refresh is not authorization. The shell is public; no login route exists yet.
+  // Refresh is not authorization. Public pages remain public.
   // Protected API handlers must validate identity AND current membership/resource scope.
   // If redirecting, return preserveSessionResponse(response, NextResponse.redirect(url)).
   return response;

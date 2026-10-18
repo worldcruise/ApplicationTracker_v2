@@ -40,7 +40,7 @@ try {
   run(npm, ["run", "build"], baseEnv);
   const runtimeEnv = { ...baseEnv, SUPABASE_SERVICE_ROLE_KEY: serviceKey, NODE_ENV: "production" };
   step = "production server startup";
-  server = spawn(process.execPath, [fileURLToPath(new URL("../../../node_modules/next/dist/bin/next", import.meta.url)), "start", "--port", "3000"],
+  server = spawn(process.execPath, [fileURLToPath(import.meta.resolve("next/dist/bin/next")), "start", "--port", "3000"],
     { cwd: web, env: runtimeEnv, stdio: "ignore" });
   let ready = false;
   for (let i = 0; i < 60; i++) {
