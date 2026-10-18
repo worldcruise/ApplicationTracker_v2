@@ -152,6 +152,10 @@ begin
  if not p_active then
    update public.candidate_assignments set ended_at=now()
     where organization_id=p_org and team_id=p_team and user_id=p_user and ended_at is null;
+   update public.bid_access_grants g set revoked_at=now()
+    where g.organization_id=p_org and g.user_id=p_user and g.revoked_at is null and
+     (exists(select 1 from public.candidates c where c.organization_id=p_org and c.id=g.candidate_id and c.owning_team_id=p_team)
+      or exists(select 1 from public.bids b where b.organization_id=p_org and b.id=g.bid_id and b.team_id=p_team));
  end if;
  perform private.audit(p_org,'team.membership_changed',p_user,p_request,p_team,jsonb_build_object('active',p_active,'role',p_role));
  return v_version;
