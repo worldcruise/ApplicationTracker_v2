@@ -7,20 +7,26 @@
     "dev": "next dev",
     "typecheck": "next typegen && tsc --noEmit",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "tsx --test tests/supabase.test.ts",
+    "supabase:check": "node --env-file-if-exists=.env.local scripts/check-supabase.mjs"
   },
   "dependencies": {
     "@candidate/contracts": "0.1.0",
     "@candidate/domain": "0.1.0",
     "@candidate/resume-engine": "0.1.0",
     "@candidate/ui": "0.1.0",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.118.0",
     "next": "16.4.2",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
     "postcss": "8.5.30",
-    "tailwindcss": "4.3.3"
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15"
   }
 }

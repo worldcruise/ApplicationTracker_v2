@@ -2,7 +2,7 @@
 
 Last updated: 17 October 2026, America/New_York.
 
-Repository status: npm workspace scaffold complete under the user's implementation request. T001 and T002 are complete. All later implementation tasks remain pending; scaffolding does not complete authentication, database authorization, resume validation, or browser feasibility gates.
+Repository status: T001, T002, and the explicitly requested H001 hosted Supabase SSR foundation are complete. T003–T063 remain pending. The web shell now uses hosted development without Docker; sign-in UI, application schema/authorization, resume validation, and browser feasibility gates are not complete.
 
 ## Completed work
 
@@ -13,14 +13,16 @@ Repository status: npm workspace scaffold complete under the user's implementati
 | CTX03 | Reviewed contradictions, coverage gaps and open decisions; verified the documentation handoff. | C01 records required versus optional phone; G01–G10 distinguish ambiguities/refinements/coverage gaps; D01–D11 retain policy, feasibility and operational gates. Verification details below. |
 | T001 | Recorded scaffold authorization and explicit pending dispositions for the conflict, coverage gaps, and decision owners. | [Decision 0001](decisions/0001-workspace-scaffold.md) preserves all affected gates and owner roles without inventing product approvals. |
 | T002 | Created the npm monorepo, minimal web/MV3 shells, four shared packages, Supabase configuration/test boundary, environment examples, and local setup instructions. | Exact stable dependencies and npm lockfile; root checks and production builds pass; development/production HTTP and extension artifact smoke checks pass. See scaffold verification and limitations below. |
+| H001 | Added hosted Supabase browser/request-scoped server clients, Next 16 proxy refresh, uncached session responses, and separate connectivity diagnostics. Configured ignored app-local public settings without changing example placeholders or remote schema. | Root check passes five tests; production web/extension builds pass and identify the proxy; hosted Auth accepts the public key; served shell/API-404 cache headers and static matcher exclusion pass. [Hosted workflow/manual test plan](HOSTED_SUPABASE.md) and [decision 0002](decisions/0002-hosted-supabase-ssr.md) record prerequisites and the cookie-design conflict. |
 
 ## Current work
 
-No implementation task is active. The authorized scaffold is complete; T003 is the next scoped task when requested.
+No implementation task is active. H001's requested configuration work is complete with the verification limits below; T003 remains the next planned task when requested. Authentication UI, application schema, membership/permission enforcement features, and later task acceptance gates remain pending.
 
 ## Blockers and dependencies
 
-- Node/npm were absent from the initial PATH. Verified with an official portable Node 24.22.0/npm 11.19.1 runtime under ignored `.tools/`; no system runtime installation was changed. Docker/Podman is absent, so the configured local database and pgTAP tests could not run.
+- Node/npm were absent from the initial PATH. Verified with an official portable Node 24.22.0/npm 11.19.1 runtime under ignored `.tools/`; no system runtime installation was changed. Docker/Podman is absent; hosted development now needs neither, while optional local pgTAP tests remain unavailable.
+- Hosted Auth connectivity succeeds. No test-user session/token, approved existing application table, CLI access token, or database password was supplied. No application SQL migrations exist locally; hosted table existence is unverified. Authenticated database access, real browser token rotation, hosted migrations and application authorization cannot be claimed as verified. No remote Auth/schema/RLS/account change was performed.
 - No browser is exposed by the available browser tooling. Interactive web/extension checks and loading the unpacked extension remain unverified; HTTP and built-artifact checks are recorded separately below.
 - One development-only braces advisory produces four high audit findings through Next's lint plugin. No patched braces release was available; track the upstream fix. Runtime dependency audit reports zero vulnerabilities. See the dated verification and README.
 - C01 requires product confirmation before freezing candidate completeness rules: PRD §7.1 both lists phone as required and cautions against assuming every candidate has one; design §1 makes it optional. Draft/Ready validation is a proposed design interpretation, not recorded product approval.
@@ -39,11 +41,32 @@ No implementation task is active. The authorized scaffold is complete; T003 is t
 | T002-D01 | 2026-10-17 | Use npm workspaces with Node 24/npm 11, Next 16/React 19, Tailwind 4, TypeScript 5.9, ESLint 10, and esbuild for MV3. | User-selected structure; exact stable package versions and compatible peers are locked. TypeScript remains within the parser's supported range; Next lint rules use its plugin directly. |
 | T002-D02 | 2026-10-17 | Copy canonical schema v1 unchanged and expose starter API/error/state and renderer boundaries only. | T003–T005 own complete contracts/validation; T008 owns rendering feasibility. No business routes, candidate tables, permissions, document generation, or submission behavior is claimed. |
 | T002-D03 | 2026-10-17 | Keep project instructions in root AGENTS.md; disable Next's automatic managed-agent-file generation. | The development smoke check demonstrated that default Next behavior creates `apps/web/AGENTS.md`; `agentRules: false` removes that generated-only file and keeps development from changing instruction files. |
+| H001-D01 | 2026-10-17 | Use hosted development with Supabase SSR 0.12.7/JS 2.118.0 and actual `src/proxy.ts` on installed Next 16.4.2. | Explicit user request and current official SSR guidance; compatible package peers/Node versions, pinned lockfile, request-scoped server clients, and no privileged credentials. Docker remains optional. |
+| H001-C01 | 2026-10-17 | Record the design §4 HttpOnly conflict and follow the specifically requested browser/server SSR pattern with JavaScript-readable Supabase session cookies. | [Decision 0002](decisions/0002-hosted-supabase-ssr.md). SameSite=Lax/Secure production transport is explicit; strict HttpOnly-only transport needs a separately scoped architecture decision. Membership checks and CSRF requirements are not waived. |
 | C01 / D01–D11 | Pending | Product/policy and feasibility decisions remain unresolved; recommended defaults have not been accepted on an owner's behalf. | See [comparison and decision register](BUILD_PLAN.md#requirements-comparison-and-decision-register), including owner roles and affected gates. |
 
 Relative paths and collision-safe folder suffixes are compatible refinements: the PRD explicitly allows relative path copying and labels its folder layout recommended. They are not recorded as contradictions. Interviews separating lifecycle from outcome, and bidder export being distinct from generation, also preserve the stated requirements.
 
 ## Verification
+
+### H001 hosted SSR verification — 17 October 2026
+
+Passed:
+
+- Inspected installed Next 16.4.2, Node 24.22.0, React 19.3.1, source layout/aliases, existing shell, rules, design/PRD Auth boundaries, and absence of existing Supabase integration. Added one explicitly scoped H001 preparation task without marking future foundation/auth tasks complete.
+- Consulted the [official SSR client/proxy guide](https://supabase.com/docs/guides/auth/server-side/creating-a-client), advanced cookie/cache guidance, current npm package metadata and pinned CLI help. Installed exact web-workspace dependencies and updated `package-lock.json`; SSR's JS ^2.114.0 peer and JS's Node >=22 requirement are satisfied.
+- `npm run check`: zero lint warnings, shared/web/extension type checks, two domain tests and three web tests. Real Supabase SDK tests with synthetic mocked Auth exercise near-expiry refresh with multiple cookie chunks, immediate forwarded request/response synchronization, persistence without repeat refresh, redirect cookie attributes/deletions/cache headers, and preserving user Authorization while overriding fetch caching. These are offline tests, not real hosted-user authentication.
+- `npm run build`: all shared packages, Next web and MV3 extension pass. Next reports dynamic `/` and `Proxy (Middleware)`, proving the installed version discovers `src/proxy.ts`. Build ran outside this environment's filesystem sandbox for the existing extension bundler restriction.
+- Production HTTP smoke: `/` returns 200 with the expected public shell; `/api/v1/not-implemented` returns 404, exposing no invented API route. Both carry private/no-store, `Pragma: no-cache`, and `Expires: 0`. A real `/_next/static` asset returns success without the proxy cache headers, validating the matcher exclusion. Test server stopped afterward.
+- `npm run db:check:hosted`: after retrying outside the network sandbox (initial `EACCES`), hosted Auth settings accepted the configured publishable key (`SERVICE_OK`). The separate authenticated query correctly did not run: `MISSING_AUTHENTICATION` and `MISSING_TABLE_CONFIGURATION`; script exit 2 is reported by npm as a nonzero lifecycle failure. No test table was created or RLS relaxed.
+- `npm audit --omit=dev`: zero vulnerabilities after adding Supabase dependencies. Earlier development-only braces follow-up remains recorded below.
+- `.env.local` is ignored by Git; only the supplied public URL/key were set, preserving unrelated content. Example files remain placeholders. No service-role/secret key is imported into source or clients. Source PRD/design and schema v1 remain unchanged. JSON/whitespace, dependency graph, local documentation links, and diff review pass.
+
+Not run / remaining prerequisites:
+
+- No browser is exposed (empty browser inventory), and no approved synthetic account session/sign-in flow is available. Real hosted browser refresh, invalid-refresh/network interaction, and actual protected redirects remain manual checks in [HOSTED_SUPABASE.md](HOSTED_SUPABASE.md#manual-session-refresh-test-plan). Current shell has no sign-in/callback route or protected data.
+- No authorized test table/token was provided; local migration folder contains no application SQL. Remote table absence is not assumed. Membership/resource allow/deny tests and authenticated application queries remain blocked on their schema/test-identity prerequisites.
+- CLI management authentication, project linking, database credentials, remote baseline reconciliation, migration dry-run/application, and pgTAP execution were not performed. CLI hosted flags were checked with `--help`; the Docker-free workflow is documented. No migration is needed for application client configuration.
 
 ### T002 scaffold verification — 17 October 2026
 

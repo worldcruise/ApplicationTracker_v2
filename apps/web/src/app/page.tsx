@@ -1,5 +1,8 @@
 import { EmptyState, WorkspaceShell } from "@candidate/ui";
 
+// The proxy may refresh a session even on this public shell; do not use ISR.
+export const dynamic = "force-dynamic";
+
 export default function HomePage() {
   return (
     <WorkspaceShell

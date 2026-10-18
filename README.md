@@ -1,6 +1,6 @@
 # Candidate Platform
 
-An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. This scaffold provides two empty application shells and local development tooling. Authentication, candidate records, PDF rendering, saving, submission, and production authorization are later build-plan tasks.
+An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. The web shell uses hosted Supabase development with SSR session-refresh plumbing. Sign-in UI, candidate records, PDF rendering, saving, submission, and application authorization are later build-plan tasks.
 
 ## Local setup
 
@@ -13,9 +13,11 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The shared packages compile first and rebuild in watch mode alongside Next.js. Stop both processes with Ctrl+C. No API key, database, or environment file is required to build or view either shell. If PowerShell blocks `npm.ps1`, use `npm.cmd` for the same commands; no execution-policy change is needed.
+Open [http://localhost:3000](http://localhost:3000). The shared packages compile first and rebuild in watch mode alongside Next.js. Stop both processes with Ctrl+C. Hosted development needs no Docker or local database startup. If PowerShell blocks `npm.ps1`, use `npm.cmd` for the same commands; no execution-policy change is needed.
 
-For future web integrations, copy `apps/web/.env.example` to `apps/web/.env.local` and fill in the public Supabase settings from your development project. A root `.env.example` lists the same settings for reference; Next.js reads the web app's file. The service-role slot is server-only and should stay blank until a server-only feature needs it. Never prefix a secret with `NEXT_PUBLIC_`. Local settings and credentials are ignored by Git. Use only synthetic data during development.
+Before serving the web app, configure `apps/web/.env.local`. It has already been created for the supplied hosted development project in this working copy. On a fresh clone, copy `apps/web/.env.example` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from the development project's Connect dialog. Preserve an existing local file rather than overwriting it. The examples contain placeholders; real values remain ignored. Restart Next after changing environment settings. Builds and offline tests do not require hosted credentials, but the session-refresh proxy requires the two public settings at request time.
+
+The root `.env.example` is a reference; Next reads the web application's file. The service-role slot remains blank and is not used by these clients. Never prefix a secret with `NEXT_PUBLIC_`. Use only synthetic data. See [hosted Supabase setup, migrations, diagnostics, and manual refresh testing](docs/HOSTED_SUPABASE.md) and the [cookie-design exception](docs/decisions/0002-hosted-supabase-ssr.md).
 
 If using the task-local portable runtime instead of an installed Node, add its directory to PATH for the terminal session before running npm. `.tools/` is ignored and is not part of the repository setup contract.
 
@@ -23,11 +25,12 @@ If using the task-local portable runtime instead of an installed Node, add its d
 
 | Command | Behavior and requirements |
 | --- | --- |
-| `npm run dev` | Compile shared packages, then watch them and serve the web app at port 3000. No credentials needed. |
-| `npm run check` | ESLint with zero warnings, shared-package/application type checks, and shared operation-state tests. Generates Next.js types before checking a fresh clone. No Docker or secrets needed. |
+| `npm run dev` | Compile shared packages, then watch them and serve the web app at port 3000. Reads the hosted public settings in `apps/web/.env.local`; no Docker. |
+| `npm run check` | ESLint with zero warnings, shared-package/application type checks, operation-state tests and synthetic SSR cookie/cache tests. Generates Next.js types before checking a fresh clone. No Docker or hosted credentials needed. |
 | `npm run build` | Compile all four shared packages, build the Next.js production app and bundled MV3 extension. |
 | `npm run db:start` | Start the local Supabase stack. Requires a running Docker-compatible engine; first run downloads images. |
 | `npm run db:test` | Execute rollback-only pgTAP tests against the running local stack. Does not start Docker or apply a reset. |
+| `npm run db:check:hosted` | Read-only hosted Auth connectivity probe; separately attempt an authenticated existing-table query only when the documented synthetic-user token/table prerequisites are provided. Nonzero if incomplete or failed; no Docker. |
 | `npm run extension:build` | Compile shared packages and rebuild `apps/extension/dist/`. No web build required. |
 | `npm run db:stop` | Stop this project's local Supabase services, preserving local data. |
 | `npm run db:reset` | Reset the **local** database, reapply migrations and seeds. Destructive to local development data; use intentionally. |
@@ -56,16 +59,16 @@ For source watching, run `npm run dev --workspace @candidate/extension` after `n
 
 `apps/extension/.env.example` reserves future **public** API configuration. The current shell makes no API requests and does not load this file or inject arbitrary environment variables. Do not add tokens or privileged keys to extension configuration. Authentication, exact-origin permissions and capture are separate tasks.
 
-## Local database
+## Optional local database
 
-Install and start Docker Desktop (or another Supabase-compatible Docker engine), then:
+The default development workflow uses hosted Supabase and skips these commands. For optional local Supabase testing only, install and start Docker Desktop (or another compatible engine), then:
 
 ```sh
 npm run db:start
 npm run db:test
 ```
 
-The Supabase CLI is pinned as a root development dependency. No global CLI installation or hosted Supabase account is required. Defaults in `supabase/config.toml` use API port 54321, PostgreSQL 54322, Studio 54323 and test mail 54324. Keep these development services local. Public signup, analytics, object storage and edge functions are disabled until needed. Do not paste local or production secrets into tracked files, logs or client bundles.
+The Supabase CLI is pinned as a root development dependency. Local defaults in `supabase/config.toml` use API port 54321, PostgreSQL 54322, Studio 54323 and test mail 54324. Keep these development services local. Local signup, analytics, storage and edge-function settings do not configure the hosted project. Hosted CLI migrations need separate CLI authentication and database credentials as documented in [HOSTED_SUPABASE.md](docs/HOSTED_SUPABASE.md). Do not paste secrets into tracked files, logs or client bundles.
 
 There are no application migrations or candidate seeds yet. `supabase/migrations/` is the required home for timestamped SQL changes, including permissions and policies. `supabase/tests/000_infrastructure.test.sql` checks the local Auth schema/role inside a transaction and rolls back; it does **not** establish or test application RLS. Later tables require backend permission checks, RLS/grants, and positive/negative database tests. New migrations can be created with `npx supabase migration new <name>`; run `db:reset` intentionally to verify from empty local state.
 
