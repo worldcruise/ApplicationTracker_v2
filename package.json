@@ -25,6 +25,7 @@
     "db:reset": "supabase db reset --local",
     "db:test": "supabase test db",
     "db:check:hosted": "npm run supabase:check --workspace @candidate/web",
+    "admin:bootstrap": "npm run admin:bootstrap --workspace @candidate/web --",
     "extension:build": "npm run build:packages && npm run build --workspace @candidate/extension",
     "feasibility:pdf": "npm run build:packages && npm run feasibility:pdf --workspace @candidate/extension"
   },

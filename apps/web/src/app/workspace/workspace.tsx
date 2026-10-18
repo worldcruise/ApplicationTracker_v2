@@ -1,0 +1,68 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import type { FoundationSnapshot, UserContext, BidderCandidate } from "@candidate/contracts";
+import { readApi } from "./requests";
+import { Administration } from "./administration";
+
+export function FoundationWorkspace({ context }: { context: UserContext }) {
+  const [org, setOrg] = useState(context.organizations[0]?.organizationId ?? "");
+  const currentOrg = useRef(org);
+  const [snapshot, setSnapshot] = useState<FoundationSnapshot | null>(null);
+  const [candidates, setCandidates] = useState<{ id: string; fullName: string; status: string }[]>([]);
+  const [error, setError] = useState("");
+  const [tick, setTick] = useState(0);
+  const [projection, setProjection] = useState<BidderCandidate | null>(null);
+  useEffect(() => {
+    let active = true;
+    setSnapshot(null); setCandidates([]); setProjection(null); setError("");
+    void (async () => {
+      try {
+        const result = await readApi<FoundationSnapshot>(`/api/v1/organizations/${org}`);
+        const rows = result.scope.role === "bidder" ? [] :
+          await readApi<typeof candidates>(`/api/v1/candidates?organizationId=${org}`);
+        if (active) { setSnapshot(result); setCandidates(rows); }
+      } catch (cause) { if (active) setError(cause instanceof Error ? cause.message : "The workspace could not be loaded."); }
+    })();
+    return () => { active = false; };
+  }, [org, tick]);
+  return <div className="grid gap-6">
+    <label className="grid max-w-md gap-1">Organization<select className="rounded border bg-white p-2" value={org} onChange={e => {
+      currentOrg.current = e.target.value; setSnapshot(null); setCandidates([]); setProjection(null); setError(""); setOrg(e.target.value);
+    }}>
+      {context.organizations.map(o => <option key={o.organizationId} value={o.organizationId}>{o.name}</option>)}
+    </select></label>
+    {error && <p role="alert">{error} <a className="underline" href="/workspace">Reload access</a></p>}
+    {!snapshot && !error && <p role="status">Checking current access…</p>}
+    {snapshot && <>
+      <section className="rounded border bg-white p-5"><h2 className="text-lg font-semibold">Current access</h2>
+        <p>Role: {snapshot.scope.role.replaceAll("_", " ")}</p><p>Teams: {snapshot.teams.map(t => t.name).join(", ") || "No active team scope"}</p>
+      </section>
+      {snapshot.scope.role === "bidder" ? <section className="rounded border bg-white p-5">
+        <h2 className="text-lg font-semibold">Authorized candidate preparation</h2>
+        <p className="mb-4 text-sm">Open a candidate using its assigned reference. A bid-specific grant also requires the bid reference.</p>
+        <form className="grid gap-3" onSubmit={async e => {
+          e.preventDefault(); setProjection(null); setError("");
+          const form = new FormData(e.currentTarget);
+          const candidateId = String(form.get("candidateId") ?? "");
+          const bidId = String(form.get("bidId") ?? "");
+          try {
+            const result = await readApi<BidderCandidate>(`/api/v1/candidates/${encodeURIComponent(candidateId)}?organizationId=${org}${bidId ? `&bidId=${encodeURIComponent(bidId)}` : ""}`);
+            if (currentOrg.current === org) setProjection(result);
+          } catch (cause) { if (currentOrg.current === org) setError(cause instanceof Error ? cause.message : "Preparation details are unavailable."); }
+        }}>
+          <label className="grid gap-1">Candidate reference<input name="candidateId" required className="rounded border p-2" /></label>
+          <label className="grid gap-1">Bid reference (when assigned)<input name="bidId" className="rounded border p-2" /></label>
+          <button className="w-fit rounded bg-slate-900 px-4 py-2 text-white">Open authorized details</button>
+        </form>
+        {projection && <article className="mt-5"><h3 className="font-semibold">{projection.fullName}</h3>
+          <p>{projection.location}</p>{projection.email && <p>{projection.email}</p>}{projection.phone && <p>{projection.phone}</p>}
+          <p className="mt-3 whitespace-pre-wrap">{projection.approvedSummary ?? "No approved summary is available."}</p>
+        </article>}
+      </section> : <section className="rounded border bg-white p-5"><h2 className="text-lg font-semibold">Candidates in your scope</h2>
+        {candidates.length ? <ul className="mt-3 grid gap-2">{candidates.map(c => <li key={c.id}>{c.fullName} <span className="text-sm text-slate-500">({c.status})</span></li>)}</ul> : <p>No candidates found in your authorized scope.</p>}
+      </section>}
+      {snapshot.scope.role === "admin" && <Administration key={org} snapshot={snapshot} refresh={() => setTick(n => n + 1)} />}
+    </>}
+  </div>;
+}
+

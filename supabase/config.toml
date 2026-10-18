@@ -35,10 +35,14 @@ enabled = false
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://127.0.0.1:3000"]
+additional_redirect_urls = ["http://localhost:3000/auth/callback?mode=recovery", "http://localhost:3000/account/update-password"]
 jwt_expiry = 3600
 enable_signup = false
 enable_anonymous_sign_ins = false
+
+[auth.email.template.invite]
+subject = "Your ApplicationTracker invitation"
+content_path = "./supabase/templates/invite.html"
 
 [analytics]
 enabled = false

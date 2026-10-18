@@ -38,3 +38,50 @@ Supabase's managed Auth schema grants cannot be delegated by the normal migratio
 - Deactivation is organization-scoped. It revokes database access immediately despite a valid token, retains identity/history and preserves access to other organizations. It does not globally ban an Auth identity or revoke sessions belonging to unrelated organizations. A global account shutdown/session purge requires a separately authorized platform operation; previously exported local files cannot be revoked.
 - H001-C01 remains: official browser/server SSR uses JavaScript-readable Supabase cookies. SameSite=Lax, Secure production cookies, no-store responses and server mutation CSRF checks remain required. Do not silently switch to an incompatible HttpOnly-only client pattern.
 - Live email delivery, callback behavior, browser sessions and hosted migration/application access require manual evidence. CI fixtures do not demonstrate hosted configuration or real account recovery.
+
+## Account setup and recovery
+
+1. Apply the reviewed migrations to an authorized development target following [HOSTED_SUPABASE.md](HOSTED_SUPABASE.md). This task does not apply them to the hosted project. Preserve existing `apps/web/.env.local`; the public project settings already configured there are reused.
+2. Set `NEXT_PUBLIC_APP_URL` to the exact application origin (locally `http://localhost:3000`). Set the hosted Auth Site URL to that origin and allow exactly `/auth/callback?mode=recovery` and `/account/update-password` redirects. The local config does not change hosted settings.
+3. Configure the hosted **invite** email template to use the link in `supabase/templates/invite.html`: `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite`. This exchanges a one-time invite hash server-side and redirects to a fixed password page. Keep the default recovery `{{ .ConfirmationURL }}` template for the browser-initiated PKCE flow; open recovery links in the same browser that requested them. A custom recovery template may instead use `/auth/confirm?token_hash={{ .TokenHash }}&type=recovery`. Do not log email links, query credentials, session cookies or request authorization headers in infrastructure.
+4. An authorized operator creates or invites and confirms the first synthetic Auth identity using the Supabase dashboard. Copy its UUID privately. No application password is stored. For this operator command and subsequent Auth invitations only, provide `SUPABASE_SERVICE_ROLE_KEY` through the ignored web env file or a server secret manager. Never prefix it with `NEXT_PUBLIC_`, send it to the extension, or paste it into a command argument.
+5. Bootstrap a **new** organization with a new UUID and the existing confirmed Auth UUID:
+
+```sh
+npm run admin:bootstrap -- --organization-id <new-organization-uuid> --admin-user-id <confirmed-auth-uuid> --name "Synthetic Development"
+npm run dev
+```
+
+The bootstrap RPC is executable only by `service_role`; it creates organization, active admin membership and audit atomically. It refuses an existing organization, so retries cannot attach or escalate a user. After an uncertain response, inspect memberships/audit before retrying. Retain the operator audit request ID. Remove the operator key after bootstrap if server invitations are not needed; ordinary application use never needs it.
+
+Visit `/sign-in`, then `/workspace`. The admin can invite/attach accounts, explicitly activate confirmed identities, change roles, deactivate/reactivate memberships, create teams and manage matching team roles. No public signup UI exists. An invitation attaches an **inactive** membership; only explicit activation enables access. Team membership and assignments must then be granted separately. The last active admin cannot be removed. `/account/recovery`, `/auth/callback` and `/account/update-password` implement recovery; sign-out uses Supabase Auth and clears its session cookies.
+
+Provisioning records `(organization, operationId, actor, requestHash)` before calling Auth. It checks for an existing identity first, reconciles an accepted invitation whose response was lost, and records `CONFIGURATION_REQUIRED` or `AUTH_UNAVAILABLE` while remaining `pending_auth` on failure. Retry the original frozen fields and operation ID through Account operations; a changed actor or payload is rejected. `awaiting_activation` advances to `completed` after activation. Existing deactivated memberships are never silently restored by an invitation. Another active admin may start a **new** operation ID for the same intended identity if the original actor is unavailable; the original operation remains part of the audit/reconciliation record. No global Auth ban or identity deletion is hidden inside organization deactivation.
+
+## Foundation API
+
+Every route is under `/api/v1`, validates identity and current membership server-side, uses the caller's public-key/JWT or SSR cookie context, and returns `{ requestId, data }` or the shared error envelope. Responses are private/no-store. Extension requests use a bearer token and the configured exact `EXTENSION_ALLOWED_ORIGIN`. Cookie mutations require the exact application `Origin`; malformed bearer headers never fall back to cookies. Database RLS and commands independently recheck scope. Missing migrations, unavailable Auth/database services, invalid authentication and denied access produce distinct 503/401/403 outcomes.
+
+| Route | Scope and behavior |
+| --- | --- |
+| `GET /me` | Current active organizations, roles and team memberships; no role from JWT metadata or client state. Empty organizations is an authenticated identity without active membership. |
+| `GET /organizations/{organizationId}` | RLS-filtered teams, memberships, assignments, grants and admin-only account operations. Display-name lookup also retains user RLS context. Initial lists cap at 100; complete cursor contracts remain T005. |
+| `GET /candidates?organizationId=...` | Admin/leader/assigned-member directory. Bidders are denied. |
+| `GET /candidates/{id}?organizationId=...&bidId=...` | Profile for authorized non-bidders; fixed safe projection for bidders. A bid-specific grant requires the exact bid ID. |
+| `POST /organizations/{organizationId}/commands` | Strict foundation command union in `packages/contracts/src/foundation.ts`; no arbitrary RPC name, actor, organization, permission override or unknown fields accepted. |
+
+Commands are `createTeam`, `setTeamMembership`, `setOrganizationMembership`, `createCandidate`, `changeAssignment`, `approveBidderSummary`, `createDraftBid`, `grantBidderAccess`, `revokeBidderAccess`, `provisionUser`. Administrative changes/grants require admin. Leaders create candidates, assign within their team and approve summaries. Members prepare assigned-candidate drafts; bidders need a candidate preparation grant to create a draft. Draft creation never submits an application. Candidate transfer and editing remain later tasks.
+
+Membership/approved-summary commands require `If-Match: "<rowVersion>"`; use `"0"` only when the team membership/approved summary does not exist yet. Responses expose `rowVersion` and ETag. New organization memberships are attached only by provisioning. Assignment end/add is idempotent for an unchanged desired assignment and retains ended rows. Only provisioning currently has a durable frozen operation/retry contract; do not automatically replay other creation commands after an uncertain response. Inspect current state first.
+
+Foundation command input bounds (32 KiB body; 200-character names/titles; 320-character email; 4,000-character approved summary) are defensive limits for these endpoints, not approval of the pending D11 resume/archive/load limits. Full OpenAPI, pagination and business field contracts remain T003–T005 and later entity tasks.
+
+## Manual acceptance still required
+
+- Use synthetic accounts for all four roles in two organizations. Check navigation and every command against current memberships, then deactivate/reassign while an old tab and access token remain open. Reload must reflect current scope; direct Supabase reads must also deny revoked access.
+- Sign in, reload, sign out, close/reopen tabs and exercise password recovery. Open a real delivered invite, set the password, confirm no operational access before admin activation, then add team/assignment scope. Test expired/reused links and provider/network failure separately. This computer has no exposed browser; an automated HTTP test is not visual/browser acceptance.
+- Follow [HOSTED_SUPABASE.md](HOSTED_SUPABASE.md)'s near-expiry proxy refresh, multi-chunk cookie, redirect, revoked-refresh-token and cross-profile cache-isolation checks. Both successful and unsuccessful responses must carry no-store and preserve refreshed/deleted cookie chunks.
+- Force an Auth invitation failure or remove the server admin key: operation stays pending with a safe code; restore configuration and retry the original operation. Repeat with Auth accepted but the client response lost. A payload change or different actor using the same key must fail.
+- Review hosted signup, email templates, redirect allowlists, SMTP limits/delivery and operator ownership before onboarding. Configure the invite-only policy with the owner; the previous hosted signup mismatch is not automatically resolved by local code.
+
+Implementation references: [official SSR client/session guidance](https://supabase.com/docs/guides/auth/server-side/creating-a-client), [password and recovery flows](https://supabase.com/docs/guides/auth/passwords), [Auth invitations](https://supabase.com/docs/reference/javascript/auth-admin-inviteuserbyemail), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [isolated CI testing](https://supabase.com/docs/guides/deployment/ci/testing).

@@ -44,6 +44,7 @@ select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-00000000
 set local role authenticated;
 
 select is((select count(*)::int from public.candidates),3,'admin sees only own organization candidates');
+select is((select count(*)::int from public.users),8,'admin roster excludes unrelated organization identities');
 select is((select count(*)::int from public.teams),2,'admin sees both organization teams');
 select is((select count(*)::int from public.interview_feedback),1,'admin can read own organization feedback');
 select throws_ok($$update public.organization_memberships set role='admin' where user_id='00000000-0000-4000-8000-000000000003'$$,'42501',null,'direct role mutation denied even to admin');
@@ -67,6 +68,7 @@ select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-00000000
 set local role authenticated;
 
 select is((select count(*)::int from public.candidates),1,'member sees only assigned candidate, not other owned records');
+select is((select count(*)::int from public.users),1,'member cannot enumerate organization identities');
 select is((select count(*)::int from public.interview_feedback),1,'assigned member sees scoped feedback');
 select throws_ok($$select public.change_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000003',true,'00000000-0000-4000-8000-000000000700')$$,'42501','FORBIDDEN','member cannot self-assign');
 select throws_ok($$select public.create_team('00000000-0000-4000-8000-000000000100','Escalation','00000000-0000-4000-8000-000000000700')$$,'42501','FORBIDDEN','forged JWT admin metadata is ignored');

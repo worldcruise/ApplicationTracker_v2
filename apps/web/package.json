@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "test": "tsx --test tests/*.test.ts",
-    "supabase:check": "node --env-file-if-exists=.env.local scripts/check-supabase.mjs"
+    "supabase:check": "node --env-file-if-exists=.env.local scripts/check-supabase.mjs",
+    "admin:bootstrap": "node --env-file-if-exists=.env.local scripts/bootstrap-admin.mjs"
   },
   "dependencies": {
     "@candidate/contracts": "0.1.0",
