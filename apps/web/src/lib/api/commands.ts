@@ -50,8 +50,8 @@ export async function executeCommand(command: FoundationCommand, context: Comman
       const candidate = await requireRow(client, "candidates", p_org, command.candidateId);
       requireManagedTeam(scope, String(candidate.owning_team_id));
       if (command.command === "changeAssignment") {
-        return { assignmentId: await rpc("change_candidate_assignment", { ...base, p_candidate: command.candidateId,
-          p_user: command.userId, p_assign: command.assign }) };
+        return rpc("set_candidate_assignment", { ...base, p_candidate: command.candidateId,
+          p_user: command.userId, p_assign: command.assign, p_expected: expectedVersion(request) });
       }
       return { rowVersion: await rpc("approve_bidder_summary", { ...base, p_candidate: command.candidateId,
         p_summary: command.summary, p_expected: expectedVersion(request) }) };

@@ -94,6 +94,16 @@ The user requested the following probes after H001, before the full contract/sch
 
 ## Milestone 1 Foundation
 
+### Candidate management increments (18 October 2026 request)
+
+Complete CM01, CM02, then CM03, reusing FN01–FN03. This request brings forward the candidate-specific subset of T005 and completes candidate profile/directory work without claiming the full resume/OpenAPI or later document/bid/interview workflows. C01 is resolved for implementation by the user's explicit choice: Ready requires name, email, location **and phone**; incomplete drafts remain valid. Original source documents remain unchanged.
+
+| ID | Increment | Design / plan | Acceptance |
+| --- | --- | --- | --- |
+| CM01 | Profile contracts, normalized children, immutable revisions, protected mutations | §§6, 8; T016–T018 | Ordered records, date precision, official/proposed/approved titles, four-field Ready rule, scoped RLS, transactional audit/revisions, optimistic edit/archive/assignment commands. |
+| CM02 | User-context candidate APIs and persistence tests | §§3, 6, 8–9; T017–T019 | Search/filter/sort/paging, create/read/edit, assignment/title approval/archive, safe tabs, real reload persistence, conflict and denied-access evidence in isolated CI. |
+| CM03 | Candidate directory and six-tab editor | §§3, 6; T020 | URL-preserved directory filters and selection, accessible structured editing/reordering, unsaved/conflict retention, assignments, archive/read-only states, honest later-workflow tabs; checks and progress evidence. |
+
 ### Explicit foundation increments (current user request)
 
 The requested foundation brings forward the minimum contracts and scope anchors needed by Sections 4–8. Execute FN01, FN02, then FN03. This does not complete T004/T005, full profile editing (T016–T018), the complete bid/company model (T036), interview workflows, or document-reference retrieval (T027). Their remaining fields and gates are retained.

@@ -23,6 +23,8 @@ Repository status: T001, T002, H001, F001A–F001C code increments and FN01–FN
 
 ## Current work
 
+**CM01 in progress — candidate management request.** Inspecting and extending the existing foundation in order: profile contracts/database/revisions, APIs and persistence checks, then directory and six-tab editor. User explicitly resolved C01: Ready requires name, email, location and phone; drafts may omit these. The faithful source documents are not rewritten.
+
 **Foundation milestone complete.** FN01, FN02 and FN03 were implemented in order and verified. No implementation task is currently in progress. The hosted project has not been migrated or configured by this task. The next ready scoped implementation task is T003; hosted setup and browser acceptance remain explicit operator/manual prerequisites.
 
 **F001V — Live Chrome acceptance pending.** No browser is exposed to the tools and no existing hosted test account has been entered through the extension. Follow the manual checklist in [FEASIBILITY.md](FEASIBILITY.md); record actual results before accepting the browser/client/provider gates. The user subsequently authorized the separate foundation increments above.

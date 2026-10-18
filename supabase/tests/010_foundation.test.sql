@@ -42,9 +42,7 @@ select ok(not has_function_privilege('authenticated','public.bootstrap_organizat
 select ok(not pg_has_role('authenticated','app_command','MEMBER'),'authenticated cannot assume command role');
 select ok(not has_column_privilege('app_permission_reader','public.candidates','private_notes','SELECT'),'permission helper cannot read profile notes');
 select ok(not has_function_privilege('app_bidder_reader','private.auth_identity(text)','EXECUTE'),'projection reader cannot look up Auth identities');
-select is((select count(*)::int from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_roles r on r.oid=p.proowner
- where n.nspname='public' and r.rolname='app_command' and p.prosecdef
-  and p.proconfig @> array['search_path=""'] and not has_function_privilege('anon',p.oid,'EXECUTE')),13,'every protected command has restricted ownership, empty search path and no anonymous execution');
+select ok((select bool_and(p.prosecdef and p.proconfig @> array['search_path=""'] and not has_function_privilege('anon',p.oid,'EXECUTE')) from pg_proc p join pg_namespace n on n.oid=p.pronamespace join pg_roles r on r.oid=p.proowner where n.nspname='public' and r.rolname='app_command'),'every protected command has restricted ownership, empty search path and no anonymous execution');
 reset role;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated","app_metadata":{"role":"admin"}}',true);
 set local role authenticated;
@@ -62,11 +60,11 @@ set local role authenticated;
 
 select is((select count(*)::int from public.candidates),2,'leader sees own team only');
 select is((select count(*)::int from public.interview_feedback),1,'own team leader sees feedback');
-select lives_ok($$select public.change_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000003',true,'00000000-0000-4000-8000-000000000700')$$,'leader can assign within team');
-select lives_ok($$select public.change_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000003',false,'00000000-0000-4000-8000-000000000700')$$,'leader can end assignment without deleting history');
+select lives_ok($$select public.set_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000003',true,coalesce((select row_version from public.candidates where id='00000000-0000-4000-8000-000000000301'),1),'00000000-0000-4000-8000-000000000700')$$,'leader can assign within team');
+select lives_ok($$select public.set_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000003',false,coalesce((select row_version from public.candidates where id='00000000-0000-4000-8000-000000000301'),1),'00000000-0000-4000-8000-000000000700')$$,'leader can end assignment without deleting history');
 select is((select count(*)::int from public.candidate_assignments where candidate_id='00000000-0000-4000-8000-000000000301' and ended_at is not null),1,'ended assignment preserved');
-select throws_ok($$select public.change_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000302','00000000-0000-4000-8000-000000000006',true,'00000000-0000-4000-8000-000000000700')$$,'42501','FORBIDDEN','leader cannot assign unrelated team');
-select throws_ok($$select public.change_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000300','00000000-0000-4000-8000-000000000006',true,'00000000-0000-4000-8000-000000000700')$$,'22023','INVALID_ASSIGNEE','cross-team assignee rejected');
+select throws_ok($$select public.set_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000302','00000000-0000-4000-8000-000000000006',true,coalesce((select row_version from public.candidates where id='00000000-0000-4000-8000-000000000302'),1),'00000000-0000-4000-8000-000000000700')$$,'42501','FORBIDDEN','leader cannot assign unrelated team');
+select throws_ok($$select public.set_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000300','00000000-0000-4000-8000-000000000006',true,coalesce((select row_version from public.candidates where id='00000000-0000-4000-8000-000000000300'),1),'00000000-0000-4000-8000-000000000700')$$,'22023','INVALID_ASSIGNEE','cross-team assignee rejected');
 select throws_ok($$select public.set_organization_membership('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000003','admin','active',1,'00000000-0000-4000-8000-000000000700')$$,'42501','FORBIDDEN','leader cannot escalate members');
 select lives_ok($$select public.create_candidate('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000200','00000000-0000-4000-8000-000000000003','Synthetic New Candidate','00000000-0000-4000-8000-000000000700')$$,'leader creates own-team candidate with eligible owner');
 reset role;
@@ -76,7 +74,7 @@ set local role authenticated;
 select is((select count(*)::int from public.candidates),1,'member sees only assigned candidate, not other owned records');
 select is((select count(*)::int from public.users),1,'member cannot enumerate organization identities');
 select is((select count(*)::int from public.interview_feedback),1,'assigned member sees scoped feedback');
-select throws_ok($$select public.change_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000003',true,'00000000-0000-4000-8000-000000000700')$$,'42501','FORBIDDEN','member cannot self-assign');
+select throws_ok($$select public.set_candidate_assignment('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000301','00000000-0000-4000-8000-000000000003',true,coalesce((select row_version from public.candidates where id='00000000-0000-4000-8000-000000000301'),1),'00000000-0000-4000-8000-000000000700')$$,'42501','FORBIDDEN','member cannot self-assign');
 select throws_ok($$select public.create_team('00000000-0000-4000-8000-000000000100','Escalation','00000000-0000-4000-8000-000000000700')$$,'42501','FORBIDDEN','forged JWT admin metadata is ignored');
 select lives_ok($$select public.create_draft_bid('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000300','Synthetic Additional Co','Engineer','00000000-0000-4000-8000-000000000700')$$,'assigned member can prepare draft');
 reset role;

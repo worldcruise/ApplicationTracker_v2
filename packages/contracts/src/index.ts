@@ -3,3 +3,4 @@ export * from "./resume.js";
 export * from "./api.js";
 export * from "./operations.js";
 export * from "./foundation.js";
+export * from "./candidates.js";

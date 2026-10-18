@@ -86,6 +86,10 @@ try {
     return { status: response.status, data: envelope.data, code: envelope.error?.code };
   }
   async function command(identity, organizationId, body, version, status = 200) {
+    if (body.command === "changeAssignment" && version === undefined) {
+      const current = await call(identity, `/candidates/${body.candidateId}?organizationId=${organizationId}`);
+      version = current.data.rowVersion;
+    }
     const result = await call(identity, `/organizations/${organizationId}/commands`, body, version);
     expect(result.status === status, `Command ${body.command} expected HTTP ${status}, received ${result.status} (${result.code ?? "OK"})`);
     return result.data;
