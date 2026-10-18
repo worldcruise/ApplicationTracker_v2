@@ -21,6 +21,9 @@ jobs:
         run: npm run db:start
       - run: npm run db:reset
       - run: npm run db:test
+      - run: npm run check
+      - name: Build and test production API with isolated synthetic Auth sessions
+        run: npm run test:foundation:http
       - name: Report local service status on failure
         if: failure()
         run: docker ps -a --format '{{.Names}} {{.Status}}'
