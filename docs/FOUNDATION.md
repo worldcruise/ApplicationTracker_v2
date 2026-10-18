@@ -32,6 +32,8 @@ Hosted development does not require Docker. Apply only reviewed migration files 
 
 ## Current decisions and limits
 
+Supabase's managed Auth schema grants cannot be delegated by the normal migration user. Fixed `private.actor_id`/`actor_role` bridges therefore remain migration-owned and delegate only to `auth.uid()`/`auth.role()` without querying tables. Two command-only Auth identity bridges read only ID/email/confirmation status; they cannot mutate identities or return password material. The business permission reader has no Auth-schema access. Every business mutation remains owned by the separate non-owner, NOBYPASSRLS command role. CI exercises this distinction on the actual Supabase stack.
+
 - D10: the implementation provides invite/attach plus explicit activation and an out-of-band bootstrap mechanism. The owner must still approve and configure hosted onboarding policy; hosted public signup was previously observed enabled. An uninvited Auth identity receives no organization membership.
 - Deactivation is organization-scoped. It revokes database access immediately despite a valid token, retains identity/history and preserves access to other organizations. It does not globally ban an Auth identity or revoke sessions belonging to unrelated organizations. A global account shutdown/session purge requires a separately authorized platform operation; previously exported local files cannot be revoked.
 - H001-C01 remains: official browser/server SSR uses JavaScript-readable Supabase cookies. SameSite=Lax, Secure production cookies, no-store responses and server mutation CSRF checks remain required. Do not silently switch to an incompatible HttpOnly-only client pattern.

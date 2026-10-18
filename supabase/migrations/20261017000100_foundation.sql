@@ -19,9 +19,9 @@ grant usage on schema private to authenticated;
 -- and expose no client-supplied identity or role. Business helpers and every
 -- mutation still use their separate non-owner NOBYPASSRLS roles.
 create function private.actor_id() returns uuid language sql stable security definer set search_path=''
-as $ select auth.uid() $;
+as $$ select auth.uid() $$;
 create function private.actor_role() returns text language sql stable security definer set search_path=''
-as $ select auth.role() $;
+as $$ select auth.role() $$;
 revoke all on function private.actor_id(),private.actor_role() from public;
 grant execute on function private.actor_id(),private.actor_role()
  to authenticated,app_permission_reader,app_command,app_bidder_reader;
@@ -382,6 +382,7 @@ grant execute on function private.reads_interview(uuid,uuid) to app_command, app
 -- Keep this narrow Auth-only lookup owned by the migration role.
 revoke all on function private.auth_identity(text) from public, anon, authenticated;
 grant execute on function private.auth_identity(text) to app_command, app_bidder_reader;
+revoke execute on function private.auth_identity(text) from app_bidder_reader;
 grant execute on function private.org_role(uuid),private.in_team(uuid,uuid),
  private.manages_team(uuid,uuid),private.reads_candidate(uuid,uuid),
  private.reads_bid(uuid,uuid),private.reads_interview(uuid,uuid) to authenticated;

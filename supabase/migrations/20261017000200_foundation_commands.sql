@@ -34,9 +34,9 @@ grant execute on function private.candidate_team(uuid,uuid) to app_command;
 grant insert on public.organizations to app_command;
 create policy command_insert on public.organizations for insert to app_command with check (private.actor_role()='service_role' or private.org_role(id)='admin');
 grant update on public.organizations to app_command;
-create policy command_update on public.organizations for update to app_command using (private.actor_role()='service_role' or private.org_role(id)='admin') with check (private.actor_role()='service_role' or private.org_role(id)='admin');
+create policy command_update on public.organizations for update to app_command using (private.actor_role()='service_role' or private.org_role(id) in ('admin','team_leader')) with check (private.actor_role()='service_role' or private.org_role(id) in ('admin','team_leader'));
 grant select on public.organizations to app_command;
-create policy command_select on public.organizations for select to app_command using (private.actor_role()='service_role' or private.org_role(id)='admin');
+create policy command_select on public.organizations for select to app_command using (private.actor_role()='service_role' or private.org_role(id) in ('admin','team_leader'));
 grant insert on public.users to app_command;
 create policy command_insert on public.users for insert to app_command with check (private.actor_role()='service_role' or private.has_admin_org());
 grant select on public.users to app_command;
@@ -211,6 +211,9 @@ create function public.change_candidate_assignment(p_org uuid,p_candidate uuid,p
 returns uuid language plpgsql security definer set search_path='' as $$
 declare v_team uuid; v_id uuid;
 begin
+ -- Serialize assignment changes with team/organization deactivation. Leaders
+ -- may lock their organization; no exported command lets them edit its fields.
+ perform 1 from public.organizations where id=p_org for update;
  select owning_team_id into v_team from public.candidates where organization_id=p_org and id=p_candidate for update;
  if v_team is null or not private.manages_team(p_org,v_team) then raise exception 'FORBIDDEN' using errcode='42501'; end if;
  if p_assign is null then raise exception 'INVALID_ASSIGNMENT' using errcode='22023'; end if;
