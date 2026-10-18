@@ -24,6 +24,20 @@ export function editableProfile(profile: CandidateProfile): CandidateProfileInpu
     }) };
 }
 
+// Ordered sections are merged as a unit: silently merging individual rows could
+// resurrect a deleted record or change a user-selected order.
+export function mergeCandidateDraft(base: CandidateProfileInput, mine: CandidateProfileInput, current: CandidateProfileInput) {
+  const merged = structuredClone(current);
+  const conflicts: (keyof CandidateProfileInput)[] = [];
+  for (const key of Object.keys(base) as (keyof CandidateProfileInput)[]) {
+    const localChanged = JSON.stringify(mine[key]) !== JSON.stringify(base[key]);
+    const remoteChanged = JSON.stringify(current[key]) !== JSON.stringify(base[key]);
+    if (localChanged && remoteChanged && JSON.stringify(mine[key]) !== JSON.stringify(current[key])) conflicts.push(key);
+    else if (localChanged) Object.assign(merged, { [key]: structuredClone(mine[key]) });
+  }
+  return { merged, conflicts };
+}
+
 export function partialDateRange(value: string): { start: number; end: number } | null {
   if (!/^[0-9]{4}(-[0-9]{2})?(-[0-9]{2})?$/.test(value)) return null;
   const [year, month = 1, day = 1] = value.split("-").map(Number);

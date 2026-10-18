@@ -54,11 +54,12 @@ export function FoundationWorkspace({ context }: { context: UserContext }) {
           <label className="grid gap-1">Bid reference (when assigned)<input name="bidId" className="rounded border p-2" /></label>
           <button className="w-fit rounded bg-slate-900 px-4 py-2 text-white">Open authorized details</button>
         </form>
-        {projection && <article className="mt-5"><h3 className="font-semibold">{projection.fullName}</h3>
+        {projection && <article className="mt-5"><h3 className="font-semibold">{projection.fullName ?? "Untitled draft"}</h3>
           <p>{projection.location}</p>{projection.email && <p>{projection.email}</p>}{projection.phone && <p>{projection.phone}</p>}
           <p className="mt-3 whitespace-pre-wrap">{projection.approvedSummary ?? "No approved summary is available."}</p>
         </article>}
       </section> : <section className="rounded border bg-white p-5"><h2 className="text-lg font-semibold">Candidates in your scope</h2>
+        <a className="my-3 inline-block underline" href={`/candidates?organizationId=${org}`}>Open candidate directory</a>
         {candidates.length ? <ul className="mt-3 grid gap-2">{candidates.map(c => <li key={c.id}>{c.fullName} <span className="text-sm text-slate-500">({c.status})</span></li>)}</ul> : <p>No candidates found in your authorized scope.</p>}
       </section>}
       {snapshot.scope.role === "admin" && <Administration key={org} snapshot={snapshot} refresh={() => setTick(n => n + 1)} />}

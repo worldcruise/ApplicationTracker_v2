@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
+import { testCandidateBrowser } from "./test-candidate-browser.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -248,6 +249,12 @@ try {
   const oldAssignment = await identities.leaderA.client.rpc("change_candidate_assignment", { p_org: orgA, p_candidate: managedId,
     p_user: identities.memberA.id, p_assign: true, p_request: randomUUID() });
   expect(oldAssignment.error?.code === "42501", "Legacy assignment RPC cannot bypass version checks");
+  step = "candidate headless Chromium acceptance";
+  try {
+    const browserChecks = await testCandidateBrowser({ org: orgA, team: teamA, identities, password });
+    expect(browserChecks === 15, "Candidate browser acceptance completes all 15 checkpoints");
+    console.log(JSON.stringify({ result: "PASS", browser: "headless Chromium", candidateCheckpoints: browserChecks }));
+  } catch (error) { throw new TestFailure(error.message); }
   step = "current membership and grant revocation with existing tokens";
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);
   expect((await call(identities.memberA, candidatePath(first))).status === 403, "Unexpired token loses application access after deactivation");
@@ -317,7 +324,7 @@ try {
   }
   inspect(`${web}/.next/static`);
   inspect(`${root}/apps/extension/dist`);
-  console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "not executed" }));
+  console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "candidate headless Chromium; interactive Chrome/extension pending" }));
 } catch (error) {
   console.error(JSON.stringify({ result: "FAIL", step, message: error instanceof TestFailure ? error.message : "Integration harness failed; inspect the isolated service health and current step." }));
   process.exitCode = 1;

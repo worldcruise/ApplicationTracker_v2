@@ -23,7 +23,7 @@ Repository status: T001, T002, H001, F001A–F001C code increments and FN01–FN
 
 ## Current work
 
-**CM01 database increment complete; CM02 API work in progress.** [Isolated CI at 60f56b5](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39177336087) passes all migrations, 132 pgTAP assertions and the existing production integration harness (281 assertions). Profile creation/edit/archive, four-field Ready, date precision, immutable revisions, title approval, assigned-member writes and bidder denial are verified. Shared API validation is being connected; next is candidate-specific API persistence/conflict testing before the UI increment.
+**CM01 and CM02 complete; CM03 UI increment in progress.** [Isolated CI at 2be3fd3](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39177860348) passes all migrations, 132 pgTAP assertions, 30 unit tests, production builds and 376 real Auth/API assertions. Refresh reads retain saved profiles/order; simultaneous requests yield one success and one conflict; immutable snapshots, title approval/reset, assignment revocation, four-field Ready, archive/restore and bidder denial are verified. Next: directory and six-tab editor with explicit conflict recovery and browser acceptance.
 
 **CM01 in progress — candidate management request.** Inspecting and extending the existing foundation in order: profile contracts/database/revisions, APIs and persistence checks, then directory and six-tab editor. User explicitly resolved C01: Ready requires name, email, location and phone; drafts may omit these. The faithful source documents are not rewritten.
 

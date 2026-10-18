@@ -1,11 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { emptyCandidateProfile, emptyExperience, partialDateRange, validateCandidateProfile, ProfileValidationFailure } from "@candidate/domain";
+import { emptyCandidateProfile, emptyExperience, partialDateRange, validateCandidateProfile, ProfileValidationFailure, mergeCandidateDraft } from "@candidate/domain";
 
 test("unknown drafts are valid; Ready requires the four explicitly selected facts", () => {
   assert.equal(validateCandidateProfile(emptyCandidateProfile()).warnings.length, 4);
   assert.throws(() => validateCandidateProfile({ ...emptyCandidateProfile(), status: "ready", fullName: "Synthetic Avery", email: "avery@example.invalid", location: "Synthetic City" }),
     error => error instanceof ProfileValidationFailure && error.issues.some(i => i.path === "phone"));
+});
+
+test("three-way conflict recovery preserves independent edits and requires choices for reordered/deleted sections", () => {
+  const base = { ...emptyCandidateProfile(), fullName: "Synthetic Avery", experiences: [emptyExperience(), emptyExperience()] };
+  const mine = { ...base, phone: "+1 202 555 0100", experiences: [base.experiences[1]!, base.experiences[0]!] };
+  const current = { ...base, fullName: "Synthetic Blake", experiences: [base.experiences[0]!] };
+  const result = mergeCandidateDraft(base, mine, current);
+  assert.equal(result.merged.fullName, current.fullName);
+  assert.equal(result.merged.phone, mine.phone);
+  assert.deepEqual(result.conflicts, ["experiences"]);
+  assert.deepEqual(result.merged.experiences, current.experiences);
+  assert.deepEqual(mergeCandidateDraft(base, mine, structuredClone(mine)).conflicts, []);
+  assert.equal(base.phone, null);
 });
 
 test("real date precision is retained and impossible dates/periods fail", () => {

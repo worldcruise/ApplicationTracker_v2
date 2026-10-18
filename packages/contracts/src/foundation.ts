@@ -17,7 +17,7 @@ export interface UserContext {
 /** Explicitly safe output: never extend with raw profile or feedback fields. */
 export interface BidderCandidate {
   candidateId: string;
-  fullName: string;
+  fullName: string | null;
   location: string | null;
   email: string | null;
   phone: string | null;
