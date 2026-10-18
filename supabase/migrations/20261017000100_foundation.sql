@@ -8,6 +8,10 @@ revoke create on schema public from public, anon, authenticated;
 create role app_permission_reader nologin nobypassrls noinherit;
 create role app_command nologin nobypassrls noinherit;
 create role app_bidder_reader nologin nobypassrls noinherit;
+-- Supabase's migration owner is not a superuser. Ownership transfers require
+-- SET ROLE membership and temporary CREATE on the containing schema.
+grant app_permission_reader, app_command, app_bidder_reader to postgres;
+grant create on schema public, private to app_permission_reader, app_command, app_bidder_reader;
 grant usage on schema public, private, auth to app_permission_reader, app_command, app_bidder_reader;
 grant usage on schema private to authenticated;
 grant execute on function auth.uid(), auth.role() to app_permission_reader, app_command, app_bidder_reader;

@@ -23,7 +23,7 @@ jobs:
       - run: npm run db:test
       - name: Report local service status on failure
         if: failure()
-        run: npx supabase status --output json | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>{const x=JSON.parse(s);console.log({API_URL:x.API_URL,DB_URL_PRESENT:!!x.DB_URL})})"
+        run: docker ps -a --format '{{.Names}} {{.Status}}'
       - name: Stop isolated stack
         if: always()
         run: npm run db:stop -- --no-backup

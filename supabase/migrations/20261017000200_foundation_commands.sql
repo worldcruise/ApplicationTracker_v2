@@ -442,5 +442,6 @@ end $$;
 alter function public.get_bidder_candidate(uuid,uuid,uuid) owner to app_bidder_reader;
 revoke all on function public.get_bidder_candidate(uuid,uuid,uuid) from public,anon;
 grant execute on function public.get_bidder_candidate(uuid,uuid,uuid) to authenticated;
+revoke create on schema public, private from app_permission_reader, app_command, app_bidder_reader;
 commit;
 
