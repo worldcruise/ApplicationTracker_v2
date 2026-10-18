@@ -19,7 +19,7 @@ function headers(request: Request, response: NextResponse): NextResponse {
   if (origin) {
     response.headers.set("Access-Control-Allow-Origin", origin);
     response.headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type, If-Match");
-    response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
     response.headers.set("Access-Control-Expose-Headers", "ETag");
   }
   return response;
@@ -41,7 +41,8 @@ export async function api(request: Request, work: (requestId: string) => Promise
   } catch (error) {
     const failure = error instanceof ApiFailure ? error : new ApiFailure(503, "SERVICE_UNAVAILABLE", "The application service is unavailable.", true);
     const body: ApiErrorResponse = { requestId, error: {
-      code: failure.code, message: failure.message, fieldErrors: [], retryable: failure.retryable,
+      code: failure.code, message: failure.message, fieldErrors: failure.fieldErrors, retryable: failure.retryable,
+      ...(failure.currentVersion === undefined ? {} : { currentVersion: failure.currentVersion }),
     } };
     return headers(request, NextResponse.json(body, { status: failure.status }));
   }

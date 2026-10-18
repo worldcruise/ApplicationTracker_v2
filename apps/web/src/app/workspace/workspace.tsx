@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { FoundationSnapshot, UserContext, BidderCandidate } from "@candidate/contracts";
+import type { FoundationSnapshot, UserContext, BidderCandidate, CandidateDirectory } from "@candidate/contracts";
 import { readApi } from "./requests";
 import { Administration } from "./administration";
 
@@ -19,7 +19,7 @@ export function FoundationWorkspace({ context }: { context: UserContext }) {
       try {
         const result = await readApi<FoundationSnapshot>(`/api/v1/organizations/${org}`);
         const rows = result.scope.role === "bidder" ? [] :
-          await readApi<typeof candidates>(`/api/v1/candidates?organizationId=${org}`);
+          (await readApi<CandidateDirectory>(`/api/v1/candidates?organizationId=${org}`)).items.map(c => ({ ...c, fullName: c.fullName ?? "Untitled draft" }));
         if (active) { setSnapshot(result); setCandidates(rows); }
       } catch (cause) { if (active) setError(cause instanceof Error ? cause.message : "The workspace could not be loaded."); }
     })();

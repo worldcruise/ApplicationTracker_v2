@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createOperationProgress } from "./index.ts";
+import { createOperationProgress } from "@candidate/domain";
 
 test("a local save cannot imply database synchronization or submission", () => {
   const progress = createOperationProgress();

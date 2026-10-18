@@ -65,7 +65,8 @@ returns jsonb language plpgsql stable security invoker set search_path='' as $$
 declare v_result jsonb; v_search text;
 begin
  if private.org_role(p_org) is null or private.org_role(p_org)='bidder' then raise exception 'FORBIDDEN' using errcode='42501'; end if;
- if p_status not in ('active','all','draft','ready','archived') or p_sort not in ('updated_desc','name_asc','name_desc','created_desc')
+ if p_status is null or p_sort is null or p_page is null or p_page_size is null or p_query is null or p_unassigned is null or
+  p_status not in ('active','all','draft','ready','archived') or p_sort not in ('updated_desc','name_asc','name_desc','created_desc')
   or p_page not between 1 and 100000 or p_page_size not between 1 and 100 or length(p_query)>200 then raise exception 'INVALID_FILTER' using errcode='22023'; end if;
  v_search:=replace(replace(replace(p_query,chr(92),chr(92)||chr(92)),'%',chr(92)||'%'),'_',chr(92)||'_');
  with filtered as materialized (
@@ -87,7 +88,11 @@ begin
  )
  select jsonb_build_object('total',(select count(*) from filtered),'page',p_page,'pageSize',p_page_size,
  'items',coalesce((select jsonb_agg(jsonb_build_object('id',id,'fullName',full_name,'email',email,'location',location,
- 'status',status,'owningTeamId',owning_team_id,'ownerId',owner_id,'rowVersion',row_version,'updatedAt',updated_at)) from page),'[]'::jsonb)) into v_result;
+ 'status',status,'owningTeamId',owning_team_id,'ownerId',owner_id,'rowVersion',row_version,'updatedAt',updated_at)
+ order by case when p_sort='name_asc' then lower(full_name) end asc nulls last,
+ case when p_sort='name_desc' then lower(full_name) end desc nulls last,
+ case when p_sort='updated_desc' then updated_at end desc,
+ case when p_sort='created_desc' then created_at end desc,id) from page),'[]'::jsonb)) into v_result;
  return v_result;
 end $$;
 revoke all on function public.list_candidates(uuid,text,text,uuid,uuid,uuid,boolean,text,integer,integer) from public,anon;

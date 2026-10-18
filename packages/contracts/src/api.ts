@@ -12,6 +12,7 @@ export interface ApiErrorResponse {
     message: string;
     fieldErrors: readonly { path: string; message: string }[];
     retryable: boolean;
+    currentVersion?: number;
   };
 }
 

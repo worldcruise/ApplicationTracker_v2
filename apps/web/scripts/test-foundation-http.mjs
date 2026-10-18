@@ -73,9 +73,9 @@ try {
   const boot = await operator.rpc("bootstrap_organization", { p_org: orgB, p_admin: identities.adminB.id, p_name: "Synthetic South", p_request: randomUUID() });
   expect(!boot.error, "Second isolated organization bootstrap");
 
-  async function call(identity, path, body, version, extra = {}) {
+  async function call(identity, path, body, version, extra = {}, method = body ? "POST" : "GET") {
     const response = await fetch(`http://localhost:3000/api/v1${path}`, {
-      method: body ? "POST" : "GET",
+      method,
       headers: { ...(identity ? { Authorization: `Bearer ${identity.token}` } : {}),
         ...(body ? { "Content-Type": "application/json" } : {}), ...(version === undefined ? {} : { "If-Match": JSON.stringify(String(version)) }), ...extra },
       ...(body ? { body: JSON.stringify(body) } : {}), redirect: "manual",
@@ -83,7 +83,7 @@ try {
     expect(/no-store/.test(response.headers.get("cache-control") ?? ""), "API responses are no-store");
     const envelope = await response.json();
     expect(typeof envelope.requestId === "string", "API response has request ID");
-    return { status: response.status, data: envelope.data, code: envelope.error?.code };
+    return { status: response.status, data: envelope.data, code: envelope.error?.code, currentVersion: envelope.error?.currentVersion, fieldErrors: envelope.error?.fieldErrors };
   }
   async function command(identity, organizationId, body, version, status = 200) {
     if (body.command === "changeAssignment" && version === undefined) {
@@ -165,6 +165,89 @@ try {
   const foreign = await identities.adminA.client.from("candidates").select("id").eq("organization_id", orgB);
   expect(!foreign.error && foreign.data.length === 0, "User context cannot bypass cross-tenant RLS");
 
+  step = "candidate API persistence, concurrent editing, history and archive";
+  const blank = { fullName: null, email: null, phone: null, location: null, seniorityPreference: null,
+    professionalSummary: null, privateNotes: null, status: "draft", links: [], experiences: [], educations: [], certifications: [] };
+  const createdProfile = await call(identities.adminA, `/candidates?organizationId=${orgA}`, { teamId: teamA, ownerId: identities.memberA.id, profile: blank });
+  expect(createdProfile.status === 200 && createdProfile.data.fullName === null, "Incomplete draft is persisted without invented facts");
+  const managedId = createdProfile.data.id;
+  const path = `/candidates/${managedId}?organizationId=${orgA}`;
+  const childPath = suffix => `/candidates/${managedId}/${suffix}?organizationId=${orgA}`;
+  const experience = (title, start, end) => ({ id: randomUUID(), company: "Synthetic Employer", officialTitle: title,
+    proposedDisplayTitle: "Software Engineer", titlePolicy: "tailorable", startDate: start, endDate: end, current: false,
+    location: null, sourceBullets: ["Synthetic verified contribution"], achievements: ["Synthetic verified achievement"], preferredBulletCount: 3 });
+  let content = { ...blank, fullName: "Synthetic Managed Avery", email: "managed@example.invalid", phone: "+1-202-555-0100",
+    location: "Synthetic City", status: "ready", links: [{ id: randomUUID(), type: "github", url: "https://GITHUB.com/synthetic-candidate" }],
+    experiences: [experience("Engineer II", "2020-02", "2022"), experience("Engineer I", "2018", "2020-01")],
+    educations: [{ id: randomUUID(), institution: "Synthetic University", degree: "BSc", fieldOfStudy: "Computing",
+      startDate: "2014", endDate: "2018", displayPolicy: "fixed" }],
+    certifications: [{ id: randomUUID(), name: "Synthetic Certification", issuer: "Synthetic Issuer", issueDate: "2021-01",
+      expiryDate: null, credentialId: "SYNTHETIC-123", verificationStatus: "verified" }] };
+  const invalidReady = await call(identities.adminA, path, { ...content, phone: null }, 1, {}, "PATCH");
+  expect(invalidReady.status === 400 && invalidReady.fieldErrors.some(i => i.path === "phone"), "Ready API requires phone with a linked field error");
+  let savedProfile = await call(identities.adminA, path, content, 1, {}, "PATCH");
+  expect(savedProfile.status === 200 && savedProfile.data.rowVersion === 2, "All profile sections persist atomically");
+  const reloaded = await call(identities.adminA, path);
+  expect(reloaded.data.experiences.length === 2 && reloaded.data.educations[0].institution === "Synthetic University"
+    && reloaded.data.certifications[0].credentialId === "SYNTHETIC-123" && reloaded.data.links[0].url === "https://github.com/synthetic-candidate", "Fresh GET retains normalized persisted sections");
+  expect(reloaded.data.experiences[0].startDate === "2020-02", "HTTP round trip preserves date precision");
+  const assigned = await call(identities.leaderA, childPath("assignments"), { userId: identities.memberA.id, assign: true }, 2);
+  expect(assigned.status === 200 && assigned.data.rowVersion === 3, "Candidate assignment is versioned");
+  const concurrent = await Promise.all([
+    call(identities.adminA, path, { ...content, fullName: "Synthetic Managed Winner One" }, 3, {}, "PATCH"),
+    call(identities.memberA, path, { ...content, fullName: "Synthetic Managed Winner Two" }, 3, {}, "PATCH"),
+  ]);
+  expect(concurrent.filter(r => r.status === 200).length === 1 && concurrent.filter(r => r.status === 409).length === 1, "Simultaneous saves have exactly one winner");
+  expect(concurrent.find(r => r.status === 409).currentVersion === 4, "Conflict response exposes current authorized version");
+  savedProfile = await call(identities.adminA, path);
+  content.fullName = savedProfile.data.fullName;
+  const pendingApproval = await call(identities.memberA, childPath("title-approvals"), { experienceId: content.experiences[0].id }, 4);
+  expect(pendingApproval.status === 403, "Members cannot approve presentation variants");
+  const approved = await call(identities.leaderA, childPath("title-approvals"), { experienceId: content.experiences[0].id }, 4);
+  expect(approved.status === 200 && approved.data.experiences[0].officialTitle === "Engineer II"
+    && approved.data.experiences[0].approvedDisplayTitle === "Software Engineer", "Title approval is separate from official history");
+  const frozenTitle = await call(identities.adminA, childPath("revisions/5"));
+  content.experiences[0].proposedDisplayTitle = "Backend Engineer";
+  const changedTitle = await call(identities.memberA, path, content, 5, {}, "PATCH");
+  expect(changedTitle.status === 200 && changedTitle.data.experiences[0].approvedDisplayTitle === null, "Editing proposed title clears stale approval");
+  expect(frozenTitle.data.experiences[0].approvedDisplayTitle === "Software Engineer", "Earlier approved snapshot is immutable");
+  const stolenChild = await call(identities.adminA, `/candidates?organizationId=${orgA}`, { teamId: teamA, ownerId: null, profile: content });
+  expect([400, 403].includes(stolenChild.status), "Record IDs cannot be reparented to a different candidate");
+  const badDate = structuredClone(content); badDate.experiences[0].startDate = "2023-02-29";
+  expect((await call(identities.adminA, path, badDate, 6, {}, "PATCH")).status === 400, "Impossible dates fail without overwriting input");
+  const unsafe = structuredClone(content); unsafe.links[0].url = "javascript:alert(1)";
+  expect((await call(identities.adminA, path, unsafe, 6, {}, "PATCH")).status === 400, "Unsafe professional URL rejected");
+  content.experiences.reverse();
+  expect((await call(identities.memberA, path, content, 6, {}, "PATCH")).status === 200, "Record reorder saves");
+  const reordered = await call(identities.adminA, path);
+  expect(reordered.data.experiences[0].id === content.experiences[0].id, "Record order survives fresh request");
+  const oldOrder = await call(identities.adminA, childPath("revisions/2"));
+  expect(oldOrder.data.experiences[0].officialTitle === "Engineer II", "Reordering cannot alter earlier revision order");
+  content.experiences.pop();
+  expect((await call(identities.memberA, path, content, 7, {}, "PATCH")).status === 200, "Removing a current record saves");
+  expect((await call(identities.adminA, childPath("revisions/2"))).data.experiences.length === 2, "Removal preserves old immutable source records");
+  const filtered = await call(identities.adminA, `/candidates?organizationId=${orgA}&q=Managed&status=ready&teamId=${teamA}&ownerId=${identities.memberA.id}&assigneeId=${identities.memberA.id}&sort=name_asc`);
+  expect(filtered.status === 200 && filtered.data.total === 1 && filtered.data.items[0].id === managedId, "Directory search/filters/sorting operate on authorized persisted data");
+  expect((await call(identities.leaderBeta, path)).status === 403, "Unrelated team cannot read complete profile");
+  const archivedProfile = await call(identities.memberA, childPath("archive"), { archived: true }, 8);
+  expect(archivedProfile.status === 200 && archivedProfile.data.status === "archived", "Archiving persists as explicit versioned state");
+  const normalList = await call(identities.adminA, `/candidates?organizationId=${orgA}`);
+  expect(!normalList.data.items.some(r => r.id === managedId), "Default directory excludes archived profile");
+  const archivedList = await call(identities.adminA, `/candidates?organizationId=${orgA}&status=archived`);
+  expect(archivedList.data.items.some(r => r.id === managedId), "Archived filter exposes retained authorized profile");
+  expect((await call(identities.memberA, path, content, 9, {}, "PATCH")).status === 409, "Archived profile cannot be edited");
+  expect((await call(identities.leaderA, childPath("assignments"), { userId: identities.memberA.id, assign: false }, 9)).status === 409, "Archived assignments are read-only");
+  const restoredProfile = await call(identities.memberA, childPath("archive"), { archived: false }, 9);
+  expect(restoredProfile.status === 200 && restoredProfile.data.status === "ready", "Restore preserves prior Ready state");
+  const workspaceData = await call(identities.adminA, childPath("workspace"));
+  expect(workspaceData.data.revisions.length >= 10 && workspaceData.data.events.some(r => r.action === "candidate.archived"), "Activity tab uses actual revisions and audit events");
+  const revokedAssignment = await call(identities.leaderA, childPath("assignments"), { userId: identities.memberA.id, assign: false }, 10);
+  expect(revokedAssignment.status === 200 && (await call(identities.memberA, path)).status === 403, "Ending assignment immediately revokes complete profile access");
+  expect((await identities.bidderA.client.from("candidate_profile_revisions").select("id")).data.length === 0, "Direct bidder profile-history access denied");
+  expect((await identities.memberA.client.from("work_experiences").select("id").eq("candidate_id", managedId)).data.length === 0, "Revoked user cannot bypass API via child tables");
+  const oldAssignment = await identities.leaderA.client.rpc("change_candidate_assignment", { p_org: orgA, p_candidate: managedId,
+    p_user: identities.memberA.id, p_assign: true, p_request: randomUUID() });
+  expect(oldAssignment.error?.code === "42501", "Legacy assignment RPC cannot bypass version checks");
   step = "current membership and grant revocation with existing tokens";
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);
   expect((await call(identities.memberA, candidatePath(first))).status === 403, "Unexpired token loses application access after deactivation");
