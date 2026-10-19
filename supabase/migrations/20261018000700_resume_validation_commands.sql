@@ -75,7 +75,7 @@ begin
   end loop;
  end loop;
  for r in select value,n-1 as i from jsonb_array_elements(p_content->'experience') with ordinality a(value,n) loop
-  v_id:=p_map->'experienceIds'->>r.i; select value into w from jsonb_array_elements(p_snapshot->'experiences') where value->>'id'=v_id;
+  v_id:=p_map->'experienceIds'->>(r.i::integer); select value into w from jsonb_array_elements(p_snapshot->'experiences') where value->>'id'=v_id;
   if w is null or v_id=any(v_seen) then return false; end if; v_seen:=array_append(v_seen,v_id);
   if private.resume_norm(r.value->>'company')='' or private.resume_norm(r.value->>'company')<>private.resume_norm(w->>'company') then return false; end if;
   if private.resume_norm(r.value->>'title')='' or not (private.resume_norm(r.value->>'title')=private.resume_norm(w->>'officialTitle') or (w->>'titlePolicy'='tailorable' and private.resume_norm(r.value->>'title')=private.resume_norm(w->>'approvedDisplayTitle'))) then return false; end if;
@@ -84,7 +84,7 @@ begin
  end loop;
  v_seen:='{}';
  for r in select value,n-1 as i from jsonb_array_elements(p_content->'education') with ordinality a(value,n) loop
-  v_id:=p_map->'educationIds'->>r.i; select value into w from jsonb_array_elements(p_snapshot->'educations') where value->>'id'=v_id;
+  v_id:=p_map->'educationIds'->>(r.i::integer); select value into w from jsonb_array_elements(p_snapshot->'educations') where value->>'id'=v_id;
   if w is null or v_id=any(v_seen) or private.resume_norm(w->>'degree')='' then return false; end if; v_seen:=array_append(v_seen,v_id);
   if private.resume_norm(r.value->>'degree') not in (private.resume_norm(w->>'degree'),private.resume_norm(concat_ws(' ',w->>'degree',w->>'fieldOfStudy')),private.resume_norm(concat_ws(' in ',w->>'degree',w->>'fieldOfStudy'))) then return false; end if;
  end loop;

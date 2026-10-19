@@ -37,6 +37,12 @@ select is(private.resume_reviewed('{"company":"x","title":"","summary":"Improved
  '{"status":"ready","professionalSummary":"Improved by 20%.","experiences":[],"educations":[],"certifications":[]}',
  '{"experienceIds":[],"educationIds":[],"claims":{}}'),true,'exact source evidence can verify automatically');
 select throws_ok($$update public.resume_versions set raw_json='{}'$$,'42501','IMMUTABLE_PROFILE_REVISION','owner rewrite is also blocked');
+select set_config('test.work_content','{"company":"Target","title":"Engineer","summary":"","skills":[],"experience":[{"company":"Historical Studio","title":"Engineer II","sentences":["Improved by 20%."]}],"education":[{"degree":"BSc in Computing"}]}',true);
+select set_config('test.work_snapshot','{"status":"ready","professionalSummary":null,"experiences":[{"id":"a8000000-0000-4000-9000-000000000400","company":"Historical Studio","officialTitle":"Engineer II","approvedDisplayTitle":null,"titlePolicy":"fixed","startDate":"2020-03","endDate":null,"location":null,"sourceBullets":["Improved by 20%."],"achievements":[]}],"educations":[{"id":"a8000000-0000-4000-9000-000000000500","degree":"BSc","fieldOfStudy":"Computing","institution":"Synthetic University","startDate":null,"endDate":null}],"certifications":[]}',true);
+select set_config('test.work_mapping','{"experienceIds":["a8000000-0000-4000-9000-000000000400"],"educationIds":["a8000000-0000-4000-9000-000000000500"],"claims":{}}',true);
+select ok(private.resume_reviewed(current_setting('test.work_content')::jsonb,current_setting('test.work_snapshot')::jsonb,current_setting('test.work_mapping')::jsonb),'work and education IDs map using ordered array indices');
+select ok(not private.resume_reviewed(jsonb_set(current_setting('test.work_content')::jsonb,'{experience,0,company}','"Target"'),current_setting('test.work_snapshot')::jsonb,current_setting('test.work_mapping')::jsonb),'target company cannot replace a historical employer in database review');
+select throws_ok($$select private.resume_reviewed(current_setting('test.work_content')::jsonb,current_setting('test.work_snapshot')::jsonb,null)$$,'22023','INVALID_REVIEW','missing review shape is rejected');
 select set_config('request.jwt.claims','{"sub":"a8000000-0000-4000-9000-000000000004","role":"authenticated"}',true);
 set local role authenticated;
 select is((select count(*)::int from public.resume_versions),0,'bidders receive no unrestricted source history');
