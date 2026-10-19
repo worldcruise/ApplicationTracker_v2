@@ -26,7 +26,7 @@ select ok((public.save_resume_source('a8000000-0000-4000-9000-000000000100',curr
 select throws_ok($$select public.save_resume_source('a8000000-0000-4000-9000-000000000100',current_setting('test.resume_candidate')::uuid,current_setting('test.payload')::jsonb||'{"rawJson":"{}"}',gen_random_uuid())$$,'22023','KEY_PAYLOAD_MISMATCH','changed payload cannot reuse key');
 select throws_ok($$update public.resume_versions set raw_json='{}'$$,'42501',null,'clients cannot rewrite source versions');
 select throws_ok($$delete from public.prompt_assemblies$$,'42501',null,'clients cannot remove frozen assemblies');
-select throws_ok($$select public.publish_prompt_version('a8000000-0000-4000-9000-000000000100',null,0,'{"kind":"custom","scope":"candidate","teamId":null,"candidateId":"a8000000-0000-4000-9000-000000000999","name":"Bad scope","description":"","content":"x","enabled":true,"order":0}',gen_random_uuid())$$,'23503',null,'foreign candidate prompt scope rejected');
+select throws_ok($$select public.publish_prompt_version('a8000000-0000-4000-9000-000000000100',null,0,'{"kind":"custom","scope":"candidate","teamId":null,"candidateId":"a8000000-0000-4000-9000-000000000999","name":"Bad scope","description":"","content":"x","enabled":true,"order":0}',gen_random_uuid())$$,'42501',null,'foreign candidate prompt scope rejected by RLS');
 reset role;
 select throws_ok($$select private.resume_structure('{"skills":[],"company":"x"}')$$,'22023','SCHEMA_INVALID','database rejects missing required v1 structure');
 select throws_ok($$select private.resume_structure('{"__proto__":{},"company":"x"}')$$,'22023','SCHEMA_INVALID','database rejects prototype keys');

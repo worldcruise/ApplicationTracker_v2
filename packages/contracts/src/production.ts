@@ -6,7 +6,7 @@ export interface ResumeReviewInput {
   claims: Record<string, { sources: string[]; attested: boolean }>;
 }
 export interface ResumeEvidence { id: string; label: string; text: string }
-export interface ResumeClaim { path: string; text: string; evidence: ResumeEvidence[]; automatic: boolean; resolved: boolean; issues: string[] }
+export interface ResumeClaim { path: string; text: string; workId: string | null; automatic: boolean; resolved: boolean; issues: string[] }
 export interface ResumeReview {
   mapping: ResumeReviewInput; claims: ResumeClaim[]; conflicts: ResumeIssue[]; reviewed: boolean;
 }

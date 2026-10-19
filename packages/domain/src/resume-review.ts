@@ -44,7 +44,7 @@ export function reviewResume(content: ResumeContentV1, snapshot: CandidateProfil
   const claims: ResumeReview["claims"] = [];
   const conflict = (path: string, message: string) => conflicts.push({ path, code: "FACTUAL_REVIEW_REQUIRED", message });
   if (mapping.experienceIds.length !== content.experience.length || mapping.educationIds.length !== content.education.length) conflict("", "Map every employment and education entry to this frozen profile.");
-  function claim(path: string, text: string, allowed: ResumeEvidence[]) {
+  function claim(path: string, text: string, allowed: ResumeEvidence[], workId: string | null = null) {
     if (!text.trim()) return;
     const automatic = allowed.some(e => norm(e.text) === norm(text));
     const selected = mapping.claims[path];
@@ -59,7 +59,7 @@ export function reviewResume(content: ResumeContentV1, snapshot: CandidateProfil
     if (credentials.some(c => !proof.includes(c))) issues.push("A qualification claim is absent from the selected verified evidence.");
     if (!automatic && (!selected?.attested || !sources.length)) issues.push("Select supporting facts and explicitly attest this paraphrase; unsupported claims must be corrected in the verified profile first.");
     if (selected?.sources.some(id => !allowed.some(e => e.id === id))) issues.push("Evidence must belong to the mapped source entry or frozen profile.");
-    claims.push({ path, text, evidence: allowed, automatic, resolved: issues.length === 0, issues });
+    claims.push({ path, text, workId, automatic, resolved: issues.length === 0, issues });
   }
   claim("/summary", content.summary, evidence);
   content.skills.forEach((group, i) => Object.entries(group).forEach(([category, skills]) => skills.forEach((s, j) => claim(`/skills/${i}/${escape(category)}/${j}`, s, evidence))));
@@ -71,7 +71,7 @@ export function reviewResume(content: ResumeContentV1, snapshot: CandidateProfil
     if (!norm(entry.company) || norm(entry.company) !== norm(source.company)) conflict(`/experience/${i}/company`, "Historical employer must match the selected work record; target company is separate metadata.");
     const allowedTitles = [source.officialTitle, ...(source.titlePolicy === "tailorable" ? [source.approvedDisplayTitle] : [])].filter(v => norm(v));
     if (!norm(entry.title) || !allowedTitles.some(t => norm(t) === norm(entry.title))) conflict(`/experience/${i}/title`, "Use the official title or an explicitly approved tailorable display title.");
-    entry.sentences.forEach((text, j) => claim(`/experience/${i}/sentences/${j}`, text, evidence.filter(e => e.id.startsWith(`work:${source.id}:`))));
+    entry.sentences.forEach((text, j) => claim(`/experience/${i}/sentences/${j}`, text, evidence.filter(e => e.id.startsWith(`work:${source.id}:`)), source.id));
   });
   content.education.forEach((entry, i) => {
     const source = snapshot.educations.find(e => e.id === mapping.educationIds[i]);
