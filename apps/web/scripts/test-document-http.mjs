@@ -49,6 +49,8 @@ export async function testDocumentHTTP({ call, command, identities, org, candida
   // Build the allowlisted profile input instead of echoing aggregate metadata.
   const fields = ["fullName","email","phone","location","seniorityPreference","professionalSummary","privateNotes","status","links","experiences","educations","certifications"];
   const edit = Object.fromEntries(fields.map(k => [k, rest[k]])); edit.professionalSummary = "Later synthetic profile update.";
+  const experienceFields = ["id","company","officialTitle","proposedDisplayTitle","titlePolicy","startDate","endDate","current","location","sourceBullets","achievements","preferredBulletCount"];
+  edit.experiences = profile.experiences.map(w => Object.fromEntries(experienceFields.map(k => [k,w[k]])));
   const changed = await call(m, url(`/candidates/${candidate}`), edit, rowVersion, {}, "PATCH"); expect(changed.status === 200, "Live candidate changes after sealing");
   expect((await call(m, url(`/documents/${documentId}/pdf`))).data.sha256 === rendered.data.sha256, "Stored bytes survive later profile/template edits");
   expect((await call(m, url(`/cover-letter-versions/${letter.data.id}`))).data.bodyText === bodyText, "Original letter text remains immutable after profile changes");

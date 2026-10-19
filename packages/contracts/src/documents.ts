@@ -11,3 +11,7 @@ export interface FrozenDocument {
   id: string; kind: "resume" | "cover_letter"; candidateId: string; filename: string; pdfSha256: string; byteSize: number; pageCount: number;
   schemaVersion: number; templateVersionId: string; rendererVersion: string; assetHashes: Record<string, string>; reviewed: boolean; createdAt: string;
 }
+export interface CoverLetterRequest {
+  operationId: string; candidateId: string; bidId: string | null; schemaVersion: 1; profileRevision: number;
+  templateVersionId: string; bodyText: string; review: ResumeReviewInput; render: ResumeRenderReceipt | null;
+}

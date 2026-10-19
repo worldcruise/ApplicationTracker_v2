@@ -11,6 +11,7 @@ import { testResumeHTTP } from "./test-resume-http.mjs";
 import { testResumeBrowser } from "./test-resume-browser.mjs";
 import { testTemplateHTTP } from "./test-template-http.mjs";
 import { testDocumentHTTP } from "./test-document-http.mjs";
+import { testDocumentBrowser } from "./test-document-browser.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -265,6 +266,9 @@ try {
   step = "resume production headless Chromium acceptance";
   try { const checkpoints = await testResumeBrowser({ org: orgA, candidate: resumeFixture.candidate, identities, password }); expect(checkpoints === 9, "All resume browser checkpoints completed"); console.log(JSON.stringify({ result: "PASS", resumeBrowserCheckpoints: checkpoints })); }
   catch (error) { throw new TestFailure(error.message); }
+  step = "letter and frozen document headless Chromium acceptance";
+  try { const checks = await testDocumentBrowser({org:orgA,candidate:resumeFixture.candidate,identities,password}); expect(checks===7,"All letter/document browser checkpoints completed"); console.log(JSON.stringify({result:"PASS",documentBrowserCheckpoints:checks})); }
+  catch(error) { throw new TestFailure(error.message); }
   step = "candidate headless Chromium acceptance";
   try {
     const browserChecks = await testCandidateBrowser({ org: orgA, team: teamA, identities, password });

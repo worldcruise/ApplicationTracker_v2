@@ -9,6 +9,7 @@ import { FactReview } from "./fact-review";
 import { ProductionPdfPreview } from "./pdf-preview";
 import { TemplateLibrary } from "./template-library";
 import { PromptEditor } from "./prompt-editor";
+import { DocumentHistory } from "@/app/documents/document-history";
 import { button, control, primary } from "../../directory";
 type VersionRow = { id: string; version: number; reviewed: boolean; render: unknown; createdAt: string };
 type PromptRow = PromptVersion & { current: boolean; builtin: boolean };
@@ -23,6 +24,7 @@ export function ResumeStudio({ profile, scope, actorId }: { profile: CandidatePr
   const [ready, setReady] = useState(false); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [localError, setLocalError] = useState("");
   const [checked, setChecked] = useState(false); const [prompts, setPrompts] = useState<PromptRow[]>([]); const [versions, setVersions] = useState<VersionRow[]>([]); const [tick, setTick] = useState(0);
   const [historical, setHistorical] = useState<ResumeSourceVersion | null>(null); const [historicalPdf, setHistoricalPdf] = useState<StudioPdf | null>(null);
+  const [journalReady, setJournalReady] = useState(false);
   const key = studioKey(actorId, scope.organizationId, profile.id); const query = `organizationId=${scope.organizationId}`;
   const validation = validateResume(raw); const snapshot = assembly?.snapshot ?? profile;
   const reviewInput = mapping ?? (validation.content ? defaultResumeMapping(validation.content, snapshot) : null);
@@ -31,7 +33,7 @@ export function ResumeStudio({ profile, scope, actorId }: { profile: CandidatePr
     review.reviewed = false; review.conflicts.push({ path: "/company", code: "FACTUAL_REVIEW_REQUIRED", message: "Target company must match the reviewed job metadata." });
   }
   const uncertain = operation?.outcomes.databaseSync.state === "unknown";
-  const disabled = busy || !ready || profile.status === "archived" || !!historical || uncertain;
+  const disabled = busy || !ready || !journalReady || profile.status === "archived" || !!historical || uncertain;
   const pdf = historical ? historicalPdf : operation?.pdf ?? null;
   const stale = !!assembly && assembly.profileRevision !== profile.rowVersion;
   useEffect(() => {
@@ -46,15 +48,16 @@ export function ResumeStudio({ profile, scope, actorId }: { profile: CandidatePr
           if (!active) return; setRaw(saved.rawJson); setJob(saved.job); setAssembly(saved.assembly); if (saved.assembly) setTemplateId(saved.assembly.templateVersionId); setMapping(saved.review); setOperation(saved.operation); setOutcomes(saved.operation?.outcomes ?? saved.outcomes ?? initialResumeOutcomes());
           setMessage("Restored this account’s local draft and operation outcomes.");
         }
+        if (active) setJournalReady(true);
       } catch { if (active) setLocalError("Local draft restore failed. Existing data was not deleted. Durable operation actions require a working IndexedDB journal."); }
       finally { if (active) setReady(true); }
     })(); return () => { active = false; };
   }, [key, actorId, scope.organizationId, profile.id]);
   useEffect(() => {
-    if (!ready || historical) return;
+    if (!ready || !journalReady || historical) return;
     const timer = setTimeout(() => { void saveStudioDraft(key, { rawJson: raw, job, assembly, review: mapping, operation, outcomes }).then(() => setLocalError(""), () => setLocalError("Local draft saving failed. Keep this page open; copy your source before leaving.")); }, 150);
     return () => clearTimeout(timer);
-  }, [ready, key, raw, job, assembly, mapping, operation, outcomes, historical]);
+  }, [ready, journalReady, key, raw, job, assembly, mapping, operation, outcomes, historical]);
   useEffect(() => {
     let active = true;
     void Promise.all([readApi<PromptRow[]>(`/api/v1/prompts?${query}&candidateId=${profile.id}`), readApi<VersionRow[]>(`/api/v1/resume-versions?${query}&candidateId=${profile.id}`)]).then(([p, v]) => { if (active) { setPrompts(p); setVersions(v); } }, cause => { if (active) setMessage(cause instanceof Error ? cause.message : "Prompt/history loading failed."); });
@@ -123,7 +126,7 @@ export function ResumeStudio({ profile, scope, actorId }: { profile: CandidatePr
     } catch (error) { setOutcomes(o => stage(o, "localExport", "failed", "Download could not be initiated.")); fail(error); } finally { setBusy(false); }
   }
   return <div className="grid gap-5">
-    <nav className="flex flex-wrap gap-4"><a className="underline" href={`/candidates/${profile.id}?${query}&tab=resumes`}>Candidate workspace</a><span>{profile.fullName ?? "Untitled draft"} · Profile revision {profile.rowVersion}</span></nav>
+    <nav className="flex flex-wrap gap-4"><a className="underline" href={`/candidates/${profile.id}?${query}&tab=resumes`}>Candidate workspace</a><a className="underline" href={`/candidates/${profile.id}/letters?${query}`}>Cover letters</a><a className="underline" href={`/documents?${query}&candidateId=${profile.id}`}>Document history</a><span>{profile.fullName ?? "Untitled draft"} · Profile revision {profile.rowVersion}</span></nav>
     {profile.status === "archived" && <p role="status" className="rounded border p-3">Archived candidate: new assembly/generation/saving is disabled. Existing source history remains readable.</p>}
     {localError && <p role="alert">{localError}</p>}{message && <p role="status" className="rounded border bg-white p-3">{message}</p>}
     <section aria-label="Independent operation outcomes" className="rounded border bg-white p-3"><h2 className="font-semibold">Operation outcomes</h2><dl className="mt-2 grid gap-2 text-sm sm:grid-cols-5">{Object.entries(outcomes).map(([step, result]) => <div key={step}><dt>{step}</dt><dd data-testid={`outcome-${step}`}>{result.state}</dd><dd className="text-xs">Attempts: {result.attempts}{result.error && <p>{result.error}</p>}</dd></div>)}</dl>{operation && <p className="mt-2 break-all text-xs">Operation: <span data-testid="operation-id">{operation.id}</span></p>}</section>
@@ -133,8 +136,10 @@ export function ResumeStudio({ profile, scope, actorId }: { profile: CandidatePr
       <div className="flex flex-wrap gap-3"><button className={primary} disabled={disabled} onClick={async () => {
         setBusy(true); try { const result = await readApi<PromptAssembly>(`/api/v1/prompt-assemblies?${query}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ candidateId: profile.id, profileRevision: profile.rowVersion, job, templateVersionId: templateId }) }); setAssembly(result); setMapping(null); setOperation(null); setOutcomes(initialResumeOutcomes()); setMessage("Exact prompt assembled and frozen. Copy writes this preview without changes."); } catch (error) { fail(error); } finally { setBusy(false); }
       }}>Assemble prompt</button><button className={button} disabled={!assembly || busy} onClick={async () => {
-        if (!assembly) return; try { await navigator.clipboard.writeText(assembly.text); setOutcomes(o => stage(o, "clipboard", "succeeded")); setMessage("Exact previewed prompt copied."); }
-        catch { setOutcomes(o => stage(o, "clipboard", "failed", "Clipboard permission denied; select the exact preview text manually.")); setMessage("Clipboard failed. The exact prompt remains in the preview for manual copying."); }
+        if (!assembly) return; let next: ResumeOutcomes;
+        try { await navigator.clipboard.writeText(assembly.text); next = stage(outcomes, "clipboard", "succeeded"); setMessage("Exact previewed prompt copied."); }
+        catch { next = stage(outcomes, "clipboard", "failed", "Clipboard permission denied; select the exact preview text manually."); setMessage("Clipboard failed. The exact prompt remains in the preview for manual copying."); }
+        setOutcomes(next); if (operation) try { await keep({ ...operation, outcomes: next }); } catch { setLocalError("Clipboard result could not be journaled. The actual clipboard outcome is shown above."); }
       }}>Copy Prompt</button></div>
       {assembly && <details open><summary className="cursor-pointer font-medium">Exact prompt preview · revision {assembly.profileRevision}</summary><textarea aria-label="Exact prompt preview" readOnly value={assembly.text} rows={9} className={`${control} font-mono`} /><p className="break-all text-xs">Assembly {assembly.id} · SHA-256 {assembly.sha256}</p></details>}
       <PromptEditor scope={scope} profile={profile} prompts={prompts} disabled={disabled} refresh={() => setTick(n => n + 1)} report={setMessage} />
@@ -143,10 +148,10 @@ export function ResumeStudio({ profile, scope, actorId }: { profile: CandidatePr
     {historical && <p className="rounded border bg-amber-50 p-3">Historical source version {historical.version} · read-only.<button className={`${button} ml-3`} onClick={() => { setHistorical(null); setHistoricalPdf(null); setOperation(null); setOutcomes(initialResumeOutcomes()); setMessage("Loaded content is now a new draft. Assemble against the current profile before saving a new version."); }}>Edit as new draft</button></p>}
     <div className="grid items-start gap-4 xl:grid-cols-12">
       <aside className="grid gap-4 xl:col-span-3"><TemplateLibrary scope={scope} profile={profile} selected={templateId} onSelect={id => { setTemplateId(id); setAssembly(null); setOperation(null); setMessage("Template selected. Assemble a new prompt and regenerate to use this frozen version."); }} disabled={disabled} report={setMessage} />
-        <section className="rounded border bg-white p-4"><h2 className="font-semibold">Immutable source history</h2><p className="text-xs">Most recent 50 versions.</p><ul className="mt-3 grid gap-2">{versions.map(v => <li key={v.id}><button className={`${button} w-full text-left`} disabled={busy} onClick={async () => {
+        <section className="rounded border bg-white p-4"><h2 className="font-semibold">Immutable source history</h2><p className="text-xs">Most recent 50 versions.</p><ul className="mt-3 grid gap-2">{versions.map(v => <li key={v.id}><button className={`${button} w-full text-left`} disabled={busy || uncertain} onClick={async () => {
           if (raw && !confirm("Load this historical source? Your current operation is retained in the journal; the editor will show the selected version.")) return;
           setBusy(true); try { const source = await readApi<ResumeSourceVersion>(`/api/v1/resume-versions/${v.id}?${query}`); const origin = await readApi<PromptAssembly>(`/api/v1/prompt-assemblies/${source.assemblyId}?${query}`);
-            setHistorical(source); setRaw(source.rawJson); setMapping(source.provenance.mapping); setAssembly(origin); setJob(origin.job); setOperation(null); setHistoricalPdf(null); setOutcomes(initialResumeOutcomes());
+            setHistorical(source); setRaw(source.rawJson); setMapping(source.provenance.mapping); setAssembly(origin); setTemplateId(source.templateVersionId); setJob(origin.job); setOperation(null); setHistoricalPdf(null); setOutcomes(initialResumeOutcomes());
             if (source.render) { const result = decodePdf(await readApi<Omit<StudioPdf, "bytes"> & { base64: string }>(`/api/v1/resume-versions/${v.id}/pdf?${query}`)); if (await pdfDigest(result.bytes) !== source.render.sha256) throw new Error("Historical PDF hash mismatch; export blocked."); setHistoricalPdf(result); }
             setMessage(`Historical source ${source.version} loaded. ${source.render ? "Recovered PDF matches its recorded hash." : "No PDF was recorded for this source version."}`);
           } catch (error) { fail(error); } finally { setBusy(false); }
@@ -162,10 +167,12 @@ export function ResumeStudio({ profile, scope, actorId }: { profile: CandidatePr
           <button className={button} disabled={disabled} onClick={() => { if (confirm("Clear the editor? Prior operations and saved versions remain unchanged.")) editRaw(""); }}>Clear JSON</button></div>
         {checked && validation.errors.map((e, i) => <p role="alert" key={i} className="text-sm text-red-800">{e.path || "/"}: {e.message}</p>)}
         {validation.content && <details><summary className="cursor-pointer text-sm">Content warnings ({validation.warnings.length})</summary><ul className="text-xs">{validation.warnings.map((w, i) => <li key={i}>{w.path || "/"}: {w.message}</li>)}</ul></details>}
-        <button className={primary} disabled={busy || !ready || !assembly || stale || !!historical || profile.status === "archived" || !validation.content || outcomes.databaseSync.state === "succeeded"} onClick={() => void synchronize()}>{operation?.payload ? "Retry original synchronization" : review?.reviewed ? "Save reviewed source" : "Save unverified source"}</button>
+        <button className={primary} disabled={busy || !ready || !journalReady || !assembly || stale || !!historical || profile.status === "archived" || !validation.content || outcomes.databaseSync.state === "succeeded"} onClick={() => void synchronize()}>{operation?.payload ? "Retry original synchronization" : review?.reviewed ? "Save reviewed source" : "Save unverified source"}</button>
         <button className={button} disabled={busy || uncertain || !operation} onClick={() => { setOperation(null); setOutcomes(initialResumeOutcomes()); setMessage("New operation will use a new UUID. Earlier frozen operations remain retained."); }}>Start new operation</button>
       </section>
     </div>
     {validation.content && review && reviewInput && <FactReview content={validation.content} snapshot={snapshot} review={review} value={reviewInput} disabled={disabled} onChange={v => { setMapping(v); setOperation(null); setOutcomes(o => ({ ...initialResumeOutcomes(), clipboard: o.clipboard })); setMessage("Review changed. Regenerate PDF to reflect this exact review."); }} />}
+    {(historical?.render || (operation?.sourceId && operation.pdf)) && <button className={button} disabled={busy} onClick={async () => { setBusy(true); try { await readApi(`/api/v1/documents?${query}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: "resume", sourceVersionId: historical?.id ?? operation?.sourceId }) }); setTick(n => n + 1); setMessage("Exact frozen resume PDF stored. Local export and submission remain separate."); } catch (error) { fail(error); } finally { setBusy(false); } }}>Store exact resume PDF</button>}
+    <DocumentHistory scope={scope} candidateId={profile.id} refresh={tick} />
   </div>;
 }

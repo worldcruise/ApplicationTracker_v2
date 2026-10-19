@@ -36,6 +36,7 @@ export function FoundationWorkspace({ context }: { context: UserContext }) {
     {snapshot && <>
       <section className="rounded border bg-white p-5"><h2 className="text-lg font-semibold">Current access</h2>
         <p>Role: {snapshot.scope.role.replaceAll("_", " ")}</p><p>Teams: {snapshot.teams.map(t => t.name).join(", ") || "No active team scope"}</p>
+        <a className="mt-2 inline-block underline" href={`/documents?organizationId=${org}`}>Open authorized document history</a>
       </section>
       {snapshot.scope.role === "bidder" ? <section className="rounded border bg-white p-5">
         <h2 className="text-lg font-semibold">Authorized candidate preparation</h2>
