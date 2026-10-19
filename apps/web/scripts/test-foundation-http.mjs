@@ -280,7 +280,7 @@ try {
   step = "bid and interview production API acceptance";
   const workflowFixture = await testWorkflowHTTP({call,command,identities,org:orgA,team:teamA,expect});
   step = "bid and interview browser acceptance";
-  try { const checks=await testWorkflowBrowser({org:orgA,team:teamA,identities,password,...workflowFixture});expect(checks===14,"All 14 workflow browser checkpoints complete");console.log(JSON.stringify({result:"PASS",workflowBrowserCheckpoints:checks})); } catch(e){throw new TestFailure(e.message); }
+  try { const checks=await testWorkflowBrowser({org:orgA,team:teamA,identities,password,...workflowFixture});expect(checks===15,"All 15 workflow browser checkpoints complete");console.log(JSON.stringify({result:"PASS",workflowBrowserCheckpoints:checks})); } catch(e){throw new TestFailure(e.message); }
   step = "current membership and grant revocation with existing tokens";
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);
   expect((await call(identities.memberA, candidatePath(first))).status === 403, "Unexpired token loses application access after deactivation");
