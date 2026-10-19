@@ -49,6 +49,14 @@ export function localStore(factory: IDBFactory = indexedDB) {
       return merged;
     },
     async remove(key: string) { await transaction("readwrite", store => store.delete(key)); },
+    async entries<T>(prefix:string):Promise<T[]> {
+      const rows:T[]=[];await transaction("readonly",store=>{const request=store.openCursor();request.onsuccess=()=>{const cursor=request.result;if(cursor){if(String(cursor.key).startsWith(prefix))rows.push(cursor.value as T);cursor.continue();}};return request;});return rows;
+    },
+    async change<T>(key:string,update:(value:T|undefined)=>T):Promise<T>{
+      let value:T;let failure:unknown;
+      try{await transaction("readwrite",store=>{const request=store.get(key);request.onsuccess=()=>{try{value=update(request.result as T|undefined);store.put(value,key);}catch(e){failure=e;store.transaction.abort();}};return request;});}
+      catch(e){throw failure??e;}return value!;
+    },
   };
 }
 

@@ -177,6 +177,16 @@ Continue after RP03. Complete TP01, TP02, then TP03. Exporting a linked frozen P
 
 ## Milestone 3 Extension workflow
 
+### Scoped implementation increments (19 October 2026)
+
+Complete EX01, then EX02, then EX03 for the requested Resume/Profile milestone. Reuse existing email/password Auth, user-context APIs and frozen document contracts. PKCE/provider experiments, automatic capture/history matching and archive package orchestration remain separate gates.
+
+| ID | Increment | Dependencies / design | Acceptance |
+| --- | --- | --- | --- |
+| EX01 | Authenticated shared API adapter and durable account-scoped journal | F001A–C, BO01–04; T032/T035; §14 | Current identity/membership before writes, safe GET refresh only, no credentials in content scripts/IndexedDB, frozen operations survive closure, cross-workspace locking and no other-account replay. |
+| EX02 | Candidate/Profile and Resume/letter workspace | EX01; T033/T034; §§10–14 | Authorized selection/summary/config, exact previewed prompt copy, invalid JSON retention, shared factual review/rendering, same-byte preview/export, immutable source/letter saves, independent operation results and web links; bidder prepared-export boundary. |
+| EX03 | Real-backend extension acceptance and Chrome runbook | EX02; §§14/22 | Isolated real Auth/API/RLS and unpacked Chromium checks, persistence/reopen/retry/account-switch/revocation evidence, builds, installation/reload/manual instructions and truthful hosted/interactive prerequisites. |
+
 | ID | Scoped task | Dependencies | Design sections | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | T032 | Build secure MV3 workspace and authenticated API adapter. | T006–T007, T013, T015 | D§14, 20 | Full workspace has Resume/Profile tabs; trusted contexts contain tokens. Manifest has minimal exact-origin permissions, validated messages, local scripts/validator, no unsafe eval, no reliance on long-lived worker globals. |
