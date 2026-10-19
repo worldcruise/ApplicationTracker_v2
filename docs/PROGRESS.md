@@ -26,7 +26,7 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 ## Current work
 
-**RP01–RP03 complete; TP01 in progress.** [407e556 isolated CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39234326319) passes 155 database assertions, 35 unit tests, production builds, 490 Auth/API assertions, nine resume and 15 candidate browser checkpoints. The three-page Unicode ATS Classic sample was rendered and visually inspected; exact export/recovery hashes and failed-sync refresh/retry pass. Continuing the 19 October request: remaining presets/scoped library, then cover letters/sealed documents/export-only access, then UI acceptance. Hosted/manual gates remain prerequisites.
+**RP01–RP03 and TP01 complete; TP02 in verification.** [2877ebf isolated CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39237810581) passes migrations, 161 database assertions, 35 unit tests, production builds, 525 Auth/API assertions, nine resume and 15 candidate browser checkpoints. Nine preset layouts pass every-page bounds and repeat hashes; the contact sheet was visually inspected. TP02 now adds letter versions and separate metadata/blob storage, HMAC-attested render receipts, and linked-bid export-only retrieval. Local checks pass; fresh database/API CI is pending. No hosted change. TP03 will connect letter/document UI and complete acceptance.
 
 **Foundation milestone complete.** FN01–FN03 were implemented and verified before CM01. Hosted setup remains an operator prerequisite; this task has not migrated or configured the hosted project.
 

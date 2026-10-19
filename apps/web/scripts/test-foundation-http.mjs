@@ -1,6 +1,6 @@
 // Isolated CI only. No linked or hosted project is accepted; credentials never print.
 import { spawn, spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { randomUUID, randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { setTimeout as pause } from "node:timers/promises";
@@ -10,6 +10,7 @@ import { testCandidateBrowser } from "./test-candidate-browser.mjs";
 import { testResumeHTTP } from "./test-resume-http.mjs";
 import { testResumeBrowser } from "./test-resume-browser.mjs";
 import { testTemplateHTTP } from "./test-template-http.mjs";
+import { testDocumentHTTP } from "./test-document-http.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -42,7 +43,8 @@ try {
   delete baseEnv.SUPABASE_SERVICE_ROLE_KEY;
   step = "production build";
   run(npm, ["run", "build"], baseEnv);
-  const runtimeEnv = { ...baseEnv, SUPABASE_SERVICE_ROLE_KEY: serviceKey, NODE_ENV: "production" };
+  const renderKey = randomBytes(32).toString("hex");
+  const runtimeEnv = { ...baseEnv, SUPABASE_SERVICE_ROLE_KEY: serviceKey, DOCUMENT_RENDER_SIGNING_KEY: renderKey, DOCUMENT_RENDER_KEY_ID: "primary", NODE_ENV: "production" };
   step = "production server startup";
   server = spawn(process.execPath, [fileURLToPath(import.meta.resolve("next/dist/bin/next")), "start", "--port", "3000"],
     { cwd: web, env: runtimeEnv, stdio: "ignore" });
@@ -55,6 +57,8 @@ try {
   expect(ready, "Production server became ready");
   const anonymous = createClient(url, publicKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const operator = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const configured = await operator.rpc("configure_document_render_key", { p_id: "primary", p_key_hex: renderKey });
+  expect(!configured.error, `Isolated render signing key registered (${configured.error?.code ?? "OK"})`);
   const password = `Synthetic-${randomUUID()}!a9`;
   const suffix = randomUUID().slice(0, 8);
   const identities = {};
@@ -255,7 +259,9 @@ try {
   step = "resume prompt/source Auth and HTTP acceptance";
   const resumeFixture = await testResumeHTTP({ call, identities, org: orgA, team: teamA, expect });
   step = "template library and frozen version acceptance";
-  await testTemplateHTTP({ call, identities, org: orgA, candidate: resumeFixture.candidate, expect });
+  const templateFixture = await testTemplateHTTP({ call, identities, org: orgA, candidate: resumeFixture.candidate, expect });
+  step = "cover letters and frozen export-only documents";
+  await testDocumentHTTP({ call, command, identities, org: orgA, ...templateFixture, expect });
   step = "resume production headless Chromium acceptance";
   try { const checkpoints = await testResumeBrowser({ org: orgA, candidate: resumeFixture.candidate, identities, password }); expect(checkpoints === 9, "All resume browser checkpoints completed"); console.log(JSON.stringify({ result: "PASS", resumeBrowserCheckpoints: checkpoints })); }
   catch (error) { throw new TestFailure(error.message); }
@@ -329,7 +335,7 @@ try {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const path = `${directory}/${entry.name}`;
       if (entry.isDirectory()) inspect(path);
-      else if (/\.(js|json|html)$/.test(entry.name)) expect(!readFileSync(path).includes(Buffer.from(serviceKey)), "Privileged key absent from client artifact");
+      else if (/\.(js|json|html)$/.test(entry.name)) { const bytes = readFileSync(path); expect(!bytes.includes(Buffer.from(serviceKey)) && !bytes.includes(Buffer.from(renderKey)), "Privileged keys absent from client artifact"); }
     }
   }
   inspect(`${web}/.next/static`);

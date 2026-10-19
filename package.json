@@ -30,7 +30,8 @@
     "admin:bootstrap": "npm run admin:bootstrap --workspace @candidate/web --",
     "test:foundation:http": "node apps/web/scripts/test-foundation-http.mjs",
     "extension:build": "npm run build:packages && npm run build --workspace @candidate/extension",
-    "feasibility:pdf": "npm run build:packages && npm run feasibility:pdf --workspace @candidate/extension"
+    "feasibility:pdf": "npm run build:packages && npm run feasibility:pdf --workspace @candidate/extension",
+    "documents:configure": "node --env-file-if-exists=apps/web/.env.local apps/web/scripts/configure-documents.mjs"
   },
   "devDependencies": {
     "@types/chrome": "0.3.5",
