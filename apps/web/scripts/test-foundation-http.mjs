@@ -44,7 +44,7 @@ try {
   const serviceKey = settings.SERVICE_ROLE_KEY;
   expect(url === "http://127.0.0.1:54321" && typeof publicKey === "string" && typeof serviceKey === "string", "Only the isolated local Supabase stack is accepted");
   const baseEnv = { ...process.env, NEXT_PUBLIC_SUPABASE_URL: url, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publicKey,
-    NEXT_PUBLIC_APP_URL: "http://localhost:3000", NEXT_TELEMETRY_DISABLED: "1" };
+    NEXT_PUBLIC_APP_URL: "http://localhost:3000", NEXT_TELEMETRY_DISABLED: "1", EXTENSION_PUBLIC_SUPABASE_URL: url, EXTENSION_PUBLIC_SUPABASE_PUBLISHABLE_KEY: publicKey, EXTENSION_PUBLIC_API_URL: "http://localhost:3000/api/v1" };
   delete baseEnv.SUPABASE_SERVICE_ROLE_KEY;
   step = "production build";
   run(npm, ["run", "build"], baseEnv);
@@ -356,7 +356,7 @@ try {
   }
   inspect(`${web}/.next/static`);
   inspect(`${root}/apps/extension/dist`);
-  console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "candidate headless Chromium; interactive Chrome/extension pending" }));
+  console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "59 headless Chromium checkpoints including unpacked MV3; hosted interactive Chrome/OS gates pending" }));
 } catch (error) {
   console.error(JSON.stringify({ result: "FAIL", step, message: error instanceof TestFailure ? error.message : "Integration harness failed; inspect the isolated service health and current step." }));
   process.exitCode = 1;

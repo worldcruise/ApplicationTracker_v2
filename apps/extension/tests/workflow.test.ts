@@ -25,6 +25,7 @@ test("shared API checks identity/current membership before writes and never retr
  await assert.rejects(api.request("resume-versions",{actorId:"other",organizationId:"synthetic-org",body:{}}),/another account/);assert.equal(calls,0);
  await assert.rejects(api.request("resume-versions",{actorId:user.id,organizationId:"synthetic-org",body:{}}),ExtensionApiError);assert.equal(writes,1);
  member=false;await assert.rejects(api.request("resume-versions",{actorId:user.id,organizationId:"synthetic-org",body:{}}),/active organization/);assert.equal(writes,1);
+ await assert.rejects(api.withActor("other-actor",async()=>{writes++;}),/account changed/);assert.equal(writes,1);
 });
 test("download events survive page closure and cannot overwrite another download's result",async()=>{
  const store=localStore(new IDBFactory());await store.put("production-op:synthetic",{downloadId:2,outcomes:{localExport:{state:"pending",attempts:1,error:null}}});
