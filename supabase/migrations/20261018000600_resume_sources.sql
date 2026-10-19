@@ -32,10 +32,13 @@ insert into public.prompt_presets(id,organization_id,kind,scope) values('a700000
 insert into public.prompt_versions(id,preset_id,version,name,content,enabled,sort_order) values('a7000000-0000-4000-9000-000000000003','a7000000-0000-4000-9000-000000000002',1,'Default main prompt',
  'Tailor a truthful ATS resume to the target job using only the provided verified facts. Return canonical schema v1 JSON with company, title, summary, skills, experience, education. Keep target company separate from historical employers. Use empty values for missing facts; never invent qualifications, dates, employers, titles or numbers.',true,0);
 
-create function private.reads_prompt(p_org uuid,p_scope text,p_team uuid,p_candidate uuid) returns boolean language sql stable security invoker set search_path='' as $$
+create function private.reads_prompt(p_org uuid,p_scope text,p_team uuid,p_candidate uuid) returns boolean language sql stable security definer set search_path='' as $$
  select p_org is null or (private.org_role(p_org) in ('admin','team_leader','team_member') and
  (p_scope='global' or (p_scope='team' and (private.manages_team(p_org,p_team) or exists(select 1 from public.team_memberships where organization_id=p_org and team_id=p_team and user_id=private.actor_id() and active and role='team_member'))) or (p_scope='candidate' and private.reads_candidate(p_org,p_candidate))))
 $$;
+grant create on schema private to app_permission_reader;
+alter function private.reads_prompt(uuid,text,uuid,uuid) owner to app_permission_reader;
+revoke create on schema private from app_permission_reader;
 create function private.edits_prompt(p_org uuid,p_scope text,p_team uuid,p_candidate uuid) returns boolean language sql stable security invoker set search_path='' as $$
  select p_org is not null and (private.org_role(p_org)='admin' or (p_scope='team' and private.manages_team(p_org,p_team)) or (p_scope='candidate' and private.edits_candidate(p_org,p_candidate)))
 $$;
