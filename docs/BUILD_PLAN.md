@@ -138,6 +138,16 @@ Task IDs are stable references, not execution order. T036 establishes the minima
 
 ## Milestone 2 Resume production
 
+### First complete ATS Classic workflow (18 October 2026 request)
+
+Implement RP01, then RP02, then RP03 using CM01–CM03 and F001C. The user explicitly limits this milestone to ATS Classic; additional templates, cover letters, submission approval and extension production integration remain separate tasks. G01 follows the explicit design §11 interpretation: missing structure/wrong types fail; empty content and unsupported fields warn, with original raw text preserved. The user explicitly permits any authorized profile editor to attest paraphrases against frozen verified facts; this does not grant submission approval (D09 remains pending for submission policy).
+
+| ID | Increment | Design / plan | Acceptance |
+| --- | --- | --- | --- |
+| RP01 | Shared v1 validation and factual mapping/review | §§10–12; T003–T004/T025 subset | Original schema unchanged; precompiled CSP-safe validator; JSON Pointer errors; bounded safe parsing; empty/unsupported warnings; original text retained; stable work/education mapping, unsupported/conflicting claims blocked or explicitly unresolved. |
+| RP02 | Scoped prompt versions/assembly and immutable source API | §§10–13; T021–T023/T026–T027 subset | Server-authorized stable scope/order, exact text/hash and frozen references, protected instructions, user-context reads, non-owner protected commands, RLS/immutable history, actor/key/payload-bound replay and synchronization reconciliation. |
+| RP03 | ATS Classic rendering and web production workflow | §§10–13; T028–T031 subset | Frozen identity/content/template/provenance; measured selectable Unicode/multipage PDF, PDF.js previews exact export bytes; raw editor preservation, claim review, exact clipboard, independent operation outcomes and failed sync/retry checks; isolated API/database/browser evidence and visual inspection. |
+
 | ID | Scoped task | Dependencies | Design sections | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | T021 | Migrate prompt/template definitions and immutable versions. | T010–T012 | D§6, 8, 12–13 | Global/team/candidate scope, descriptions, ordering, protected main prompt, layout configuration and asset identity persist. Version allocation is race-safe; publication appends; old versions cannot be changed or deleted by clients. |

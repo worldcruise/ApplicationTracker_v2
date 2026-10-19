@@ -7,6 +7,7 @@ export default defineConfig([
     "**/node_modules/**", "**/.next/**", "**/dist/**", ".tools/**",
     ".npm-cache/**", "supabase/.temp/**", "supabase/.branches/**",
     "apps/web/next-env.d.ts",
+    "packages/contracts/src/generated/**",
   ]),
   ...tseslint.configs.recommended,
   {

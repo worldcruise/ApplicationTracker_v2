@@ -26,7 +26,7 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 ## Current work
 
-**Candidate management complete (CM01–CM03).** [Final isolated CI at ac7e0f7](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39179355613) passes database, unit, production build, real Auth/API and headless Chromium acceptance. No implementation task is currently in progress. Hosted migration/application acceptance and interactive browser/extension gates remain explicit prerequisites. The next scoped implementation task is T003.
+**RP01 complete; RP02 in progress — first ATS Classic production workflow.** Shared precompiled v1 validation and factual mapping/review pass root checks (35 tests). Raw input is retained; structure/empty content, unsafe keys, limits, target/employer separation, ambiguous mappings, titles, unsupported numbers and human paraphrase review have synthetic fixtures. Next: scoped prompt versions/assembly and immutable source persistence. User permits authorized profile editors to attest supported paraphrases; submission authority remains separate. Hosted/manual gates remain prerequisites.
 
 **Foundation milestone complete.** FN01–FN03 were implemented and verified before CM01. Hosted setup remains an operator prerequisite; this task has not migrated or configured the hosted project.
 
