@@ -36,6 +36,7 @@ export function extensionApi(client:SupabaseClient,config:ExtensionConfig,lock?:
    return result;
   },lock);
  }
- return {request};
+ async function withActor<T>(actorId:string,work:()=>Promise<T>){return withAuthOperation(async()=>{const user=await verifiedIdentity(client);if(!user||user.id!==actorId)throw new ExtensionApiError(403,"ACCOUNT_CHANGED","The active account changed. This local operation was not replayed.");return work();},lock);}
+ return {request,withActor};
 }
 export type ExtensionApi=ReturnType<typeof extensionApi>;

@@ -17,8 +17,8 @@ async function readSettings(url) {
 const web = await readSettings(new URL("../../web/.env.local", import.meta.url));
 const local = await readSettings(new URL("../.env.local", import.meta.url));
 const config = {
-  supabaseUrl: process.env.EXTENSION_PUBLIC_SUPABASE_URL ?? local.EXTENSION_PUBLIC_SUPABASE_URL ?? web.NEXT_PUBLIC_SUPABASE_URL ?? "",
-  publishableKey: process.env.EXTENSION_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? local.EXTENSION_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? web.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "",
+  supabaseUrl: process.env.EXTENSION_PUBLIC_SUPABASE_URL ?? local.EXTENSION_PUBLIC_SUPABASE_URL ?? web.NEXT_PUBLIC_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+  publishableKey: process.env.EXTENSION_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? local.EXTENSION_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? web.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "",
   apiUrl: process.env.EXTENSION_PUBLIC_API_URL ?? local.EXTENSION_PUBLIC_API_URL ?? "http://localhost:3000/api/v1",
 };
 const origins = [new URL(config.apiUrl)];
@@ -29,8 +29,10 @@ for (const url of origins) {
   }
   if (url.username || url.password) throw new Error("Credentials must not appear in public URLs.");
 }
-if (config.publishableKey && !config.publishableKey.startsWith("sb_publishable_")) {
-  throw new Error("The extension requires a public sb_publishable_ key, never a secret/service-role key.");
+let legacyAnon=false;
+try { legacyAnon=JSON.parse(Buffer.from(config.publishableKey.split(".")[1], "base64url").toString()).role==="anon"; } catch { /* not a legacy JWT key */ }
+if (config.publishableKey && !config.publishableKey.startsWith("sb_publishable_") && !legacyAnon) {
+  throw new Error("Use a public publishable or legacy anon key; authenticated/service-role/secret keys are forbidden.");
 }
 // Chrome host match patterns do not scope ports; CSP uses the exact configured origins.
 manifest.host_permissions = [...new Set(origins.map(url => `${url.protocol}//${url.hostname}/*`))];

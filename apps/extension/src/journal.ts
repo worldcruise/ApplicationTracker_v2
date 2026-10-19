@@ -1,11 +1,11 @@
 import type { CandidateProfile,CoverLetterRequest,FrozenTemplate,PromptAssembly,ResumeOutcomes,ResumeReviewInput,ResumeSourceRequest,ResumeStep } from "@candidate/contracts";
 import { sha256,type AtsRender } from "@candidate/resume-engine";
 import { localStore } from "./local-store";
-export interface ExtensionDraft {rawJson:string;letterText:string;bidId:string;job:PromptAssembly["job"];templateId:string;assembly:PromptAssembly|null;review:ResumeReviewInput|null;letterReview:ResumeReviewInput;resumeOperationId:string|null;letterOperationId:string|null}
+export interface ExtensionDraft {rawJson:string;letterText:string;bidId:string;job:PromptAssembly["job"];templateId:string;assembly:PromptAssembly|null;review:ResumeReviewInput|null;letterReview:ResumeReviewInput;resumeOperationId:string|null;letterOperationId:string|null;clipboard?:{state:"succeeded"|"failed";assemblyId:string;error:string|null}}
 export interface ExtensionOperation {
  id:string;actorId:string;organizationId:string;candidateId:string;deviceId:string;kind:"resume"|"cover_letter";createdAt:string;inputHash:string;
  input:{snapshot:CandidateProfile;assembly:PromptAssembly|null;template:FrozenTemplate;rawJson:string;bodyText:string;bidId:string|null;review:ResumeReviewInput};
- payload:ResumeSourceRequest|CoverLetterRequest|null;pdf:AtsRender|null;sourceId:string|null;outcomes:ResumeOutcomes;
+ payload:ResumeSourceRequest|CoverLetterRequest|null;pdf:AtsRender|null;sourceId:string|null;documentId:string|null;outcomes:ResumeOutcomes;
  downloadId:number|null;filename:string|null;
 }
 export const draftKey=(actor:string,org:string,candidate:string)=>`production-draft:${actor}:${org}:${candidate}`;
@@ -15,9 +15,9 @@ export function operationJournal(factory:IDBFactory=indexedDB){
  const store=localStore(factory);
  async function identity(op:ExtensionOperation|undefined,actor:string,org:string){if(!op||op.actorId!==actor||op.organizationId!==org)throw Error("Queued work belongs to another account or organization. It was not replayed.");if(await sha256(new TextEncoder().encode(JSON.stringify(op.input)))!==op.inputHash)throw Error("Frozen operation input failed its integrity check.");if(op.pdf&&await sha256(op.pdf.bytes)!==op.pdf.sha256)throw Error("Frozen PDF integrity check failed.");return op;}
  return {
-  async create(value:Omit<ExtensionOperation,"id"|"createdAt"|"inputHash"|"payload"|"pdf"|"sourceId"|"outcomes"|"downloadId"|"filename"|"deviceId">){
+  async create(value:Omit<ExtensionOperation,"id"|"createdAt"|"inputHash"|"payload"|"pdf"|"sourceId"|"documentId"|"outcomes"|"downloadId"|"filename"|"deviceId">){
    let device=await store.get<string>("production-device");if(!device){try{device=crypto.randomUUID();await store.add("production-device",device);}catch{device=await store.get<string>("production-device");}}if(!device)throw Error("Local device identity could not be saved.");
-   const op:ExtensionOperation={...structuredClone(value),id:crypto.randomUUID(),createdAt:new Date().toISOString(),inputHash:await sha256(new TextEncoder().encode(JSON.stringify(value.input))),payload:null,pdf:null,sourceId:null,outcomes:initialOutcomes(),downloadId:null,filename:null,deviceId:device};
+   const op:ExtensionOperation={...structuredClone(value),id:crypto.randomUUID(),createdAt:new Date().toISOString(),inputHash:await sha256(new TextEncoder().encode(JSON.stringify(value.input))),payload:null,pdf:null,sourceId:null,documentId:null,outcomes:initialOutcomes(),downloadId:null,filename:null,deviceId:device};
    await store.add(operationKey(op.id),op);return op;
   },
   async get(id:string,actor:string,org:string){return identity(await store.get<ExtensionOperation>(operationKey(id)),actor,org);},
@@ -28,6 +28,7 @@ export function operationJournal(factory:IDBFactory=indexedDB){
   async pdf(id:string,pdf:AtsRender){if(await sha256(pdf.bytes)!==pdf.sha256)throw Error("PDF hash mismatch.");return store.change<ExtensionOperation>(operationKey(id),op=>{if(!op||op.pdf&&op.pdf.sha256!==pdf.sha256)throw Error("Frozen PDF cannot be replaced.");return {...op,pdf};});},
   async payload(id:string,payload:ResumeSourceRequest|CoverLetterRequest){return store.change<ExtensionOperation>(operationKey(id),op=>{if(!op||payload.operationId!==id||op.payload&&JSON.stringify(op.payload)!==JSON.stringify(payload))throw Error("Frozen synchronization payload cannot change.");return {...op,payload};});},
   async source(id:string,sourceId:string){return store.change<ExtensionOperation>(operationKey(id),op=>{if(!op||op.sourceId&&op.sourceId!==sourceId)throw Error("Immutable result cannot change.");return {...op,sourceId};});},
+  async document(id:string,documentId:string){return store.change<ExtensionOperation>(operationKey(id),op=>{if(!op||op.documentId&&op.documentId!==documentId)throw Error("Immutable document result cannot change.");return {...op,documentId};});},
   async download(id:string,downloadId:number|null,filename:string){return store.change<ExtensionOperation>(operationKey(id),op=>{if(!op||op.filename&&op.filename!==filename)throw Error("Export filename cannot change.");return {...op,downloadId,filename};});},
  };
 }

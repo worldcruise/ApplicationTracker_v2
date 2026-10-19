@@ -11,3 +11,17 @@
 .probe-card details { margin-top: 1rem; }
 .pdf-preview { padding: 1rem; background: #e8eef0; margin-top: 1rem; }
 .pdf-preview canvas { display: block; max-width: 100%; height: auto; background: white; border: 1px solid #b9cbd0; margin: .8rem auto; }
+.workspace-card { margin: 1rem 0; padding: 1.1rem; border: 1px solid #b9cbd0; border-radius: .5rem; background: white; }
+.workspace-card h2 { font-size: 1.2rem; font-weight: 650; margin-bottom: .7rem; }
+.workspace-card label { display: block; margin: .6rem 0; }
+.workspace-card input:not([type=checkbox]), .workspace-card select, .workspace-card textarea { display: block; width: 100%; padding: .55rem; border: 1px solid #9eb4bc; border-radius: .3rem; }
+.workspace-card textarea, .preserve { white-space: pre-wrap; overflow-wrap: anywhere; }
+.workspace-card button { margin: .25rem .5rem .25rem 0; padding: .5rem .7rem; border: 1px solid #17604f; border-radius: .3rem; background: #f1f8f5; }
+.workspace-card button:disabled, fieldset:disabled { opacity: .6; }
+.workspace-card a { text-decoration: underline; color: #17604f; }
+.workspace-card code { overflow-wrap: anywhere; font-size: .8rem; }
+.workspace-card p { margin: .5rem 0; }
+.operation { border-top: 1px solid #b9cbd0; margin-top: 1rem; padding-top: 1rem; }
+.operation dl { display: grid; grid-template-columns: repeat(auto-fit,minmax(9rem,1fr)); gap: .8rem; }
+.operation dt { font-weight: 600; }
+.notice { padding: .8rem; background: #e9f3ef; border-left: 3px solid #17604f; }

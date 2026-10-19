@@ -5,6 +5,8 @@ import type { CandidateProfile,FrozenTemplate,ResumeSourceRequest } from "@candi
 import { operationJournal } from "../src/journal";
 import { extensionApi,ExtensionApiError } from "../src/api";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {localStore} from "../src/local-store";
+import {settleDownload} from "../src/download-events";
 test("production journals survive closure, partition actors, preserve frozen input and merge independent outcomes",async()=>{
  const factory=new IDBFactory();const journal=operationJournal(factory);
  const op=await journal.create({actorId:"synthetic-actor",organizationId:"synthetic-org",candidateId:"synthetic-candidate",kind:"resume",input:{snapshot:{} as CandidateProfile,template:{} as FrozenTemplate,assembly:null,rawJson:'{"invalid":',bodyText:"",bidId:null,review:{experienceIds:[],educationIds:[],claims:{}}}});
@@ -23,4 +25,12 @@ test("shared API checks identity/current membership before writes and never retr
  await assert.rejects(api.request("resume-versions",{actorId:"other",organizationId:"synthetic-org",body:{}}),/another account/);assert.equal(calls,0);
  await assert.rejects(api.request("resume-versions",{actorId:user.id,organizationId:"synthetic-org",body:{}}),ExtensionApiError);assert.equal(writes,1);
  member=false;await assert.rejects(api.request("resume-versions",{actorId:user.id,organizationId:"synthetic-org",body:{}}),/active organization/);assert.equal(writes,1);
+});
+test("download events survive page closure and cannot overwrite another download's result",async()=>{
+ const store=localStore(new IDBFactory());await store.put("production-op:synthetic",{downloadId:2,outcomes:{localExport:{state:"pending",attempts:1,error:null}}});
+ await store.put("production-download:1",{operationId:"synthetic"});await store.put("production-download:2",{operationId:"synthetic"});
+ await settleDownload(1,"interrupted","SYNTHETIC_ERROR",store);
+ assert.equal((await store.get<{outcomes:{localExport:{state:string}}}>("production-op:synthetic"))!.outcomes.localExport.state,"pending");
+ await settleDownload(2,"complete",undefined,store);
+ assert.equal((await store.get<{outcomes:{localExport:{state:string}}}>("production-op:synthetic"))!.outcomes.localExport.state,"succeeded");
 });

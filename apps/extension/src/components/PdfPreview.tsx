@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getDocument, PDFWorker, type PDFDocumentLoadingTask, type PDFDocumentProxy, type RenderTask } from "pdfjs-dist/legacy/build/pdf.mjs";
-import type { StoredSample } from "../sample-pdf";
 
-export function PdfPreview({ sample }: { sample: StoredSample }) {
+export function PdfPreview({ sample }: { sample: {bytes:Uint8Array} }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [document, setDocument] = useState<PDFDocumentProxy>();
   const [pageNumber, setPageNumber] = useState(1);
@@ -59,6 +58,6 @@ export function PdfPreview({ sample }: { sample: StoredSample }) {
       <label>Zoom <select value={scale} onChange={event => setScale(Number(event.target.value))}><option value={.8}>80%</option><option value={1.2}>120%</option><option value={1.6}>160%</option></select></label>
     </div>
     <p role="status" aria-live="polite">{message}</p>
-    <canvas ref={canvas} aria-label={`Synthetic resume PDF preview, page ${pageNumber}. A text view follows.`} />
+    <canvas ref={canvas} aria-label={`PDF preview, page ${pageNumber}. A text view follows.`} />
   </div>;
 }
