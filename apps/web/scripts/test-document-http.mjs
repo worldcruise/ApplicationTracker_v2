@@ -55,5 +55,6 @@ export async function testDocumentHTTP({ call, command, identities, org, candida
   expect((await call(m, url(`/documents/${documentId}/pdf`))).data.sha256 === rendered.data.sha256, "Stored bytes survive later profile/template edits");
   expect((await call(m, url(`/cover-letter-versions/${letter.data.id}`))).data.bodyText === bodyText, "Original letter text remains immutable after profile changes");
   expect((await save(payload)).data.id === letter.data.id, "Original letter operation replays after profile changes");
-  return { letterId: letter.data.id, documentId };
+  await command(a, org, { command: "grantBidderAccess", userId: bidder.id, candidateId: null, bidId: bid, capability: "document.export", allowEmail: false, allowPhone: false, expiresAt: null });
+  return { letterId: letter.data.id, documentId, bidderPdfHash: rendered.data.sha256 };
 }

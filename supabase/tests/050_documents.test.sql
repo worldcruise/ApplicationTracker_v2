@@ -14,6 +14,9 @@ select ok((select relforcerowsecurity from pg_class where oid='public.cover_lett
 select ok(not has_table_privilege('authenticated','public.cover_letter_versions','UPDATE'),'letter editing requires a new immutable version');
 select ok(not has_table_privilege('authenticated','public.documents','INSERT'),'clients cannot insert self-attested PDF metadata');
 select ok(has_function_privilege('authenticated','public.export_frozen_document(uuid,uuid)','EXECUTE'),'frozen export is a distinct protected command');
+select ok(exists(select 1 from pg_constraint where conrelid='public.cover_letter_versions'::regclass and conname='letter_bid_candidate_consistency'),'letter bid reference constrains candidate and tenant');
+select ok(exists(select 1 from pg_constraint where conrelid='public.bid_document_links'::regclass and conname='document_link_bid_candidate_consistency'),'document bid link constrains candidate and tenant');
+select throws_ok($$select private.check_template_layout(layout||'{"page":null}'::jsonb) from public.template_versions where id='b7000000-0000-4000-9000-000000000001'$$,'22023','INVALID_TEMPLATE','SQL rejects a null template configuration');
 select set_config('request.jwt.claims','{"sub":"a8000000-0000-4000-9000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
 select throws_ok($$select public.export_frozen_document(gen_random_uuid(),gen_random_uuid())$$,'42501','FORBIDDEN','unknown or unauthorized export reveals no existence');

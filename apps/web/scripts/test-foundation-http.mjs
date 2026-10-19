@@ -262,12 +262,12 @@ try {
   step = "template library and frozen version acceptance";
   const templateFixture = await testTemplateHTTP({ call, identities, org: orgA, candidate: resumeFixture.candidate, expect });
   step = "cover letters and frozen export-only documents";
-  await testDocumentHTTP({ call, command, identities, org: orgA, ...templateFixture, expect });
+  const documentFixture = await testDocumentHTTP({ call, command, identities, org: orgA, ...templateFixture, expect });
   step = "resume production headless Chromium acceptance";
   try { const checkpoints = await testResumeBrowser({ org: orgA, candidate: resumeFixture.candidate, identities, password }); expect(checkpoints === 9, "All resume browser checkpoints completed"); console.log(JSON.stringify({ result: "PASS", resumeBrowserCheckpoints: checkpoints })); }
   catch (error) { throw new TestFailure(error.message); }
   step = "letter and frozen document headless Chromium acceptance";
-  try { const checks = await testDocumentBrowser({org:orgA,candidate:resumeFixture.candidate,identities,password}); expect(checks===7,"All letter/document browser checkpoints completed"); console.log(JSON.stringify({result:"PASS",documentBrowserCheckpoints:checks})); }
+  try { const checks = await testDocumentBrowser({org:orgA,candidate:resumeFixture.candidate,identities,password,...documentFixture}); expect(checks===8,"All letter/document browser checkpoints completed"); console.log(JSON.stringify({result:"PASS",documentBrowserCheckpoints:checks})); }
   catch(error) { throw new TestFailure(error.message); }
   step = "candidate headless Chromium acceptance";
   try {
