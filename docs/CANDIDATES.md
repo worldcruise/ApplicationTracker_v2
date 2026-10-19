@@ -93,7 +93,9 @@ CI=true npm run test:foundation:http
 npm run db:stop -- --no-backup
 ```
 
-Record observed hosted/interactive results separately; automated evidence is in [PROGRESS.md](PROGRESS.md). Manual checks still required on the supported browser/deployment:
+Final [isolated CI at ac7e0f7](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39179355613) passes eight migrations, 132 pgTAP assertions, 31 unit tests, production builds, 379 Auth/API assertions and all 15 candidate Chromium checkpoints. Details and failed-attempt corrections are in [PROGRESS.md](PROGRESS.md). The [official Playwright CI guidance](https://playwright.dev/docs/ci-intro) describes browser/dependency installation; this harness keeps credentials and browser sessions in memory.
+
+Record observed hosted/interactive results separately. Manual checks still required on the supported browser/deployment:
 
 1. Sign in with synthetic admin/leader/member/bidder accounts. Confirm directory and raw profile scope across two organizations/two teams. Direct URL/API access must deny unrelated teams and bidders.
 2. Create an empty draft; add the four Ready facts, links, precise/unknown dates, ordered work/education/certification entries. Save and reload. Invalid phone/email/scheme/dates must block saving; work overlap must warn.
