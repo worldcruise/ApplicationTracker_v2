@@ -33,7 +33,7 @@ export interface ProvisioningResult {
 
 export interface FoundationSnapshot {
   scope: OrganizationScope;
-  teams: { id: string; name: string; status: string; rowVersion: number }[];
+  teams: { id: string; name: string; status: string; rowVersion: number; approvalPolicy?: { required: boolean; coverLetterRequired: boolean; version: number } | null }[];
   memberships: { userId: string; role: OrganizationRole; state: "invited" | "active" | "deactivated"; rowVersion: number }[];
   people: { id: string; displayName: string }[];
   teamMemberships: { teamId: string; userId: string; role: TeamRole; active: boolean; rowVersion: number }[];

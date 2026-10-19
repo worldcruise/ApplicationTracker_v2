@@ -3,7 +3,7 @@ create function public.get_bid_workflow_access(p_org uuid,p_bid uuid) returns js
 declare b public.bids;manager boolean;self_review boolean;begin
  if not private.reads_bid(p_org,p_bid) then raise exception 'FORBIDDEN' using errcode='42501';end if;
  select * into b from public.bids where organization_id=p_org and id=p_bid;
- manager:=private.manages_team(p_org,b.team_id);self_review:=private.actor_id()=any(private.package_authors(p_org,b.id));
+ manager:=private.manages_team(p_org,b.team_id);self_review:=coalesce(private.actor_id()=any(private.package_authors(p_org,b.id)),false);
  return jsonb_build_object('canEdit',private.org_role(p_org)<>'bidder' or exists(select 1 from private.bidder_grants(p_org,b.candidate_id,b.id,'bid.prepare')),
  'canTransition',manager or b.owner_id=private.actor_id() or exists(select 1 from private.bidder_grants(p_org,b.candidate_id,b.id,'bid.prepare')),
  'canSubmit',case when private.org_role(p_org)='bidder' then exists(select 1 from private.bidder_grants(p_org,b.candidate_id,b.id,'bid.submit')) else manager or b.owner_id=private.actor_id() end,

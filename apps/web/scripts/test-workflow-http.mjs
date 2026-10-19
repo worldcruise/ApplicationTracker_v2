@@ -13,7 +13,7 @@ export async function testWorkflowHTTP({call,command,identities,org,team,expect}
   const source=await call(m,url("/resume-versions"),payload,undefined,{"Idempotency-Key":payload.operationId});expect(source.status===200,"Workflow immutable source saves");
   const stored=await call(m,url("/documents"),{kind:"resume",sourceVersionId:source.data.id});expect(stored.status===200,"Workflow PDF is attested and stored");return stored.data.id;
  }
- const doc1=await document(2),doc2=await document(2);
+ const doc1=await document(2),doc2=await document(2);const originalPdf=(await call(m,url("/documents/"+doc2+"/pdf"))).data.base64;
  const input={candidateId:candidate,teamId:team,ownerId:m.id,companyName:"Synthetic Workflow Company",jobTitle:"Engineer",jobDescription:"Synthetic verified opportunity",jobUrl:"https://example.invalid/jobs/synthetic-1",externalId:"synthetic-1",jobLocation:"Synthetic City",priority:"normal",followUpAt:new Date(Date.now()-3600000).toISOString(),lastContactAt:null,notes:"Synthetic notes",outcome:"",resumeDocumentId:doc1,coverLetterDocumentId:null};
  const write=(who,p,body,version=0,method="POST")=>{const b={operationId:randomUUID(),...body};return call(who,url(p),b,version,{"Idempotency-Key":b.operationId},method);};
  const read=async id=>{const r=await call(m,url("/bids/"+id));expect(r.status===200,"Bid refresh loads persisted current row");return r.data;};
@@ -70,12 +70,40 @@ export async function testWorkflowHTTP({call,command,identities,org,team,expect}
  expect((await read(pending)).bid.status==="resume_preparation","Facts change invalidates pending package");
  expect((await transition(m,pending,"ready_for_review")).status===422,"Historical versions cannot be reapproved after facts change");
  expect((await read(bid)).submissions[0].resume_document_id===doc2,"Prior actual submission remains immutable after fact changes");
- const fresh=await document(3);expect((await save(pending,{...input,companyName:"Synthetic Other Opportunity",externalId:"synthetic-2",resumeDocumentId:fresh})).status===200,"Fresh reviewed source replaces stale pending package");
+ let fresh=await document(3);expect((await save(pending,{...input,companyName:"Synthetic Other Opportunity",externalId:"synthetic-2",resumeDocumentId:fresh})).status===200,"Fresh reviewed source replaces stale pending package");
  expect((await transition(m,pending,"ready_for_review")).status===200&&(await transition(l,pending,"approved")).status===200,"Fresh version can be independently reapproved");
  // Bidder prepare and actual-submit capabilities are independent.
  await command(a,org,{command:"grantBidderAccess",userId:bidder.id,candidateId:null,bidId:pending,capability:"bid.prepare",allowEmail:false,allowPhone:false,expiresAt:null});
  expect((await call(bidder,url("/bids/"+pending))).status===200,"Scoped bidder can read bid without raw profile");
  expect((await transition(bidder,pending,"submitted",{submittedAt:new Date().toISOString(),attested:true})).status===403,"Prepare grant cannot record actual submission");
  expect((await call(bidder,url("/interviews")+"&bidId="+pending)).status===403,"Bid grant never exposes interview data");
+ expect((await transition(m,pending,"submitted",{submittedAt:new Date().toISOString(),attested:true})).status===200&&(await transition(m,pending,"interview_invited")).status===200,"Second opportunity records its own actual submission and invitation");
+ const otherRound=await write(m,"/interviews",{input:{...round,bidId:pending,offset:"-05:00"},previousRoundId:null});expect(otherRound.status===200&&(await call(m,url("/interviews/"+otherRound.data.id))).data.interview.roundNumber===1,"Independent opportunity starts at round one");
+ const self=await write(l,"/bids",{input:{...input,resumeDocumentId:fresh,ownerId:l.id,companyName:"Synthetic Self Review"}});
+ expect(self.status===200,"Leader may own a prepared opportunity");const selfId=self.data.id;
+ expect((await transition(l,selfId,"resume_preparation")).status===200&&(await transition(l,selfId,"ready_for_review")).status===200,"Leader-owned package enters review");
+ expect((await transition(l,selfId,"approved")).status===403,"Leader cannot review own package");
+ expect((await transition(a,selfId,"approved")).status===200,"Independent administrator can review leader package");
+ expect((await save(selfId,{...input,resumeDocumentId:fresh,ownerId:a.id,companyName:"Synthetic Self Review"},a)).status===200,"Authorized ownership change invalidates approval");
+ expect((await transition(a,selfId,"ready_for_review")).status===200&&(await transition(a,selfId,"approved")).status===403,"Administrator self-approval requires an explicit override reason");
+ expect((await transition(a,selfId,"approved",{adminOverrideReason:"Synthetic audited exception"})).status===200,"Reasoned administrator override records approval");
+ expect((await read(selfId)).approvals[0].override_reason==="Synthetic audited exception","Override reason is retained in immutable approval");
+ // Verify serialization of a profile edit racing an approval.
+ const racing=await write(m,"/bids",{input:{...input,resumeDocumentId:fresh,companyName:"Synthetic Concurrent Facts"}});expect(racing.status===200,"Race fixture persists");
+ await transition(m,racing.data.id,"resume_preparation");await transition(m,racing.data.id,"ready_for_review");
+ const racingVersion=(await read(racing.data.id)).bid.rowVersion;
+ const race=await Promise.all([transition(l,racing.data.id,"approved",{},racingVersion),call(m,url("/candidates/"+candidate),{...fixture,professionalSummary:"Changed verified facts.",location:"Synthetic Updated City"},3,{},"PATCH")]);
+ expect([200,422].includes(race[0].status)&&race[1].status===200,"Concurrent profile/approval requests serialize without a service error");
+ const raced=await read(racing.data.id);expect(!raced.bid.currentApprovalId&&raced.bid.status!=="approved","Concurrent facts change cannot leave stale approval");
+ fresh=await document(4);
+ expect((await call(m,url("/documents/"+doc2+"/pdf"))).data.base64===originalPdf,"Historical exact PDF survives later candidate facts");
+ const delegated=await write(a,"/bids",{input:{...input,resumeDocumentId:fresh,ownerId:bidder.id,companyName:"Synthetic Delegated Submission"}});expect(delegated.status===200,"Administrator assigns an active bidder owner");
+ const delegatedId=delegated.data.id;
+ for(const capability of ["bid.prepare","bid.submit","document.export"])await command(a,org,{command:"grantBidderAccess",userId:bidder.id,candidateId:null,bidId:delegatedId,capability,allowEmail:false,allowPhone:false,expiresAt:null});
+ expect((await call(a,url("/documents/"+fresh+"/links"),{bidId:delegatedId})).status===200,"Exact frozen document linked to delegated bid");
+ expect((await transition(bidder,delegatedId,"resume_preparation")).status===200&&(await transition(bidder,delegatedId,"ready_for_review")).status===200,"Scoped bidder prepares only an existing reviewed package");
+ expect((await transition(l,delegatedId,"approved")).status===200,"Independent reviewer approves delegated exact package");
+ expect((await transition(bidder,delegatedId,"submitted",{submittedAt:new Date().toISOString(),attested:true})).status===200,"Bidder with explicit submit and export grants records actual submission");
+ const projection=await call(bidder,url("/bids/"+delegatedId));expect(projection.status===200&&!JSON.stringify(projection.data).includes("PRIVATE WORKFLOW NOTE")&&!Object.hasOwn(projection.data,"profile"),"Bidder workflow response contains no unrestricted profile or feedback");
  return {candidate,bid,second:pending,interview,doc1,doc2,fresh,input,round};
 }

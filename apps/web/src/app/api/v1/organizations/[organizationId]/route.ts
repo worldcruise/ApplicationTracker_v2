@@ -12,7 +12,7 @@ export async function GET(request: Request, route: { params: Promise<{ organizat
     const scope = currentOrganization(context, uuid((await route.params).organizationId));
     const org = scope.organizationId;
     const [teams, memberships, teamMemberships, assignments, grants, operations] = await Promise.all([
-      databaseResult<FoundationSnapshot["teams"]>(client.from("teams").select("id,name,status,rowVersion:row_version").eq("organization_id", org).limit(100)),
+      databaseResult<FoundationSnapshot["teams"]>(client.from("teams").select("id,name,status,rowVersion:row_version,approvalPolicy:approval_policy").eq("organization_id", org).limit(100)),
       databaseResult<FoundationSnapshot["memberships"]>(client.from("organization_memberships").select("userId:user_id,role,state,rowVersion:row_version").eq("organization_id", org).limit(100)),
       databaseResult<FoundationSnapshot["teamMemberships"]>(client.from("team_memberships").select("teamId:team_id,userId:user_id,role,active,rowVersion:row_version").eq("organization_id", org).limit(100)),
       databaseResult<FoundationSnapshot["assignments"]>(client.from("candidate_assignments").select("id,candidateId:candidate_id,teamId:team_id,userId:user_id,activeFrom:active_from,endedAt:ended_at").eq("organization_id", org).limit(100)),
