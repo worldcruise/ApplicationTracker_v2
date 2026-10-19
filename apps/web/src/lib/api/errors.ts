@@ -11,6 +11,23 @@ export class ApiFailure extends Error {
 export interface DatabaseFailure { code?: string; message?: string }
 
 export function databaseFailure(error: DatabaseFailure): ApiFailure {
+  const workflowMessages: Record<string,string> = {
+    INVALID_BID_TRANSITION:"This bid cannot move to the selected status. Reload the current status and choose an allowed transition.",
+    APPROVAL_REQUIRED:"An independent approval of these exact job details and document versions is required.",
+    PROFILE_FACTS_CHANGED:"Candidate facts changed. Create fresh reviewed resume and letter versions before requesting review.",
+    VERIFIED_DOCUMENTS_REQUIRED:"Select a reviewed resume and any policy-required reviewed cover letter.",
+    BID_CONTENT_FROZEN:"Submitted job details and documents are frozen. An administrator must explicitly reopen the bid before preparing a new submission.",
+    SUBMISSION_ATTESTATION_REQUIRED:"Record the actual submission timestamp and confirmation or explicit attestation.",
+    WORKFLOW_POLICY_REQUIRED:"An administrator must configure this team's approval policy.",
+    INTERVIEW_INVITATION_REQUIRED:"Create a round only for a bid with an interview invitation.",
+    NEXT_ROUND_REQUIRED:"Complete the previous round with the Next Round outcome before adding its successor.",
+    INVALID_SCHEDULE:"The UTC time, local time, IANA zone and chosen offset do not agree.",
+    COMPLETION_REQUIRED:"Record interview completion before recording feedback or an outcome.",
+    INVALID_INTERVIEW_TRANSITION:"Completed rounds cannot return to scheduling; cancelled rounds remain historical.",
+    LETTER_BID_MISMATCH:"This letter belongs to another bid. Select a letter prepared for this opportunity.",
+    TASK_CLOSED:"This task has already been completed or cancelled.",
+  };
+  if (error.message && workflowMessages[error.message]) return new ApiFailure(422,"SCHEMA_INVALID",workflowMessages[error.message]!);
   if (error.message === "RENDER_ATTESTATION_REQUIRED") return new ApiFailure(503, "SERVICE_UNAVAILABLE", "The server render signing key is not registered or does not match the database. Ask the operator to configure document storage. Source versions and local PDFs are retained.");
   if (error.message === "PDF_HASH_MISMATCH") return new ApiFailure(409, "VERSION_CONFLICT", "The PDF failed its recorded integrity check. Exact export is blocked; no replacement was substituted.");
   if (error.message === "CANDIDATE_ARCHIVED") return new ApiFailure(409, "SCHEMA_INVALID", "This candidate is archived. Restore it before making changes.");

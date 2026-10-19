@@ -27,4 +27,6 @@ export interface InterviewInput {
   nextAction: string; followUpAt: string | null;
 }
 export interface Interview extends InterviewInput { id: string; roundNumber: number; scheduledAt: string | null; rowVersion: number; createdAt: string; updatedAt: string }
-export interface WorkflowTask { id: string; bidId: string; interviewId: string | null; assigneeId: string; title: string; dueAt: string; completedAt: string | null; rowVersion: number }
+export interface WorkflowTask { id: string; bidId: string; interviewId: string | null; assigneeId: string; title: string; dueAt: string; state: "open"|"completed"|"cancelled"; completedAt: string | null; rowVersion: number }
+export interface WorkflowAccess { canEdit: boolean; canTransition: boolean; canSubmit: boolean; canReview: boolean; selfReview: boolean; canOverride: boolean; canAssign: boolean; canInterview: boolean; factsCurrent: boolean; policy: WorkflowPolicy | null }
+export interface BidWorkspace { bid: Bid; access: WorkflowAccess; history: Record<string,unknown>[]; approvals: Record<string,unknown>[]; invalidations: Record<string,unknown>[]; submissions: Record<string,unknown>[]; revisions: Record<string,unknown>[] }

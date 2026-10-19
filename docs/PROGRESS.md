@@ -8,6 +8,7 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 | Task | Result | Evidence |
 | --- | --- | --- |
+| BO01 base | Added independent bid records, all fifteen status constraints/transitions, optimistic and idempotent protected commands, exact-document approvals, invalidation, explicit actual submissions and immutable history. | [60cc8e7 isolated CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39278601442) passes 207 SQL assertions, 37 unit tests, production builds, existing rendering and 32 browser checkpoints, and 649 Auth/API/artifact assertions. The additional fresh-facts refinement is committed separately and awaits its own CI result; this base evidence does not claim that refinement passed. |
 | RP01 | Preserved canonical v1, added precompiled shared structural validation, raw preservation, actionable errors and evidence-based factual review. | [407e556 CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39234326319) passes shared/SQL/API cases for malformed/missing/empty/unknown/prototype/deep/long inputs, title/employer mapping, ambiguous records, numerical/qualification conflicts and human attestation. 35 unit tests across the repository. |
 | RP02 | Added scoped immutable prompt assemblies and actor/key/payload-bound source versions with user-context RLS and audit. | [0be910a CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39185616049) passes 155 SQL and 468 Auth/API assertions, including concurrent replay, changed key payload, scope denial and profile snapshot preservation. |
 | RP03 | Added ATS Classic Studio, shared measured rendering, same-byte PDF.js preview/export and durable independent operation outcomes. | [407e556 CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39234326319): builds, 490 Auth/API assertions, nine resume and 15 candidate Chromium checkpoints. Three-page Unicode/text/bounds/repeat hashes and watermarks verified; pages visually inspected. Simulated failed sync/reload/original retry retains UUID/PDF bytes. |
@@ -33,7 +34,7 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 ## Current work
 
-**BO01 — Bid persistence, state machine, approval and submission foundation.** The user requested the complete §§18–19 milestone, split into BO01–BO04 in BUILD_PLAN.md. Reusing the verified candidate/document foundation. D04 is explicitly approved by the user: approvals required; leader/admin review; owner/package editor/document author cannot self-approve except an audited admin override with reason; cover letters optional unless required by team policy. Implementing versioned SQL and shared contracts first. Hosted/manual gates remain separate; no hosted change is authorized or needed for isolated verification.
+**BO02–BO04 — Interview persistence, API and application acceptance.** BO01's base is verified above. The user explicitly requires fresh reviewed versions after changed candidate facts for pending bids (D09); recorded submissions remain immutable. The fresh-facts refinement and interview database checks are queued in isolated CI. User-context APIs and board/detail/scheduling/follow-up controls are under implementation, with final milestone verification pending. Hosted/manual gates remain separate; no hosted database change has been performed.
 
 **Foundation milestone complete.** FN01–FN03 were implemented and verified before CM01. Hosted setup remains an operator prerequisite; this task has not migrated or configured the hosted project.
 
@@ -56,6 +57,8 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 | ID | Date | Decision or status | Basis |
 | --- | --- | --- | --- |
+| BO-D04 | 2026-10-19 | Approvals required by default, independent leader/admin review, no owner/package editor/document author self-approval except audited admin override with reason; letters optional unless team policy requires one. | Explicit user answer. Policy changes invalidate pending approvals and preserve old submission snapshots. |
+| BO-D09 | 2026-10-19 | Changed candidate facts require fresh reviewed document versions for pending bids; an independent reviewer cannot merely reapprove stale historical versions. | Explicit user answer. Historical export and previously recorded submissions remain immutable. Non-factual access/private-note metadata does not change document facts. |
 | CTX-D01 | 2026-10-17 | Keep original input files in `doc/`; put new implementation context in requested `docs/` and instructions at the root. | Actual repository paths; no source move or duplicate PRD needed. |
 | CTX-D02 | 2026-10-17 | Preserve source requirements, proposed defaults, and open decisions verbatim in DESIGN.md; record comparison findings separately. | Faithful transcription and explicit conflict reporting requested. This does not approve product defaults. |
 | CTX-D03 | 2026-10-17 | Copy the embedded architecture figure unchanged as a Markdown asset. | Retains the design's trust-boundary diagram alongside all tables and contracts. |

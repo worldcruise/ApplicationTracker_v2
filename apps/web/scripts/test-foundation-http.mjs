@@ -12,6 +12,7 @@ import { testResumeBrowser } from "./test-resume-browser.mjs";
 import { testTemplateHTTP } from "./test-template-http.mjs";
 import { testDocumentHTTP } from "./test-document-http.mjs";
 import { testDocumentBrowser } from "./test-document-browser.mjs";
+import { testWorkflowHTTP } from "./test-workflow-http.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -275,6 +276,9 @@ try {
     expect(browserChecks === 15, "Candidate browser acceptance completes all 15 checkpoints");
     console.log(JSON.stringify({ result: "PASS", browser: "headless Chromium", candidateCheckpoints: browserChecks }));
   } catch (error) { throw new TestFailure(error.message); }
+  step = "bid and interview production API acceptance";
+  const workflowFixture = await testWorkflowHTTP({call,command,identities,org:orgA,team:teamA,expect});
+  void workflowFixture;
   step = "current membership and grant revocation with existing tokens";
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);
   expect((await call(identities.memberA, candidatePath(first))).status === 403, "Unexpired token loses application access after deactivation");
