@@ -1,0 +1,30 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select no_plan();
+insert into auth.users(id,email,email_confirmed_at) select ('a8000000-0000-4000-9000-'||lpad(n::text,12,'0'))::uuid,'resume-'||n||'@example.invalid',now() from generate_series(1,4) n;
+insert into public.users(id,display_name) select id,'Synthetic Resume User' from auth.users where email like 'resume-%@example.invalid';
+insert into public.organizations(id,name) values('a8000000-0000-4000-9000-000000000100','Synthetic Resume Org');
+insert into public.organization_memberships(organization_id,user_id,role,state) select 'a8000000-0000-4000-9000-000000000100',('a8000000-0000-4000-9000-'||lpad(n::text,12,'0'))::uuid,case n when 1 then 'admin' when 2 then 'team_leader' when 3 then 'team_member' else 'bidder' end,'active' from generate_series(1,4) n;
+insert into public.teams(id,organization_id,name,created_by) values('a8000000-0000-4000-9000-000000000200','a8000000-0000-4000-9000-000000000100','Synthetic Resume Team','a8000000-0000-4000-9000-000000000001');
+insert into public.team_memberships(organization_id,team_id,user_id,role,created_by) select organization_id,'a8000000-0000-4000-9000-000000000200',user_id,role,'a8000000-0000-4000-9000-000000000001' from public.organization_memberships where role<>'admin';
+select set_config('request.jwt.claims','{"sub":"a8000000-0000-4000-9000-000000000001","role":"authenticated"}',true);
+set local role authenticated;
+select set_config('test.resume_candidate',(public.create_candidate_profile('a8000000-0000-4000-9000-000000000100','a8000000-0000-4000-9000-000000000200',null,
+ '{"fullName":"Synthetic Zoë","email":"zoe@example.invalid","phone":"+1 202 555 0100","location":"Synthetic City","seniorityPreference":null,"professionalSummary":"Built synthetic tools.","privateNotes":"PRIVATE DO NOT COPY","status":"ready","links":[],"experiences":[],"educations":[],"certifications":[]}',gen_random_uuid())->>'id'),true);
+
+select public.set_candidate_assignment('a8000000-0000-4000-9000-000000000100',current_setting('test.resume_candidate')::uuid,'a8000000-0000-4000-9000-000000000003',true,1,gen_random_uuid());
+reset role;
+select set_config('request.jwt.claims','{"sub":"a8000000-0000-4000-9000-000000000003","role":"authenticated"}',true);
+set local role authenticated;
+select set_config('test.template_input',('{"baseVersionId":"b7000000-0000-4000-9000-000000000001","name":"Synthetic scoped template","scope":"candidate","sharing":"team","teamId":null,"candidateId":"replace","layout":{"page":"Letter","margin":48,"fontSize":10.5,"lineHeight":15,"paragraphSpacing":6,"sectionSpacing":7,"bulletIndent":10,"nameSize":25,"headingSize":12,"align":"left","accent":"#17604f","showLinks":true,"experienceOrder":"source","sections":["summary","skills","experience","education"],"labels":{"summary":"Professional summary","skills":"Skills","experience":"Experience","education":"Education"}}}'::jsonb||jsonb_build_object('candidateId',current_setting('test.resume_candidate')))::text,true);
+select set_config('test.template_version',public.publish_template_version('a8000000-0000-4000-9000-000000000100',null,0,current_setting('test.template_input')::jsonb,gen_random_uuid())::text,true);
+select is((select version from public.template_versions where id=current_setting('test.template_version')::uuid),1,'assigned member receives new published version');
+select is((select name from public.template_versions where id=current_setting('test.template_version')::uuid),'Synthetic scoped template','scoped template is readable after commit boundary');
+select throws_ok($$update public.template_versions set name='overwritten'$$,'42501',null,'published template cannot be rewritten');
+select set_config('test.custom_assembly',public.assemble_resume_prompt('a8000000-0000-4000-9000-000000000100',current_setting('test.resume_candidate')::uuid,2,jsonb_build_object('company','Target','title','Role','description','Synthetic job','templateVersionId',current_setting('test.template_version')),gen_random_uuid())::text,true);
+select is((select template_snapshot->>'name' from public.prompt_assemblies where id=current_setting('test.custom_assembly')::uuid),'Synthetic scoped template','assembly pins immutable custom template');
+reset role;
+select is((select count(*)::integer from public.template_versions where preset_id is null),9,'all nine built-in versions exist');
+select throws_ok($$update public.template_versions set name='owner overwrite'$$,'42501','IMMUTABLE_PROFILE_REVISION','owner cannot accidentally mutate published version');
+select * from finish(); rollback;
