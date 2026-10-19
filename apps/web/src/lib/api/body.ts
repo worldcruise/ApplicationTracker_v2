@@ -9,7 +9,7 @@ export async function readJson(request: Request, maximum = 262_144): Promise<unk
   while (true) {
     const part = await reader.read(); if (part.done) break;
     length += part.value.byteLength;
-    if (length > maximum) { await reader.cancel(); throw new ApiFailure(413, "SCHEMA_INVALID", "The profile exceeds the 256 KiB request limit."); }
+    if (length > maximum) { await reader.cancel(); throw new ApiFailure(413, "SCHEMA_INVALID", `The request exceeds the ${maximum} byte limit.`); }
     chunks.push(part.value);
   }
   const bytes = new Uint8Array(length); let offset = 0;
