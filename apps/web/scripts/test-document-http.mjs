@@ -40,7 +40,22 @@ export async function testDocumentHTTP({ call, command, identities, org, candida
   const bidExport = await call(bidder, url(`/documents/${documentId}/pdf`)); expect(bidExport.status === 200 && createHash("sha256").update(Buffer.from(bidExport.data.base64, "base64")).digest("hex") === rendered.data.sha256, "Export-only bidder retrieves authorized frozen bytes");
   expect(!("snapshot" in bidExport.data) && !("bodyText" in bidExport.data) && !("provenance" in bidExport.data), "Export returns no raw profile or factual review payload");
   expect((await call(bidder, url(`/resume-versions/${sourceId}`))).status === 403, "Export-only grant cannot retrieve resume source");
-  expect((await call(bidder, url("/cover-letter-versions"), { ...payload, operationId: randomUUID() }, undefined, { "Idempotency-Key": randomUUID() })).status !== 200, "Export-only user cannot create letter content");
+  // Valid frozen inputs and matching keys ensure these assertions exercise
+  // authorization, rather than failing earlier on malformed request validation.
+  const letterOperation = randomUUID();
+  const forbiddenLetter = { ...payload, operationId: letterOperation, render: null };
+  expect((await call(bidder, url("/cover-letter-versions"), forbiddenLetter, undefined, { "Idempotency-Key": letterOperation })).status === 403, "Active export-only grant cannot create letter content with a valid request");
+  const source = (await call(m, url(`/resume-versions/${sourceId}`))).data;
+  const sourceOperation = randomUUID();
+  const forbiddenSource = { operationId: sourceOperation, assemblyId: source.assemblyId, schemaVersion: 1, rawJson: source.rawJson, review: source.provenance.mapping, render: null };
+  expect((await call(bidder, url("/resume-versions"), forbiddenSource, undefined, { "Idempotency-Key": sourceOperation })).status === 403, "Active export-only grant cannot create resume content with a valid request");
+  expect((await call(bidder, url("/resume-renders"), { assemblyId: source.assemblyId, rawJson: source.rawJson, review: source.provenance.mapping, renderedAt })).status === 403, "Active export-only grant cannot render new resume content");
+  const directLetter = await bidder.client.rpc("save_cover_letter", { p_org: org, p_candidate: candidate, p_payload: forbiddenLetter, p_request: randomUUID() });
+  expect(directLetter.error?.code === "42501", "Active export-only grant cannot bypass letter creation through direct RPC");
+  const directSource = await bidder.client.rpc("save_resume_source", { p_org: org, p_candidate: candidate, p_payload: forbiddenSource, p_request: randomUUID() });
+  expect(directSource.error?.code === "42501", "Active export-only grant cannot bypass resume creation through direct RPC");
+  const directEdit = await bidder.client.from("resume_versions").update({ raw_json: "forbidden edit" }).eq("id", sourceId);
+  expect(directEdit.error?.code === "42501", "Active export-only grant cannot edit an existing resume source");
   expect((await call(identities.adminB, url(`/documents/${documentId}/pdf`))).status === 403, "Other organization cannot retrieve frozen bytes");
   await command(a, org, { command: "revokeBidderAccess", grantId: grant.id });
   expect((await call(bidder, url(`/documents/${documentId}/pdf`))).status === 403, "Grant revocation immediately denies existing-token export");
