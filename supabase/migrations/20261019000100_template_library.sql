@@ -23,7 +23,9 @@ create function private.edits_template(p_org uuid,p_scope text,p_owner uuid,p_te
  select private.org_role(p_org)='admin' or (p_scope='personal' and p_owner=private.actor_id() and private.org_role(p_org) in ('team_leader','team_member')) or (p_scope='team' and private.manages_team(p_org,p_team)) or (p_scope='candidate' and private.edits_candidate(p_org,p_candidate))
 $$;
 revoke all on function private.edits_template(uuid,text,uuid,uuid,uuid) from public; grant execute on function private.edits_template(uuid,text,uuid,uuid,uuid) to app_command;
-create policy visible on public.template_presets for select to authenticated,app_command using(private.reads_template(id));
+create policy visible on public.template_presets for select to authenticated,app_command using(private.reads_template(id) or
+ (owner_id=private.actor_id() and private.org_role(organization_id) in ('admin','team_leader','team_member') and
+ (scope in ('personal','organization') or (scope='team' and private.in_team(organization_id,team_id)) or (scope='candidate' and private.reads_candidate(organization_id,candidate_id)))));
 create policy command_insert on public.template_presets for insert to app_command with check(owner_id=private.actor_id() and private.edits_template(organization_id,scope,owner_id,team_id,candidate_id));
 create policy command_update on public.template_presets for update to app_command using(private.edits_template(organization_id,scope,owner_id,team_id,candidate_id) and (sharing<>'private' or owner_id=private.actor_id() or private.org_role(organization_id)='admin')) with check(private.edits_template(organization_id,scope,owner_id,team_id,candidate_id));
 alter table public.template_versions add column preset_id uuid references public.template_presets(id);

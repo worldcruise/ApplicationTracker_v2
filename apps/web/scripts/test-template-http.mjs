@@ -6,7 +6,7 @@ export async function testTemplateHTTP({ call, identities, org, candidate, expec
   const body = { presetId: null, baseVersionId: base.id, name: "Synthetic custom template", scope: "candidate", sharing: "team", teamId: null, candidateId: candidate, layout: { ...base.layout, margin: 54, labels: { ...base.layout.labels, summary: "Synthetic profile" } } };
   expect((await call(m, url("/templates/versions"), { ...body, scope: "organization", sharing: "organization", candidateId: null }, 0)).status === 403, "Member cannot publish organization template");
   expect((await call(m, url("/templates/versions"), { ...body, layout: { ...body.layout, fontSize: 3 } }, 0)).status === 422, "Unsafe template typography rejected");
-  const first = await call(m, url("/templates/versions"), body, 0); expect(first.status === 200, "Member duplicates template in authorized candidate scope");
+  const first = await call(m, url("/templates/versions"), body, 0); expect(first.status === 200, `Member duplicates template in authorized candidate scope (${first.status}, ${first.code ?? "OK"})`);
   const list = await call(m, url("/templates") + `&candidateId=${candidate}`); const custom = list.data.find(t => t.id === first.data.id);
   const profile = await call(m, `/candidates/${candidate}?organizationId=${org}`);
   const assembled = await call(m, url("/prompt-assemblies"), { candidateId: candidate, profileRevision: profile.data.rowVersion, templateVersionId: custom.id, job: { company: "Synthetic Template Target", title: "Engineer", description: "Synthetic job" } });
