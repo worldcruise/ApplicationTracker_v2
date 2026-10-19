@@ -14,11 +14,11 @@ export async function render(input: AtsInput) {
 export async function renderAssembly(assembly: PromptAssembly, rawJson: unknown, mapping: unknown, renderedAt: unknown) {
   const analysis = analyzeSource(assembly, rawJson, mapping);
   if (typeof renderedAt !== "string" || renderedAt.length > 30 || !Number.isFinite(Date.parse(renderedAt))) throw new ApiFailure(422, "SCHEMA_INVALID", "Use the frozen ISO render timestamp.");
-  return render({ rawJson: analysis.validation.rawJson, snapshot: assembly.snapshot, mapping: analysis.review.mapping, reviewed: analysis.review.reviewed, renderedAt, templateVersionId: assembly.templateVersionId });
+  return render({ rawJson: analysis.validation.rawJson, snapshot: assembly.snapshot, mapping: analysis.review.mapping, reviewed: analysis.review.reviewed, renderedAt, templateVersionId: assembly.templateVersionId, ...(assembly.templateSnapshot ? { template: assembly.templateSnapshot } : {}) });
 }
 export function renderReceipt(value: unknown): ResumeRenderReceipt {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new ApiFailure(422, "SCHEMA_INVALID", "Supply the frozen render receipt or null.");
   const v = value as Record<string, unknown>;
-  if (Object.keys(v).sort().join() !== "pageCount,renderedAt,rendererVersion,sha256" || typeof v.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(v.sha256) || !Number.isSafeInteger(v.pageCount) || Number(v.pageCount) < 1 || Number(v.pageCount) > 100 || v.rendererVersion !== ATS_CLASSIC.renderer || typeof v.renderedAt !== "string") throw new ApiFailure(422, "SCHEMA_INVALID", "The render receipt is invalid.");
+  if (Object.keys(v).sort().join() !== "pageCount,renderedAt,rendererVersion,sha256" || typeof v.sha256 !== "string" || !/^[0-9a-f]{64}$/.test(v.sha256) || !Number.isSafeInteger(v.pageCount) || Number(v.pageCount) < 1 || Number(v.pageCount) > 100 || ![ATS_CLASSIC.renderer, "template-engine/2.0.0"].includes(String(v.rendererVersion)) || typeof v.renderedAt !== "string") throw new ApiFailure(422, "SCHEMA_INVALID", "The render receipt is invalid.");
   return v as unknown as ResumeRenderReceipt;
 }

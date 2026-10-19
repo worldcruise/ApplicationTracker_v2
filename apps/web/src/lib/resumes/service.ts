@@ -4,7 +4,7 @@ import { validateResume, type OrganizationScope, type PromptAssembly, type Promp
 import { isResumeReviewInput, reviewResume } from "@candidate/domain";
 import { ApiFailure, databaseResult } from "@/lib/api/errors";
 import { getProfile } from "@/lib/candidates/service";
-export const assemblyColumns = "id,candidateId:candidate_id,profileRevisionId:profile_revision_id,profileRevision:profile_revision,templateVersionId:template_version_id,promptVersionIds:prompt_version_ids,job,text:prompt_text,sha256:prompt_sha256,createdAt:created_at,snapshot:candidate_snapshot";
+export const assemblyColumns = "id,candidateId:candidate_id,profileRevisionId:profile_revision_id,profileRevision:profile_revision,templateVersionId:template_version_id,templateSnapshot:template_snapshot,promptVersionIds:prompt_version_ids,job,text:prompt_text,sha256:prompt_sha256,createdAt:created_at,snapshot:candidate_snapshot";
 export async function getAssembly(client: SupabaseClient, scope: OrganizationScope, id: string) {
   const row = await databaseResult<PromptAssembly | null>(client.from("prompt_assemblies").select(assemblyColumns).eq("organization_id", scope.organizationId).eq("id", id).maybeSingle());
   if (!row) throw new ApiFailure(403, "FORBIDDEN", "This assembly is unavailable in your current scope.");
@@ -31,7 +31,7 @@ export async function promptVersions(client: SupabaseClient, scope: Organization
     .select("id,presetId:preset_id,version,name,description,content,enabled,order:sort_order").in("preset_id", applicable.map(p => p.id)).order("version", { ascending: false }).limit(1000)) : [];
   return versions.map(v => { const p = applicable.find(p => p.id === v.presetId)!; return { ...v, kind: p.kind, scope: p.scope, scopeId: p.teamId ?? p.candidateId, current: p.current === v.version, builtin: p.organizationId === null } satisfies PromptVersion & { current: boolean; builtin: boolean }; });
 }
-export const sourceColumns = "id,candidateId:candidate_id,version,operationId:operation_id,assemblyId:assembly_id,rawJson:raw_json,content:parsed_content,schemaVersion:schema_version,snapshot:candidate_snapshot,provenance,templateVersionId:template_version_id,rendererVersion:renderer_version,render:render_receipt,createdAt:created_at,createdBy:created_by";
+export const sourceColumns = "id,candidateId:candidate_id,version,operationId:operation_id,assemblyId:assembly_id,rawJson:raw_json,content:parsed_content,schemaVersion:schema_version,snapshot:candidate_snapshot,provenance,templateVersionId:template_version_id,templateSnapshot:template_snapshot,rendererVersion:renderer_version,render:render_receipt,createdAt:created_at,createdBy:created_by";
 export async function getSource(client: SupabaseClient, scope: OrganizationScope, id: string) {
   const row = await databaseResult<(Omit<ResumeSourceVersion, "provenance"> & { provenance: { mapping: ResumeReviewInput; reviewerId: string | null; reviewedAt: string | null; reviewed: boolean } }) | null>(client.from("resume_versions").select(sourceColumns).eq("organization_id", scope.organizationId).eq("id", id).maybeSingle());
   if (!row) throw new ApiFailure(403, "FORBIDDEN", "This source version is unavailable in your current scope.");

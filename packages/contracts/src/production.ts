@@ -1,6 +1,7 @@
 import type { CandidateProfile } from "./candidates.js";
 import type { ResumeContentV1 } from "./resume.js";
 import type { ResumeIssue } from "./resume-validation.js";
+import type { FrozenTemplate } from "./templates.js";
 export interface ResumeReviewInput {
   experienceIds: (string | null)[]; educationIds: (string | null)[];
   claims: Record<string, { sources: string[]; attested: boolean }>;
@@ -16,6 +17,7 @@ export interface PromptVersion {
   name: string; description: string; content: string; enabled: boolean; order: number;
 }
 export interface PromptAssembly {
+  templateSnapshot?: FrozenTemplate | null;
   id: string; candidateId: string; profileRevisionId: string; profileRevision: number;
   templateVersionId: string; promptVersionIds: string[]; text: string; sha256: string; createdAt: string;
   job: { company: string; title: string; description: string }; snapshot: CandidateProfile;
@@ -25,6 +27,7 @@ export interface ResumeSourceRequest {
   operationId: string; assemblyId: string; schemaVersion: 1; rawJson: string; review: ResumeReviewInput; render: ResumeRenderReceipt | null;
 }
 export interface ResumeSourceVersion {
+  templateSnapshot?: FrozenTemplate | null;
   id: string; candidateId: string; version: number; operationId: string; assemblyId: string;
   rawJson: string; content: ResumeContentV1; schemaVersion: 1; snapshot: CandidateProfile;
   provenance: ResumeReview; templateVersionId: string; rendererVersion: string;

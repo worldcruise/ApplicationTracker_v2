@@ -6,3 +6,4 @@ export * from "./foundation.js";
 export * from "./candidates.js";
 export * from "./resume-validation.js";
 export * from "./production.js";
+export * from "./templates.js";

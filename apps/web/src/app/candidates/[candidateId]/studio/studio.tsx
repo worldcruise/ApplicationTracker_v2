@@ -7,6 +7,7 @@ import { ClientApiFailure, readApi } from "@/app/workspace/requests";
 import { initialResumeOutcomes, loadStudioDraft, saveStudioDraft, saveStudioOperation, studioKey, pdfDigest, safeResumeFilename, type StudioOperation, type StudioPdf } from "@/lib/resumes/journal";
 import { FactReview } from "./fact-review";
 import { ProductionPdfPreview } from "./pdf-preview";
+import { TemplateLibrary } from "./template-library";
 import { PromptEditor } from "./prompt-editor";
 import { button, control, primary } from "../../directory";
 type VersionRow = { id: string; version: number; reviewed: boolean; render: unknown; createdAt: string };
@@ -15,6 +16,7 @@ function decodePdf(result: Omit<StudioPdf, "bytes"> & { base64: string }): Studi
   const { base64, ...metadata } = result; return { ...metadata, bytes: Uint8Array.from(atob(base64), c => c.charCodeAt(0)) };
 }
 export function ResumeStudio({ profile, scope, actorId }: { profile: CandidateProfile; scope: OrganizationScope; actorId: string }) {
+  const [templateId, setTemplateId] = useState("a7000000-0000-4000-9000-000000000001");
   const [raw, setRaw] = useState(""); const [job, setJob] = useState<PromptAssembly["job"]>({ company: "", title: "", description: "" });
   const [assembly, setAssembly] = useState<PromptAssembly | null>(null); const [mapping, setMapping] = useState<ResumeReviewInput | null>(null);
   const [operation, setOperation] = useState<StudioOperation | null>(null); const [outcomes, setOutcomes] = useState(initialResumeOutcomes);
@@ -41,7 +43,7 @@ export function ResumeStudio({ profile, scope, actorId }: { profile: CandidatePr
           if (saved.operation && (saved.operation.actorId !== actorId || saved.operation.organizationId !== scope.organizationId || saved.operation.candidateId !== profile.id || (saved.operation.pdf && await pdfDigest(saved.operation.pdf.bytes) !== saved.operation.pdf.sha256))) throw new Error("The stored operation identity or PDF integrity check failed.");
           if (saved.operation?.outcomes.databaseSync.state === "pending") saved.operation.outcomes.databaseSync.state = "unknown";
           if (saved.operation?.outcomes.pdfGeneration.state === "pending") saved.operation.outcomes.pdfGeneration.state = "failed";
-          if (!active) return; setRaw(saved.rawJson); setJob(saved.job); setAssembly(saved.assembly); setMapping(saved.review); setOperation(saved.operation); setOutcomes(saved.operation?.outcomes ?? saved.outcomes ?? initialResumeOutcomes());
+          if (!active) return; setRaw(saved.rawJson); setJob(saved.job); setAssembly(saved.assembly); if (saved.assembly) setTemplateId(saved.assembly.templateVersionId); setMapping(saved.review); setOperation(saved.operation); setOutcomes(saved.operation?.outcomes ?? saved.outcomes ?? initialResumeOutcomes());
           setMessage("Restored this account’s local draft and operation outcomes.");
         }
       } catch { if (active) setLocalError("Local draft restore failed. Existing data was not deleted. Durable operation actions require a working IndexedDB journal."); }
@@ -129,7 +131,7 @@ export function ResumeStudio({ profile, scope, actorId }: { profile: CandidatePr
     <section className="grid gap-3 rounded border bg-white p-4"><h2 className="text-lg font-semibold">Prompt and reviewed job</h2><p className="text-sm">The external AI prompt includes professional summary, verified work, education and certifications. It excludes contact details, professional links and private notes. Review the exact text before copying it to an external service.</p>
       <fieldset disabled={disabled} className="grid gap-3 sm:grid-cols-2"><label>Target company<input aria-label="Target company" className={control} maxLength={200} value={job.company} onChange={e => { setJob({ ...job, company: e.target.value }); setAssembly(null); setOperation(null); }} /></label><label>Target role<input aria-label="Target role" className={control} maxLength={200} value={job.title} onChange={e => { setJob({ ...job, title: e.target.value }); setAssembly(null); setOperation(null); }} /></label><label className="sm:col-span-2">Reviewed job description<textarea className={control} rows={4} value={job.description} onChange={e => { setJob({ ...job, description: e.target.value }); setAssembly(null); setOperation(null); }} /></label></fieldset>
       <div className="flex flex-wrap gap-3"><button className={primary} disabled={disabled} onClick={async () => {
-        setBusy(true); try { const result = await readApi<PromptAssembly>(`/api/v1/prompt-assemblies?${query}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ candidateId: profile.id, profileRevision: profile.rowVersion, job }) }); setAssembly(result); setMapping(null); setOperation(null); setOutcomes(initialResumeOutcomes()); setMessage("Exact prompt assembled and frozen. Copy writes this preview without changes."); } catch (error) { fail(error); } finally { setBusy(false); }
+        setBusy(true); try { const result = await readApi<PromptAssembly>(`/api/v1/prompt-assemblies?${query}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ candidateId: profile.id, profileRevision: profile.rowVersion, job, templateVersionId: templateId }) }); setAssembly(result); setMapping(null); setOperation(null); setOutcomes(initialResumeOutcomes()); setMessage("Exact prompt assembled and frozen. Copy writes this preview without changes."); } catch (error) { fail(error); } finally { setBusy(false); }
       }}>Assemble prompt</button><button className={button} disabled={!assembly || busy} onClick={async () => {
         if (!assembly) return; try { await navigator.clipboard.writeText(assembly.text); setOutcomes(o => stage(o, "clipboard", "succeeded")); setMessage("Exact previewed prompt copied."); }
         catch { setOutcomes(o => stage(o, "clipboard", "failed", "Clipboard permission denied; select the exact preview text manually.")); setMessage("Clipboard failed. The exact prompt remains in the preview for manual copying."); }
@@ -140,7 +142,7 @@ export function ResumeStudio({ profile, scope, actorId }: { profile: CandidatePr
     {stale && <p role="alert">This assembly uses an older profile revision. Assemble again and re-review before a new render/save. Existing immutable PDFs remain recoverable.</p>}
     {historical && <p className="rounded border bg-amber-50 p-3">Historical source version {historical.version} · read-only.<button className={`${button} ml-3`} onClick={() => { setHistorical(null); setHistoricalPdf(null); setOperation(null); setOutcomes(initialResumeOutcomes()); setMessage("Loaded content is now a new draft. Assemble against the current profile before saving a new version."); }}>Edit as new draft</button></p>}
     <div className="grid items-start gap-4 xl:grid-cols-12">
-      <aside className="grid gap-4 xl:col-span-3"><section className="rounded border bg-white p-4"><h2 className="font-semibold">Template</h2><p className="mt-2 font-medium">ATS Classic · version 1</p><p className="text-sm">Letter · Noto Sans · selectable text · measured pagination. Target company stays in metadata.</p></section>
+      <aside className="grid gap-4 xl:col-span-3"><TemplateLibrary scope={scope} profile={profile} selected={templateId} onSelect={id => { setTemplateId(id); setAssembly(null); setOperation(null); setMessage("Template selected. Assemble a new prompt and regenerate to use this frozen version."); }} disabled={disabled} report={setMessage} />
         <section className="rounded border bg-white p-4"><h2 className="font-semibold">Immutable source history</h2><p className="text-xs">Most recent 50 versions.</p><ul className="mt-3 grid gap-2">{versions.map(v => <li key={v.id}><button className={`${button} w-full text-left`} disabled={busy} onClick={async () => {
           if (raw && !confirm("Load this historical source? Your current operation is retained in the journal; the editor will show the selected version.")) return;
           setBusy(true); try { const source = await readApi<ResumeSourceVersion>(`/api/v1/resume-versions/${v.id}?${query}`); const origin = await readApi<PromptAssembly>(`/api/v1/prompt-assemblies/${source.assemblyId}?${query}`);

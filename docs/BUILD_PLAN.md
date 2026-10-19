@@ -148,6 +148,16 @@ Implement RP01, then RP02, then RP03 using CM01–CM03 and F001C. The user expli
 | RP02 | Scoped prompt versions/assembly and immutable source API | §§10–13; T021–T023/T026–T027 subset | Server-authorized stable scope/order, exact text/hash and frozen references, protected instructions, user-context reads, non-owner protected commands, RLS/immutable history, actor/key/payload-bound replay and synchronization reconciliation. |
 | RP03 | ATS Classic rendering and web production workflow | §§10–13; T028–T031 subset | Frozen identity/content/template/provenance; measured selectable Unicode/multipage PDF, PDF.js previews exact export bytes; raw editor preservation, claim review, exact clipboard, independent operation outcomes and failed sync/retry checks; isolated API/database/browser evidence and visual inspection. |
 
+### Template, letter and frozen export extension (19 October 2026 request)
+
+Continue after RP03. Complete TP01, TP02, then TP03. Exporting a linked frozen PDF is a separate capability; it must never grant raw profile/source access or generation rights. Persist exact PDF bytes when the authenticated rendering attestation is configured; otherwise report the source-only reproduction prerequisites explicitly. No historical version may be overwritten.
+
+| ID | Increment | Design / plan | Acceptance |
+| --- | --- | --- | --- |
+| TP01 | Remaining eight presets and versioned scoped template library | §13; T021/T024/T028 | Nine searchable presets; safe configuration-only customization/duplication; private/team/organization visibility with matching role scope; append-only publication; frozen versions retain layout/assets/renderer identity. |
+| TP02 | Cover letters, sealed artifacts and narrow frozen export | §§5,7,10,13; T026–T027/T031 | Immutable body/snapshot/template/provenance and PDF hashes; signed rendered bytes, actor/key/payload-bound replay; authorized history; linked-bid export without candidate/source/generation grants; revoked grants denied. Report missing signing/storage/reproduction prerequisites. |
+| TP03 | Template/letter/document UI and acceptance | §§3,13; T024/T027/T029–T031 | Search/select/duplicate/customize/publish, scoped sharing, letter edit/review/preview/save/export/history and frozen PDF retrieval; later profile/template changes leave old bytes unchanged; isolated permission and browser checks plus visual QA. |
+
 | ID | Scoped task | Dependencies | Design sections | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | T021 | Migrate prompt/template definitions and immutable versions. | T010–T012 | D§6, 8, 12–13 | Global/team/candidate scope, descriptions, ordering, protected main prompt, layout configuration and asset identity persist. Version allocation is race-safe; publication appends; old versions cannot be changed or deleted by clients. |

@@ -1,6 +1,6 @@
 # Implementation progress
 
-Last updated: 18 October 2026, America/New_York.
+Last updated: 19 October 2026, America/New_York.
 
 Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 foundation and CM01–CM03 candidate increments are complete. Phase 0 live Chrome/hosted-user acceptance (F001V) remains pending. These increments deliver the explicitly requested subsets; full T003–T063 contracts, later document/workflow features and release gates are not collectively marked complete. Canonical validation and submission remain later tasks.
 
@@ -26,7 +26,7 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 ## Current work
 
-**RP01–RP02 complete; RP03 in progress — first ATS Classic production workflow.** [0be910a isolated CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39185616049) passes 155 database assertions, 35 unit tests, production builds, 468 real Auth/API assertions and the existing 15 candidate browser checkpoints. Scoped prompt order, raw text, human evidence, immutable snapshots, profile-change invalidation and concurrent retries are verified. Next: measured ATS Classic rendering, exact-byte preview/export and web operation journal. User permits authorized profile editors to attest supported paraphrases; submission authority remains separate. Hosted/manual gates remain prerequisites.
+**RP01–RP03 complete; TP01 in progress.** [407e556 isolated CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39234326319) passes 155 database assertions, 35 unit tests, production builds, 490 Auth/API assertions, nine resume and 15 candidate browser checkpoints. The three-page Unicode ATS Classic sample was rendered and visually inspected; exact export/recovery hashes and failed-sync refresh/retry pass. Continuing the 19 October request: remaining presets/scoped library, then cover letters/sealed documents/export-only access, then UI acceptance. Hosted/manual gates remain prerequisites.
 
 **Foundation milestone complete.** FN01–FN03 were implemented and verified before CM01. Hosted setup remains an operator prerequisite; this task has not migrated or configured the hosted project.
 
