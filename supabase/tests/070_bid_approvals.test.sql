@@ -64,4 +64,17 @@ select throws_ok($$select public.save_bid('a8000000-0000-4000-9000-000000000100'
 select lives_ok($$select public.save_bid('a8000000-0000-4000-9000-000000000100',current_setting('test.bid')::uuid,9,current_setting('test.bid_input')::jsonb||jsonb_build_object('followUpAt',now()+interval '2 days'),gen_random_uuid(),gen_random_uuid())$$,'operational follow-up can change after submission');
 reset role;
 select throws_ok($$update public.bid_submissions set confirmation='overwritten'$$,'42501','IMMUTABLE_PROFILE_REVISION','even owner cannot rewrite submission event');
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"a8000000-0000-4000-9000-000000000003","role":"authenticated"}',true);
+select set_config('test.pending',public.save_bid('a8000000-0000-4000-9000-000000000100',null,0,current_setting('test.bid_input')::jsonb,gen_random_uuid(),gen_random_uuid())->>'id',true);
+select public.transition_bid('a8000000-0000-4000-9000-000000000100',current_setting('test.pending')::uuid,1,'{"status":"resume_preparation","reason":"Prepare","submittedAt":null,"confirmation":"","attested":false,"adminOverrideReason":"","reopen":false}',gen_random_uuid(),gen_random_uuid());
+select public.transition_bid('a8000000-0000-4000-9000-000000000100',current_setting('test.pending')::uuid,2,'{"status":"ready_for_review","reason":"Fresh facts","submittedAt":null,"confirmation":"","attested":false,"adminOverrideReason":"","reopen":false}',gen_random_uuid(),gen_random_uuid());
+select set_config('request.jwt.claims','{"sub":"a8000000-0000-4000-9000-000000000002","role":"authenticated"}',true);
+select public.transition_bid('a8000000-0000-4000-9000-000000000100',current_setting('test.pending')::uuid,3,'{"status":"approved","reason":"Reviewed","submittedAt":null,"confirmation":"","attested":false,"adminOverrideReason":"","reopen":false}',gen_random_uuid(),gen_random_uuid());
+select set_config('request.jwt.claims','{"sub":"a8000000-0000-4000-9000-000000000003","role":"authenticated"}',true);
+select public.save_candidate_profile('a8000000-0000-4000-9000-000000000100',current_setting('test.resume_candidate')::uuid,2,
+ '{"fullName":"Synthetic Zoë","email":"zoe@example.invalid","phone":"+1 202 555 0100","location":"Synthetic City","seniorityPreference":null,"professionalSummary":"Changed verified facts.","privateNotes":"","status":"ready","links":[],"experiences":[],"educations":[],"certifications":[]}',gen_random_uuid());
+select is((select status from public.bids where id=current_setting('test.pending')::uuid),'resume_preparation','changed facts invalidate pending approval');
+select throws_ok($$select public.transition_bid('a8000000-0000-4000-9000-000000000100',current_setting('test.pending')::uuid,5,'{"status":"ready_for_review","reason":"Stale facts","submittedAt":null,"confirmation":"","attested":false,"adminOverrideReason":"","reopen":false}',gen_random_uuid(),gen_random_uuid())$$,'22023','PROFILE_FACTS_CHANGED','historical documents cannot be reapproved after facts change');
+select is((select resume_document_id::text from public.bid_submissions where bid_id=current_setting('test.bid')::uuid),'a8000000-0000-4000-9000-000000000602','changed profile preserves prior submission');
 select * from finish();rollback;
