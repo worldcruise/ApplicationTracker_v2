@@ -8,6 +8,7 @@ export default defineConfig([
     ".npm-cache/**", "supabase/.temp/**", "supabase/.branches/**",
     "apps/web/next-env.d.ts",
     "packages/contracts/src/generated/**",
+    "apps/web/public/pdf.worker.min.mjs",
   ]),
   ...tseslint.configs.recommended,
   {

@@ -26,7 +26,7 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 ## Current work
 
-**RP01 complete; RP02 in progress — first ATS Classic production workflow.** Shared precompiled v1 validation and factual mapping/review pass root checks (35 tests). Raw input is retained; structure/empty content, unsafe keys, limits, target/employer separation, ambiguous mappings, titles, unsupported numbers and human paraphrase review have synthetic fixtures. Next: scoped prompt versions/assembly and immutable source persistence. User permits authorized profile editors to attest supported paraphrases; submission authority remains separate. Hosted/manual gates remain prerequisites.
+**RP01–RP02 complete; RP03 in progress — first ATS Classic production workflow.** [0be910a isolated CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39185616049) passes 155 database assertions, 35 unit tests, production builds, 468 real Auth/API assertions and the existing 15 candidate browser checkpoints. Scoped prompt order, raw text, human evidence, immutable snapshots, profile-change invalidation and concurrent retries are verified. Next: measured ATS Classic rendering, exact-byte preview/export and web operation journal. User permits authorized profile editors to attest supported paraphrases; submission authority remains separate. Hosted/manual gates remain prerequisites.
 
 **Foundation milestone complete.** FN01–FN03 were implemented and verified before CM01. Hosted setup remains an operator prerequisite; this task has not migrated or configured the hosted project.
 

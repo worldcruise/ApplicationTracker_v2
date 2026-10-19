@@ -6,6 +6,7 @@ import { ApiFailure, databaseResult } from "@/lib/api/errors";
 import { strictObject } from "@/lib/candidates/input";
 import { getProfile } from "@/lib/candidates/service";
 import { getAssembly, analyzeSource, getSource } from "@/lib/resumes/service";
+import { renderAssembly, renderReceipt } from "@/lib/resumes/render";
 export const dynamic = "force-dynamic"; export const OPTIONS = preflight;
 export async function GET(request: Request) { return api(request, async () => {
   const { client, context } = await requestContext(request); const q = new URL(request.url).searchParams;
@@ -22,7 +23,10 @@ export async function POST(request: Request) { return api(request, async request
   const b = strictObject(await readJson(request, 2_097_152), ["operationId", "assemblyId", "schemaVersion", "rawJson", "review", "render"]);
   if (uuid(request.headers.get("idempotency-key")) !== uuid(b.operationId) || b.schemaVersion !== 1) throw new ApiFailure(422, "SCHEMA_INVALID", "Use schema v1 and the original operation UUID in Idempotency-Key.");
   const assembly = await getAssembly(client, scope, uuid(b.assemblyId)); const analysis = analyzeSource(assembly, b.rawJson, b.review);
-  if (b.render !== null) throw new ApiFailure(422, "SCHEMA_INVALID", "Render receipt verification is not enabled yet; save source without a PDF receipt.");
+  if (b.render !== null) {
+    const receipt = renderReceipt(b.render); const rendered = await renderAssembly(assembly, b.rawJson, analysis.review.mapping, receipt.renderedAt);
+    if (receipt.sha256 !== rendered.sha256 || receipt.pageCount !== rendered.pageCount) throw new ApiFailure(409, "VERSION_CONFLICT", "PDF bytes do not match the frozen source/review/template. Generate a new operation; the existing PDF is retained.");
+  }
   const result = await databaseResult<{ id: string; replayed: boolean }>(client.rpc("save_resume_source", { p_org: scope.organizationId, p_candidate: assembly.candidateId, p_payload: { ...b, review: analysis.review.mapping }, p_request: requestId }));
   return { ...await getSource(client, scope, result.id), replayed: result.replayed };
 }); }

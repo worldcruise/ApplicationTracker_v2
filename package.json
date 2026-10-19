@@ -19,6 +19,7 @@
     "typecheck": "npm run build:packages && tsc -p tsconfig.tests.json && npm run typecheck --workspace @candidate/web && npm run typecheck --workspace @candidate/extension",
     "test": "npm run build:packages && node --test packages/domain/src/operation-progress.test.ts packages/domain/src/candidate-profile.test.ts packages/domain/src/resume-production.test.ts && npm test --workspace @candidate/web && npm test --workspace @candidate/extension",
     "schema:compile": "node packages/contracts/scripts/compile-resume-schema.mjs",
+    "resume:verify": "npm run build:packages && node packages/resume-engine/scripts/verify-ats.mjs",
     "build:packages": "node packages/contracts/scripts/compile-resume-schema.mjs --check && tsc -b packages/contracts packages/domain packages/resume-engine packages/ui",
     "build": "npm run build:packages && npm run build --workspace @candidate/web && npm run build --workspace @candidate/extension",
     "db:start": "supabase start",

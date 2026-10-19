@@ -1,5 +1,6 @@
 import type { ResumeContentV1, RESUME_SCHEMA_VERSION } from "@candidate/contracts";
 export { renderFeasibilityResume, syntheticResume, sha256, type FeasibilityFonts } from "./feasibility.js";
+export * from "./ats-classic.js";
 
 /** Rendering boundary only. Layout/PDF implementation belongs to T008/T028. */
 export interface ResumeRenderInput {

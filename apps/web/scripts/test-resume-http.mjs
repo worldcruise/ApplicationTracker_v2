@@ -53,9 +53,21 @@ export async function testResumeHTTP({ call, identities, org, team, expect }) {
   expect((await call(m, url(`/resume-versions/${saved.data.id}`))).data.rawJson === source.rawJson, "Refresh retrieves exact original source text");
   expect((await call(identities.bidderA, url(`/resume-versions/${saved.data.id}`))).status === 403, "Bidder cannot retrieve unrestricted resume source");
   const denied = await identities.bidderA.client.from("resume_versions").select("id"); expect(!denied.error && denied.data.length === 0, "Direct bidder source-history reads denied");
+  const renderedAt = "2026-10-18T18:00:00.000Z";
+  const rendered = await call(m, url("/resume-renders"), { assemblyId: assembly.id, rawJson: source.rawJson, review, renderedAt });
+  expect(rendered.status === 200 && rendered.data.pageCount >= 1, "Production ATS Classic PDF renders");
+  const bytes = Buffer.from(rendered.data.base64, "base64");
+  expect(bytes.subarray(0, 5).toString() === "%PDF-" && createHash("sha256").update(bytes).digest("hex") === rendered.data.sha256, "Returned PDF bytes match their hash");
+  const receipt = { sha256: rendered.data.sha256, pageCount: rendered.data.pageCount, rendererVersion: rendered.data.rendererVersion, renderedAt };
+  const pdfSource = await save(m, { ...source, operationId: randomUUID(), render: receipt });
+  expect(pdfSource.status === 200, "Server verifies receipt against pinned render inputs before source persistence");
+  const recovered = await call(m, url(`/resume-versions/${pdfSource.data.id}/pdf`));
+  expect(recovered.status === 200 && recovered.data.base64 === rendered.data.base64, "Historical recovery returns byte-identical PDF");
+  expect((await save(m, { ...source, operationId: randomUUID(), render: { ...receipt, sha256: "0".repeat(64) } })).status === 409, "Forged PDF receipt cannot be reported as identical");
   const changed = await call(m, `/candidates/${candidate}?organizationId=${org}`, { ...fixture, professionalSummary: "Updated verified facts." }, 2, {}, "PATCH");
   expect(changed.status === 200, "Verified profile changes independently");
   expect((await save(m, { ...source, operationId: randomUUID() })).status === 409, "Changed profile requires new frozen assembly/re-review");
   expect((await call(m, url(`/resume-versions/${saved.data.id}`))).data.snapshot.professionalSummary === fixture.professionalSummary, "Later profile edits cannot mutate a prior source snapshot");
+  expect((await call(m, url(`/resume-versions/${pdfSource.data.id}/pdf`))).data.base64 === rendered.data.base64, "Later candidate edits do not change historical PDF bytes");
   return { candidate, sourceId: saved.data.id };
 }

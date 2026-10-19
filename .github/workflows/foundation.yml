@@ -23,6 +23,7 @@ jobs:
       - run: npm run db:reset
       - run: npm run db:test
       - run: npm run check
+      - run: npm run resume:verify
       - name: Install isolated Chromium for candidate browser acceptance
         run: npx playwright install --with-deps chromium
       - name: Build and test production API with isolated synthetic Auth sessions

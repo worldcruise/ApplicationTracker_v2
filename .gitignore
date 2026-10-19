@@ -9,6 +9,7 @@ dist/
 out/
 coverage/
 tmp/
+output/
 *.tsbuildinfo
 *.log
 apps/web/next-env.d.ts
@@ -32,3 +33,5 @@ supabase/.env
 Thumbs.db
 .idea/
 .vscode/
+apps/web/public/pdf.worker.min.mjs
+apps/web/public/PDFJS-LICENSE.txt

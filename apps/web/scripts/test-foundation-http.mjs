@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { testCandidateBrowser } from "./test-candidate-browser.mjs";
 import { testResumeHTTP } from "./test-resume-http.mjs";
+import { testResumeBrowser } from "./test-resume-browser.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -251,7 +252,10 @@ try {
     p_user: identities.memberA.id, p_assign: true, p_request: randomUUID() });
   expect(oldAssignment.error?.code === "42501", "Legacy assignment RPC cannot bypass version checks");
   step = "resume prompt/source Auth and HTTP acceptance";
-  await testResumeHTTP({ call, identities, org: orgA, team: teamA, expect });
+  const resumeFixture = await testResumeHTTP({ call, identities, org: orgA, team: teamA, expect });
+  step = "resume production headless Chromium acceptance";
+  try { const checkpoints = await testResumeBrowser({ org: orgA, candidate: resumeFixture.candidate, identities, password }); expect(checkpoints === 9, "All resume browser checkpoints completed"); console.log(JSON.stringify({ result: "PASS", resumeBrowserCheckpoints: checkpoints })); }
+  catch (error) { throw new TestFailure(error.message); }
   step = "candidate headless Chromium acceptance";
   try {
     const browserChecks = await testCandidateBrowser({ org: orgA, team: teamA, identities, password });
