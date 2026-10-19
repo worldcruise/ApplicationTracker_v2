@@ -8,6 +8,18 @@ export async function testResumeBrowser({ org, candidate, identities, password }
     await page.goto("http://localhost:3000/sign-in"); await page.getByLabel("Email", { exact: true }).fill(identities.adminA.email); await page.getByLabel("Password", { exact: true }).fill(password); await page.getByRole("button", { name: "Sign in", exact: true }).click(); await page.waitForURL("**/workspace");
     step = "open studio and assemble exact prompt";
     await page.goto(`http://localhost:3000/candidates/${candidate}/studio?organizationId=${org}`);
+    step = "template search, selection and customization";
+    await page.getByLabel("Search templates", { exact: true }).fill("Modern");
+    await page.getByRole("button", { name: "Select Modern Professional", exact: true }).click();
+    await page.getByRole("button", { name: "Duplicate / customize Modern Professional", exact: true }).click();
+    await page.getByLabel("Template name", { exact: true }).fill("Synthetic browser custom");
+    await page.getByLabel("Template fontSize", { exact: true }).fill("11");
+    await page.getByRole("button", { name: "Publish template", exact: true }).click();
+    await page.getByLabel("Search templates", { exact: true }).fill("Synthetic browser custom");
+    await expect(page.getByRole("button", { name: "Select Synthetic browser custom", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Select Synthetic browser custom", exact: true }).click();
+    await page.getByLabel("Search templates", { exact: true }).fill("");
+    step = "assemble prompt using selected custom template";
     await page.getByLabel("Target company", { exact: true }).fill("Synthetic Browser Target"); await page.getByLabel("Target role", { exact: true }).fill("Engineer"); await page.getByLabel("Reviewed job description", { exact: true }).fill("Reviewed synthetic job text.");
     await page.getByRole("button", { name: "Assemble prompt", exact: true }).click(); await expect(page.getByLabel("Exact prompt preview", { exact: true })).toHaveValue(/PROTECTED RULES/); checks++;
     step = "exact clipboard and independent denial";
