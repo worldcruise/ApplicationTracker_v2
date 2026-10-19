@@ -171,6 +171,7 @@ begin
  select team_id into v_team from public.bids where organization_id=p_org and id=p_bid;
  perform pg_advisory_xact_lock(hashtextextended('workflow-policy:'||p_org::text||v_team::text,0));
  result:=private.workflow_replay(p_org,p_operation,payload);if result is not null then return result;end if;
+ if jsonb_typeof(p_input) is distinct from 'object' or (select count(*) from jsonb_object_keys(p_input))<>7 or not p_input ?& array['status','reason','submittedAt','confirmation','attested','adminOverrideReason','reopen'] or octet_length(p_input::text)>32768 or exists(select 1 from jsonb_each(p_input) x where (x.key in ('status','reason','confirmation','adminOverrideReason') and jsonb_typeof(x.value)<>'string') or (x.key in ('attested','reopen') and jsonb_typeof(x.value)<>'boolean') or (x.key='submittedAt' and jsonb_typeof(x.value) not in ('string','null'))) then raise exception 'INVALID_TRANSITION_REQUEST' using errcode='22023';end if;
  select * into b from public.bids where organization_id=p_org and id=p_bid for update;
  if b.row_version is distinct from p_expected then raise exception 'VERSION_CONFLICT' using errcode='40001';end if;
  if not private.workflow_active(p_org,b.candidate_id) then raise exception 'CANDIDATE_ARCHIVED' using errcode='22023';end if;
@@ -242,7 +243,7 @@ declare t public.teams; b public.bids; v_from text;begin
 end $$;
 -- Historical signature remains a compatibility adapter; all writes use commands.
 create or replace function public.create_draft_bid(p_org uuid,p_candidate uuid,p_company text,p_title text,p_request uuid) returns uuid language plpgsql security definer set search_path='' as $$
-begin return (public.save_bid(p_org,null,0,jsonb_build_object('candidateId',p_candidate,'teamId',private.candidate_team(p_org,p_candidate),'ownerId',private.actor_id(),'companyName',p_company,'jobTitle',p_title,'jobDescription','','jobUrl',null,'externalId',null,'jobLocation',null,'priority','normal','followUpAt',null,'lastContactAt',null,'notes','','outcome','','resumeDocumentId',null,'coverLetterDocumentId',null),p_request,p_request)->>'id')::uuid;end $$;
+begin return (public.save_bid(p_org,null,0,jsonb_build_object('candidateId',p_candidate,'teamId',private.candidate_team(p_org,p_candidate),'ownerId',private.actor_id(),'companyName',p_company,'jobTitle',p_title,'jobDescription','','jobUrl',null,'externalId',null,'jobLocation',null,'priority','normal','followUpAt',null,'lastContactAt',null,'notes','','outcome','','resumeDocumentId',null,'coverLetterDocumentId',null),gen_random_uuid(),p_request)->>'id')::uuid;end $$;
 grant create on schema public to app_command;
 alter function public.save_bid(uuid,uuid,bigint,jsonb,uuid,uuid) owner to app_command;
 alter function public.transition_bid(uuid,uuid,bigint,jsonb,uuid,uuid) owner to app_command;
