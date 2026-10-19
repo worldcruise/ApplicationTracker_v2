@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 export async function testTemplateHTTP({ call, identities, org, candidate, expect }) {
-  const url = route => `${route}?organizationId=${org}`; const a = identities.adminA; const m = identities.memberA;
+  const url = route => `${route}?organizationId=${org}`; const m = identities.memberA;
   const templates = await call(m, url("/templates") + `&candidateId=${candidate}`); expect(templates.status === 200 && templates.data.filter(t => t.scope === "builtin").length === 9, "All nine built-in template presets available");
   const base = templates.data.find(t => t.name === "Modern Professional");
   const body = { presetId: null, baseVersionId: base.id, name: "Synthetic custom template", scope: "candidate", sharing: "team", teamId: null, candidateId: candidate, layout: { ...base.layout, margin: 54, labels: { ...base.layout.labels, summary: "Synthetic profile" } } };

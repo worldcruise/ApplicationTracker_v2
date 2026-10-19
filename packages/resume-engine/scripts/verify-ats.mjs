@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { createCanvas } from "@napi-rs/canvas";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { renderAtsClassic, ATS_CLASSIC, syntheticResume, sha256 } from "@candidate/resume-engine";
+import { builtInTemplates } from "@candidate/contracts";
 const fixture = structuredClone(syntheticResume);
 fixture.content.company = "TARGET METADATA MUST NOT BECOME EMPLOYER";
 fixture.content.experience.forEach(w => { w.sentences = [...w.sentences, ...w.sentences]; });
@@ -36,3 +37,14 @@ const unverifiedTask = getDocument({ data: unverified.bytes.slice(), useWasm: fa
 const page = await unverifiedDoc.getPage(1); const viewport = page.getViewport({ scale: 1.4 }); const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height)); await page.render({ canvas: null, canvasContext: canvas.getContext("2d"), viewport }).promise; await writeFile(new URL("ats-classic-unverified-page-1.png", previews), canvas.toBuffer("image/png"));
 assert.ok((await page.getTextContent()).items.some(i => "str" in i && i.str === "UNVERIFIED")); await unverifiedTask.destroy();
 console.log(JSON.stringify({ result: "PASS", template: "ATS Classic v1", pages: result.pageCount, bytes: result.bytes.length, sha256: result.sha256, textItems: items, unicode: "verified", bounds: "verified", targetMetadataExcluded: true, repeatedBytes: "identical", emptyContent: "verified", unsupportedGlyph: "actionable failure", unverifiedWatermark: "verified" }));
+const sheet = createCanvas(900, 1400); const sheetContext = sheet.getContext("2d"); sheetContext.fillStyle = "#e5e7eb"; sheetContext.fillRect(0, 0, 900, 1400);
+for (const [i, template] of builtInTemplates.entries()) {
+  const rendered = await renderAtsClassic(fonts, { ...input, templateVersionId: template.id, template });
+  const loading = getDocument({ data: rendered.bytes.slice(), useWasm: false, useWorkerFetch: false, isEvalSupported: false }); const document = await loading.promise;
+  for (let n = 1; n <= document.numPages; n++) { const p = await document.getPage(n); for (const item of (await p.getTextContent()).items) if ("str" in item && item.str.trim()) { assert.ok(item.transform[4] >= template.layout.margin - 1); assert.ok(item.transform[4] + item.width <= p.view[2] - template.layout.margin + 1); assert.ok(item.transform[5] >= 27 && item.transform[5] < p.view[3]); } }
+  const p = await document.getPage(1); const view = p.getViewport({ scale: .45 }); const image = createCanvas(Math.ceil(view.width), Math.ceil(view.height)); await p.render({ canvas: null, canvasContext: image.getContext("2d"), viewport: view }).promise;
+  const x = (i % 3) * 300 + 12; const y = Math.floor(i / 3) * 465 + 35; sheetContext.drawImage(image, x, y); sheetContext.fillStyle = "#111827"; sheetContext.font = "14px sans-serif"; sheetContext.fillText(template.name, x, y - 12);
+  assert.equal((await renderAtsClassic(fonts, { ...input, templateVersionId: template.id, template })).sha256, rendered.sha256); await loading.destroy();
+}
+await writeFile(new URL("template-library-contact-sheet.png", previews), sheet.toBuffer("image/png"));
+console.log(JSON.stringify({ result: "PASS", templatePresets: 9, everyPageBounds: "verified", deterministicHashes: "verified", contactSheet: "tmp/pdfs/template-library-contact-sheet.png" }));

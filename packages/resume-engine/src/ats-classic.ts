@@ -28,7 +28,7 @@ export async function renderAtsClassic(fonts: FeasibilityFonts, input: AtsInput)
   doc.setCreator(rendererVersion); doc.setProducer("pdf-lib 1.17.1"); doc.setCreationDate(new Date(input.renderedAt)); doc.setModificationDate(new Date(input.renderedAt));
   const supported = new Map<PDFFont, Set<number>>([[regular, new Set(regular.getCharacterSet())], [bold, new Set(bold.getCharacterSet())]]);
   const blocks: Block[] = [];
-  function add(text: string, size = 10.5, isBold = false, indent = 0, after = 6, keepNext = 0) {
+  function add(text: string, size = 10.5, isBold = false, indent = 0, after = config.paragraphSpacing, keepNext = 0) {
     if (!text.trim()) return;
     size = size === 10.5 ? config.fontSize : size === 12 ? config.headingSize : size === 22 ? config.nameSize : size === 11 && !legacy ? config.fontSize + .5 : size;
     const font = isBold ? bold : regular; const available = width - 2 * margin - indent; const lines: string[] = [];
