@@ -18,7 +18,7 @@ export async function generateOperation(op:ExtensionOperation):Promise<AtsRender
  try{
   const asset=async(name:string)=>{const r=await fetch(chrome.runtime.getURL("fonts/"+name));if(!r.ok)throw Error("Bundled font unavailable.");return new Uint8Array(await r.arrayBuffer());};
   const [regular,bold]=await Promise.all([asset("NotoSans-Regular.ttf"),asset("NotoSans-Bold.ttf")]);
-  const pdf=await renderAtsClassic({regular,bold},{rawJson:op.kind==="resume"?op.input.rawJson:JSON.stringify(letterContent(op.input.bodyText)),snapshot:op.input.snapshot,mapping:op.input.review,reviewed:analysis.review.reviewed,renderedAt:op.createdAt,templateVersionId:op.input.template.id,template:op.input.template,...(op.kind==="cover_letter"?{letterText:op.input.bodyText}:{})});
+  const pdf=await renderAtsClassic({regular,bold},{rawJson:op.kind==="resume"?op.input.rawJson:JSON.stringify(letterContent(op.input.bodyText)),snapshot:op.input.snapshot,mapping:op.input.review,reviewed:analysis.review.reviewed,renderedAt:op.createdAt,templateVersionId:op.input.template.id,template:op.kind==="cover_letter"?{...op.input.template,rendererVersion:"template-engine/2.0.0"}:op.input.template,...(op.kind==="cover_letter"?{letterText:op.input.bodyText}:{})});
   await journal.pdf(op.id,pdf);await journal.stage(op.id,"pdfGeneration","succeeded");return pdf;
  }catch(e){await journal.stage(op.id,"pdfGeneration","failed",e instanceof Error?e.message:"Generation failed; source retained.");throw e;}
 }
