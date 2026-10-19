@@ -104,7 +104,7 @@ begin
   for token in select m[1] from regexp_matches(private.resume_norm(r.value->>'text'),'\m(ph[.]?d[.]?|mba|msc|bsc|bachelor|master|doctorate|certified|certification)\M','g') m loop
    if strpos(private.resume_norm(v_proof),token)=0 then return false; end if; end loop;
  end loop;
- if exists(select 1 from jsonb_object_keys(p_map->'claims') k where not exists(select 1 from jsonb_array_elements(v_claims) c where c->>'path'=k and private.resume_norm(c->>'text')<>'')) then return false; end if;
+ if exists(select 1 from jsonb_object_keys(p_map->'claims') as keys(path) where not exists(select 1 from jsonb_array_elements(v_claims) as items(value) where items.value->>'path'=keys.path and private.resume_norm(items.value->>'text')<>'')) then return false; end if;
  return true;
 end $$;
 revoke all on function private.resume_structure(text),private.resume_evidence(jsonb),private.resume_reviewed(jsonb,jsonb,jsonb) from public;
