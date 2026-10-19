@@ -32,8 +32,12 @@ export async function testWorkflowHTTP({call,command,identities,org,team,expect}
  expect((await transition(m,bid,"approved")).status===403,"Member cannot approve");
  expect((await transition(l,bid,"approved")).status===200,"Independent leader approves");
  const approved=await read(bid);expect(approved.approvals[0].resume_document_id===doc1,"Approval binds exact document one");
+ expect((await transition(m,bid,"on_hold")).status===200&&(await transition(m,bid,"approved")).status===200,"Owner restores a still-valid held approval without self-review");
+ expect((await read(bid)).bid.currentApprovalId===approved.bid.currentApprovalId,"Restoring held approval retains original reviewer record");
  expect((await save(bid,{...input,priority:"high"})).status===200&&(await read(bid)).bid.currentApprovalId===approved.bid.currentApprovalId,"Priority change preserves exact approval");
- expect((await save(bid,{...input,resumeDocumentId:doc2})).status===200,"Selected document changes persist");let changed=await read(bid);expect(changed.bid.status==="resume_preparation"&&!changed.bid.currentApprovalId&&changed.invalidations.length===1,"Changed selected document invalidates approval");
+ expect((await transition(m,bid,"on_hold")).status===200,"Approved package can be held");
+ expect((await save(bid,{...input,resumeDocumentId:doc2})).status===200,"Selected document changes persist");let changed=await read(bid);expect(changed.bid.status==="on_hold"&&!changed.bid.currentApprovalId&&changed.invalidations.length===1,"Changed held document invalidates approval");
+ expect((await transition(m,bid,"approved")).status===200&&(await read(bid)).bid.status==="resume_preparation","Invalid held approval routes back to preparation");
  expect(approved.approvals[0].resume_document_id===doc1,"Historical approval remains document one");
  expect((await transition(m,bid,"ready_for_review")).status===200&&(await transition(l,bid,"approved")).status===200,"Changed package independently reapproved");
  const submitPayload={operationId:randomUUID(),status:"submitted",reason:"Actual synthetic submission",submittedAt:new Date(Date.now()-1000).toISOString(),confirmation:"Synthetic submission confirmation",attested:true,adminOverrideReason:"",reopen:false};
@@ -96,6 +100,14 @@ export async function testWorkflowHTTP({call,command,identities,org,team,expect}
  expect([200,422].includes(race[0].status)&&race[1].status===200,"Concurrent profile/approval requests serialize without a service error");
  const raced=await read(racing.data.id);expect(!raced.bid.currentApprovalId&&raced.bid.status!=="approved","Concurrent facts change cannot leave stale approval");
  fresh=await document(4);
+ const beforeReopen=(await read(pending)).submissions[0];
+ expect((await transition(m,pending,"closed")).status===200,"Explicit closure preserves interview rounds");
+ expect((await transition(m,pending,"resume_preparation",{reopen:true})).status===403,"Member cannot exceptionally reopen");
+ expect((await transition(a,pending,"resume_preparation",{reopen:true})).status===200,"Administrator explicitly reopens for fresh preparation");
+ expect((await save(pending,{...input,companyName:"Synthetic Other Opportunity",externalId:"synthetic-2",resumeDocumentId:fresh,jobDescription:"Second synthetic application"})).status===200,"Reopened bid prepares a fresh exact package");
+ expect((await transition(m,pending,"ready_for_review")).status===200&&(await transition(l,pending,"approved")).status===200,"Reapplication is independently reviewed");
+ expect((await transition(m,pending,"submitted",{submittedAt:new Date().toISOString(),attested:true})).status===200,"Second actual submission appends an event");
+ const reapplied=await read(pending);expect(reapplied.submissions.length===2&&reapplied.submissions.some(s=>s.id===beforeReopen.id&&s.resume_document_id===beforeReopen.resume_document_id),"Resubmission retains previous immutable document links");
  expect((await call(m,url("/documents/"+doc2+"/pdf"))).data.base64===originalPdf,"Historical exact PDF survives later candidate facts");
  const delegated=await write(a,"/bids",{input:{...input,resumeDocumentId:fresh,ownerId:bidder.id,companyName:"Synthetic Delegated Submission"}});expect(delegated.status===200,"Administrator assigns an active bidder owner");
  const delegatedId=delegated.data.id;
@@ -105,5 +117,9 @@ export async function testWorkflowHTTP({call,command,identities,org,team,expect}
  expect((await transition(l,delegatedId,"approved")).status===200,"Independent reviewer approves delegated exact package");
  expect((await transition(bidder,delegatedId,"submitted",{submittedAt:new Date().toISOString(),attested:true})).status===200,"Bidder with explicit submit and export grants records actual submission");
  const projection=await call(bidder,url("/bids/"+delegatedId));expect(projection.status===200&&!JSON.stringify(projection.data).includes("PRIVATE WORKFLOW NOTE")&&!Object.hasOwn(projection.data,"profile"),"Bidder workflow response contains no unrestricted profile or feedback");
+ expect((await call(m,url("/candidates/"+candidate+"/archive"),{archived:true},4)).status===200,"Candidate archive retains bid history");
+ expect((await save(bid,{...input,resumeDocumentId:doc2})).status===409,"Archived candidate blocks bid mutation");
+ expect((await call(m,url("/bids/"+bid))).data.submissions.length===1,"Archived candidate retains authorized submission history");
+ expect((await call(m,url("/candidates/"+candidate+"/archive"),{archived:false},5)).status===200,"Candidate restored for subsequent browser acceptance");
  return {candidate,bid,second:pending,interview,doc1,doc2,fresh,input,round};
 }

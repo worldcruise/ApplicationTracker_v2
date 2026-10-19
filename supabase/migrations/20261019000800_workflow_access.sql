@@ -5,7 +5,7 @@ declare b public.bids;manager boolean;self_review boolean;begin
  select * into b from public.bids where organization_id=p_org and id=p_bid;
  manager:=private.manages_team(p_org,b.team_id);self_review:=coalesce(private.actor_id()=any(private.package_authors(p_org,b.id)),false);
  return jsonb_build_object('canEdit',private.org_role(p_org)<>'bidder' or exists(select 1 from private.bidder_grants(p_org,b.candidate_id,b.id,'bid.prepare')),
- 'canTransition',manager or b.owner_id=private.actor_id() or exists(select 1 from private.bidder_grants(p_org,b.candidate_id,b.id,'bid.prepare')),
+ 'canTransition',case when private.org_role(p_org)='bidder' then exists(select 1 from private.bidder_grants(p_org,b.candidate_id,b.id,'bid.prepare')) else manager or b.owner_id=private.actor_id() end,
  'canSubmit',case when private.org_role(p_org)='bidder' then exists(select 1 from private.bidder_grants(p_org,b.candidate_id,b.id,'bid.submit')) else manager or b.owner_id=private.actor_id() end,
  'canReview',manager and not self_review,'selfReview',self_review,'canOverride',private.org_role(p_org)='admin','canAssign',manager,
  'canInterview',private.org_role(p_org)<>'bidder',

@@ -51,7 +51,8 @@ begin
  end if;
  if coalesce(length(reason),0)=0 or length(reason)>4000 then raise exception 'TRANSITION_REASON_REQUIRED' using errcode='22023';end if;
  if target in ('ready_for_review','approved','submitted') then perform private.require_bid_documents(b,pol);end if;
- if target in ('approved','needs_changes') then
+ if private.org_role(p_org)='bidder' and target<>'submitted' and not exists(select 1 from private.bidder_grants(p_org,b.candidate_id,p_bid,'bid.prepare')) then raise exception 'FORBIDDEN' using errcode='42501';end if;
+ if target in ('approved','needs_changes') and old_status<>'on_hold' then
  if not private.manages_team(p_org,b.team_id) then raise exception 'FORBIDDEN' using errcode='42501';end if;
  if target='approved' and private.actor_id()=any(private.package_authors(p_org,p_bid)) and not (private.org_role(p_org)='admin' and coalesce(length(override_reason),0)>0) then raise exception 'SELF_APPROVAL_FORBIDDEN' using errcode='42501';end if;
  if length(coalesce(override_reason,''))>4000 then raise exception 'INVALID_OVERRIDE_REASON' using errcode='22023';end if;

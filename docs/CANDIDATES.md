@@ -70,7 +70,7 @@ The old `change_candidate_assignment` RPC is no longer executable by application
 
 Overview contains saved facts, links, assignments and archive controls. Profile provides structured editing, record order, validation warnings and separate title approvals. Activity shows the most recent 50 events/revisions and opens read-only frozen profile snapshots. Tabs retain the unsaved draft; directory return links preserve filters.
 
-Bids shows the most recent 100 authorized foundation bid rows. Interviews shows up to 100 authorized rounds for those bids. Their full workflows remain later tasks. Resumes links to the implemented [resume/letter editors and frozen document history](RESUME_WORKFLOW.md). Saving a profile, approving a display title, saving/exporting a document or archiving a candidate cannot submit an application. Historical versions remain protected and unchanged after later profile edits.
+Bids shows the most recent 100 authorized bid rows and links to [bid and interview operations](BID_INTERVIEW_WORKFLOW.md). Interviews shows up to 100 authorized rounds for those bids. Resumes links to the implemented [resume/letter editors and frozen document history](RESUME_WORKFLOW.md). Saving a profile, approving a display title, saving/exporting a document or archiving a candidate cannot submit an application. Historical versions remain protected and unchanged after later profile edits.
 
 ## Verification and manual acceptance
 

@@ -54,7 +54,8 @@ export function workflow(request:Request,resource:string,parts:string[]) {
     if(id && read && !action)return bidWorkspace(client,scope,id);
     if(request.method==="POST" && id && action==="transitions") {
      const current=await bidWorkspace(client,scope,id);const input=validateBidTransition(await readJson(request));const op=operation(request,input.operationId);
-     if(["approved","needs_changes"].includes(input.status) && !current.access.canReview && !(current.access.canOverride && (input.status==="needs_changes"||input.adminOverrideReason.trim())))throw new ApiFailure(403,"FORBIDDEN","Independent leader/admin review is required. An administrator self-approval needs an override reason.");
+     if(current.bid.status!=="on_hold"&&input.status==="approved" && !current.access.canReview && !(current.access.canOverride && input.adminOverrideReason.trim()))throw new ApiFailure(403,"FORBIDDEN","Independent leader/admin review is required. An administrator self-approval needs an override reason.");
+     if(current.bid.status!=="on_hold"&&input.status==="needs_changes"&&!current.access.canAssign)throw new ApiFailure(403,"FORBIDDEN","A current team leader or administrator must request changes.");
      if(input.reopen && !current.access.canOverride)throw new ApiFailure(403,"FORBIDDEN","Only an administrator can reopen terminal bids.");
      if(input.status==="submitted" ? !current.access.canSubmit : !current.access.canTransition && !["approved","needs_changes"].includes(input.status))throw new ApiFailure(403,"FORBIDDEN","This transition is outside your permissions.");
      const {operationId:_,...payload}=input;void _;

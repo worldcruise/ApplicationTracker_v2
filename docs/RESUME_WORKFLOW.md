@@ -1,6 +1,6 @@
 # Resume and document workflow
 
-Implemented increments: RP01–RP03 and TP01–TP03, from design §§10–13 and PRD §§8–12. These web/API features reuse hosted Supabase Auth, request-scoped clients and forced RLS. The extension currently retains its Phase 0 probes; connecting this production workflow to MV3 remains T033–T035. Saving, factual review, storing PDF bytes, exporting and submitting are separate actions. Submission and application approvals remain later tasks.
+Implemented increments: RP01–RP03 and TP01–TP03, from design §§10–13 and PRD §§8–12. These web/API features reuse hosted Supabase Auth, request-scoped clients and forced RLS. The extension currently retains its Phase 0 probes; connecting this production workflow to MV3 remains T033–T035. Saving, factual review, storing PDF bytes, exporting and submitting are separate actions. [Bid operations](BID_INTERVIEW_WORKFLOW.md) now implement exact-version application approval and explicit submission recording. Factual review and archive/export remain independent.
 
 ## Start and prerequisites
 
