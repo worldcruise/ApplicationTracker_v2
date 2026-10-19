@@ -23,6 +23,8 @@ export async function requestContext(request?: Request) {
   }
   const context = await databaseResult<UserContext>(client.rpc("get_my_context"));
   if (context.userId !== identity.data.user.id) throw new ApiFailure(401, "UNAUTHENTICATED", "The session identity could not be verified.");
+  const operationActor = request?.headers.get("x-operation-actor");
+  if (operationActor !== null && operationActor !== undefined && operationActor !== context.userId) throw new ApiFailure(403, "FORBIDDEN", "This local operation belongs to another account. Sign back in as its original actor; its frozen payload has been retained.");
   return { client, context, token };
 }
 

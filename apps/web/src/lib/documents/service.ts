@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { classicLayout, type CandidateProfile, type CoverLetterVersion, type FrozenTemplate, type OrganizationScope, type ResumeReviewInput } from "@candidate/contracts";
 import { isResumeReviewInput, reviewResume } from "@candidate/domain";
 import { ApiFailure, databaseResult } from "@/lib/api/errors";
-import { uuid } from "@/lib/api/guards";
+import { uuid, requireRole } from "@/lib/api/guards";
 import { strictObject } from "@/lib/candidates/input";
 import { getProfile } from "@/lib/candidates/service";
 import { render, renderReceipt } from "@/lib/resumes/render";
@@ -56,6 +56,7 @@ export async function recoverPdf(client: SupabaseClient, scope: OrganizationScop
   return { source, result };
 }
 export async function storeDocument(client: SupabaseClient, scope: OrganizationScope, kind: "resume" | "cover_letter", id: string, requestId: string) {
+  requireRole(scope, ["admin", "team_leader", "team_member"]);
   const key = process.env.DOCUMENT_RENDER_SIGNING_KEY; const keyId = process.env.DOCUMENT_RENDER_KEY_ID ?? "primary";
   if (!key || !/^[0-9a-f]{64}$/.test(key) || !/^[a-zA-Z0-9_-]{1,60}$/.test(keyId)) throw new ApiFailure(503, "SERVICE_UNAVAILABLE", "Exact PDF storage needs the server signing key and matching database key registration. Source versions and local PDFs remain available.");
   const { source, result } = await recoverPdf(client, scope, kind, id);

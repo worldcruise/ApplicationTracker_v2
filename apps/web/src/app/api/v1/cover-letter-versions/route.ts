@@ -15,7 +15,7 @@ export async function GET(request: Request) { return api(request, async () => {
 }); }
 export async function POST(request: Request) { return api(request, async requestId => {
   const { client, context, token } = await requestContext(request); checkMutationOrigin(request, token);
-  const scope = currentOrganization(context, uuid(new URL(request.url).searchParams.get("organizationId"))); const b = letterPayload(await readJson(request, 300000));
+  const scope = currentOrganization(context, uuid(new URL(request.url).searchParams.get("organizationId"))); const b = letterPayload(await readJson(request, 2_097_152));
   if (uuid(request.headers.get("idempotency-key")) !== b.operationId) throw new ApiFailure(422, "SCHEMA_INVALID", "Reuse the original operation UUID in Idempotency-Key.");
   // Reconcile a retry against its immutable snapshot, even after the live profile changes.
   const old = await databaseResult<{ id: string } | null>(client.from("cover_letter_versions").select("id").eq("organization_id", scope.organizationId).eq("operation_id", b.operationId).maybeSingle());

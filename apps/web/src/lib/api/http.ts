@@ -18,7 +18,7 @@ function headers(request: Request, response: NextResponse): NextResponse {
   const origin = permittedOrigin(request);
   if (origin) {
     response.headers.set("Access-Control-Allow-Origin", origin);
-    response.headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type, If-Match, Idempotency-Key");
+    response.headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type, If-Match, Idempotency-Key, X-Operation-Actor");
     response.headers.set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
     response.headers.set("Access-Control-Expose-Headers", "ETag");
   }

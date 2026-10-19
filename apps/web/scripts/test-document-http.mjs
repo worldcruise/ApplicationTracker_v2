@@ -20,6 +20,8 @@ export async function testDocumentHTTP({ call, command, identities, org, candida
   expect((await call(bidder, url(`/cover-letter-versions/${letter.data.id}`))).status === 403, "Bidder cannot read raw letter/source history");
   const sealedResume = await call(m, url("/documents"), { kind: "resume", sourceVersionId: sourceId });
   expect(sealedResume.status === 200, `Server attests and stores frozen resume bytes (${sealedResume.status})`);
+  expect((await call(m,url("/documents"),{kind:"resume",sourceVersionId:sourceId},undefined,{"X-Operation-Actor":a.id})).status===403,"Account-switched local operations cannot run under another actor");
+  expect((await call(bidder,url("/documents"),{kind:"resume",sourceVersionId:sourceId})).status===403,"Export-only user cannot create stored content artifacts");
   const sealed = await call(m, url("/documents"), { kind: "cover_letter", sourceVersionId: letter.data.id });
   expect(sealed.status === 200 && sealed.data.pdfSha256 === rendered.data.sha256, `Server attests and stores exact letter bytes (${sealed.status})`);
   expect((await call(m, url("/documents"), { kind: "cover_letter", sourceVersionId: letter.data.id })).data.id === sealed.data.id, "Storing same frozen bytes is idempotent");
@@ -52,6 +54,10 @@ export async function testDocumentHTTP({ call, command, identities, org, candida
   const experienceFields = ["id","company","officialTitle","proposedDisplayTitle","titlePolicy","startDate","endDate","current","location","sourceBullets","achievements","preferredBulletCount"];
   edit.experiences = profile.experiences.map(w => Object.fromEntries(experienceFields.map(k => [k,w[k]])));
   const changed = await call(m, url(`/candidates/${candidate}`), edit, rowVersion, {}, "PATCH"); expect(changed.status === 200, "Live candidate changes after sealing");
+  const templates = (await call(m,url("/templates")+`&candidateId=${candidate}`)).data;
+  const preset = templates.find(t=>t.id===templateId).presetId; const current = templates.find(t=>t.presetId===preset && t.current);
+  const nextTemplate = await call(m,url("/templates/versions"),{presetId:preset,baseVersionId:current.id,name:current.name,scope:current.scope,sharing:current.sharing,teamId:current.teamId,candidateId:current.candidateId,layout:{...current.layout,margin:64}},current.version);
+  expect(nextTemplate.status===200,"Template changes again after exact PDF storage");
   expect((await call(m, url(`/documents/${documentId}/pdf`))).data.sha256 === rendered.data.sha256, "Stored bytes survive later profile/template edits");
   expect((await call(m, url(`/cover-letter-versions/${letter.data.id}`))).data.bodyText === bodyText, "Original letter text remains immutable after profile changes");
   expect((await save(payload)).data.id === letter.data.id, "Original letter operation replays after profile changes");
