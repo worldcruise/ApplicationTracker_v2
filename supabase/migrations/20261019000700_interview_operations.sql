@@ -101,6 +101,7 @@ declare b public.bids;i public.interviews;prior public.interviews;r jsonb;payloa
  if not found or not private.workflow_active(p_org,b.candidate_id) then raise exception 'CANDIDATE_ARCHIVED' using errcode='22023';end if;
  if jsonb_typeof(p_input)<>'object' or (select count(*) from jsonb_object_keys(p_input))<>15 or not(p_input ?& array['bidId','ownerId','type','interviewer','localDateTime','timezone','offset','scheduledAt','durationMinutes','location','meetingUrl','lifecycle','outcome','nextAction','followUpAt']) then raise exception 'INVALID_INTERVIEW' using errcode='22023';end if;
  owner:=(p_input->>'ownerId')::uuid;
+ if exists(select 1 from jsonb_each(p_input) x where (x.key in ('bidId','ownerId','type','interviewer','location','lifecycle','outcome','nextAction') and jsonb_typeof(x.value)<>'string') or (x.key in ('localDateTime','timezone','offset','scheduledAt','meetingUrl','followUpAt') and jsonb_typeof(x.value) not in ('string','null')) or (x.key='durationMinutes' and jsonb_typeof(x.value)<>'number')) then raise exception 'INVALID_INTERVIEW' using errcode='22023';end if;
  if not private.interview_owner(p_org,b.candidate_id,b.team_id,owner) then raise exception 'FORBIDDEN' using errcode='42501';end if;
  stamp:=(p_input->>'scheduledAt')::timestamptz;
  if stamp is not null then
@@ -123,6 +124,7 @@ declare b public.bids;i public.interviews;prior public.interviews;r jsonb;payloa
  if i.lifecycle_status='cancelled' or (i.lifecycle_status in ('completed','feedback_pending') and p_input->>'lifecycle' not in ('completed','feedback_pending')) then raise exception 'INVALID_INTERVIEW_TRANSITION' using errcode='22023';end if;
  i.row_version:=i.row_version+1;
  end if;
+ if not private.manages_team(p_org,b.team_id) and owner is distinct from (case when p_interview is null then private.actor_id() else i.owner_id end) then raise exception 'FORBIDDEN' using errcode='42501';end if;
  update public.interviews set owner_id=owner,type=p_input->>'type',interviewer=p_input->>'interviewer',scheduled_at=stamp,timezone=p_input->>'timezone',local_datetime=p_input->>'localDateTime',chosen_offset=p_input->>'offset',
  duration_minutes=(p_input->>'durationMinutes')::integer,location=p_input->>'location',meeting_url=p_input->>'meetingUrl',lifecycle_status=p_input->>'lifecycle',outcome=p_input->>'outcome',
  next_action=p_input->>'nextAction',follow_up_at=(p_input->>'followUpAt')::timestamptz,completed_at=case when p_input->>'lifecycle' in ('completed','feedback_pending') then coalesce(i.completed_at,now()) else null end,
@@ -169,10 +171,12 @@ create function public.read_workflow_notification(p_org uuid,p_notification uuid
  update public.workflow_notifications set read_at=coalesce(read_at,now()) where organization_id=p_org and id=p_notification and recipient_id=private.actor_id();
  if not found then raise exception 'FORBIDDEN' using errcode='42501';end if;
 end $$;
+grant create on schema public to app_command;
 alter function public.save_interview(uuid,uuid,bigint,jsonb,uuid,uuid,uuid) owner to app_command;
 alter function public.record_interview_feedback(uuid,uuid,bigint,text,uuid,uuid) owner to app_command;
 alter function public.complete_workflow_task(uuid,uuid,bigint,uuid,uuid) owner to app_command;
 alter function public.read_workflow_notification(uuid,uuid) owner to app_command;
+revoke create on schema public from app_command;
 revoke all on function public.save_interview(uuid,uuid,bigint,jsonb,uuid,uuid,uuid),public.record_interview_feedback(uuid,uuid,bigint,text,uuid,uuid),public.complete_workflow_task(uuid,uuid,bigint,uuid,uuid),public.read_workflow_notification(uuid,uuid) from public,anon;
 grant execute on function public.save_interview(uuid,uuid,bigint,jsonb,uuid,uuid,uuid),public.record_interview_feedback(uuid,uuid,bigint,text,uuid,uuid),public.complete_workflow_task(uuid,uuid,bigint,uuid,uuid),public.read_workflow_notification(uuid,uuid) to authenticated;
 commit;

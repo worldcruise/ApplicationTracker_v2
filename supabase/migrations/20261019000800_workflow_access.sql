@@ -12,7 +12,9 @@ declare b public.bids;manager boolean;self_review boolean;begin
  'factsCurrent',private.document_facts_current(p_org,b.resume_document_id) and (b.cover_letter_document_id is null or private.document_facts_current(p_org,b.cover_letter_document_id)),
  'policy',(select approval_policy from public.teams where organization_id=p_org and id=b.team_id));
 end $$;
+grant create on schema public to app_command;
 alter function public.get_bid_workflow_access(uuid,uuid) owner to app_command;
+revoke create on schema public from app_command;
 revoke all on function public.get_bid_workflow_access(uuid,uuid) from public,anon;
 grant execute on function public.get_bid_workflow_access(uuid,uuid) to authenticated;
 -- A letter created for one bid must never be used for another opportunity.

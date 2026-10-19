@@ -88,6 +88,11 @@ export function workflow(request:Request,resource:string,parts:string[]) {
   }catch(e){
    if(e instanceof WorkflowValidationFailure)throw new ApiFailure(422,"SCHEMA_INVALID",e.message,false,e.issues);
    if(e instanceof ApiFailure&&e.code==="VERSION_CONFLICT"&&id){if(resource==="bids")e.currentVersion=(await getBid(client,scope,id)).rowVersion;else if(resource==="interviews")e.currentVersion=(await getInterview(client,scope,id)).rowVersion;}
+   if(!read&&id&&e instanceof ApiFailure&&["VERSION_CONFLICT","SCHEMA_INVALID","KEY_PAYLOAD_MISMATCH","SERVICE_UNAVAILABLE"].includes(e.code)){
+    try{const op=uuid(request.headers.get("idempotency-key"));const target=resource==="bids"?await getBid(client,scope,id):resource==="interviews"?await getInterview(client,scope,id):null;
+     if(target)await client.rpc("record_workflow_failure",{p_org:org,p_bid:resource==="bids"?id:(target as Interview).bidId,p_interview:resource==="interviews"?id:null,p_operation:op,p_code:e.code});
+    }catch{/* Failure notification must never replace the original operation result or error. */}
+   }
    throw e;
   }
  });

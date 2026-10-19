@@ -77,5 +77,5 @@ export async function testWorkflowHTTP({call,command,identities,org,team,expect}
  expect((await call(bidder,url("/bids/"+pending))).status===200,"Scoped bidder can read bid without raw profile");
  expect((await transition(bidder,pending,"submitted",{submittedAt:new Date().toISOString(),attested:true})).status===403,"Prepare grant cannot record actual submission");
  expect((await call(bidder,url("/interviews")+"&bidId="+pending)).status===403,"Bid grant never exposes interview data");
- return {candidate,bid,second:pending,interview,doc1,doc2,input,round};
+ return {candidate,bid,second:pending,interview,doc1,doc2,fresh,input,round};
 }
