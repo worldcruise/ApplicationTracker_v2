@@ -51,6 +51,6 @@ export type FoundationCommand =
   | { command: "approveBidderSummary"; candidateId: string; summary: string }
   | { command: "createDraftBid"; candidateId: string; companyName: string; jobTitle: string }
   | { command: "grantBidderAccess"; userId: string; candidateId: string | null; bidId: string | null;
-      capability: "bid.prepare" | "document.read" | "document.export"; allowEmail: boolean; allowPhone: boolean; expiresAt: string | null }
+      capability: "bid.prepare" | "bid.submit" | "document.read" | "document.export"; allowEmail: boolean; allowPhone: boolean; expiresAt: string | null }
   | { command: "revokeBidderAccess"; grantId: string }
   | { command: "provisionUser"; operationId: string; email: string; displayName: string; role: OrganizationRole };

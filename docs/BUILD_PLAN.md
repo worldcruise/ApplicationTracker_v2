@@ -186,6 +186,17 @@ Continue after RP03. Complete TP01, TP02, then TP03. Exporting a linked frozen P
 
 ## Milestone 4 Bid and interview operations
 
+### Scoped implementation increments (19 October 2026)
+
+The user approved D04: approval required by default, leader/admin reviewers, no self-review by owner/package editor/document author except an audited admin override with reason; letters optional unless team policy requires one. Preserve all original source requirements. Complete the following increments in order; each receives checks/progress before the next.
+
+| ID | Increment | Dependencies / design | Acceptance |
+| --- | --- | --- | --- |
+| BO01 | Bid contracts, protected persistence/state machine, exact approvals and explicit submissions | TP01–TP04; §§7–8,18; T036–T040 | Independent opportunities, scoped ownership/team/job fields, optimistic/idempotent commands, all fifteen statuses, held state/admin reopen, immutable job/document approvals and submissions, invalidation and reviewer restrictions. |
+| BO02 | Interview rounds, scheduling/feedback revisions and next-action tasks | BO01; §19; T042–T044 | Bid-specific rounds, UTC plus IANA and explicit DST ambiguity choice, lifecycle separate from outcome, immutable reschedule/feedback history, typed tasks and scoped in-app events. |
+| BO03 | User-context APIs and isolated authorization/workflow acceptance | BO01–BO02; §§5,9,18–19 | Strict input, current permissions, allowed/denied transitions, stale/concurrent edits, changed documents after approval, multiple opportunities and retained submissions; fresh DB/API checks. |
+| BO04 | Bid board/detail and interview/task UI; milestone verification/runbook | BO03; §§3,18–19; T041/T043/T045 | Owner/team/status filters, explicit review/submission, version history, interview scheduling/feedback/next rounds and follow-ups; browser checks, setup/prerequisites and completed progress. Saving/exporting never submits. |
+
 | ID | Scoped task | Dependencies | Design sections | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | T037 | Implement scoped bid creation, draft editing, and listing. | T005, T018–T019, T036 | D§4–5, 8–9 | Bid grants and assignment scope are checked on API and database paths; updates require If-Match and allowlisted fields. Direct status/ownership escalation fails; company and job details preserve original values. Strong duplicate resolution is added in T046/T051 before archive release. |

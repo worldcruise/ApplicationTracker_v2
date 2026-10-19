@@ -20,7 +20,7 @@ const schemas: Record<FoundationCommand["command"], Record<string, Rule>> = {
   approveBidderSummary: { candidateId: id, summary: text(4000) },
   createDraftBid: { candidateId: id, companyName: text(200), jobTitle: text(200) },
   grantBidderAccess: { userId: id, candidateId: nullable(id), bidId: nullable(id),
-    capability: oneOf(["bid.prepare", "document.read", "document.export"]), allowEmail: bool, allowPhone: bool, expiresAt: nullable(date) },
+    capability: oneOf(["bid.prepare", "bid.submit", "document.read", "document.export"]), allowEmail: bool, allowPhone: bool, expiresAt: nullable(date) },
   revokeBidderAccess: { grantId: id },
   provisionUser: { operationId: id, email: v => { text(320)(v); if (typeof v !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) invalid(); }, displayName: text(200), role },
 };
