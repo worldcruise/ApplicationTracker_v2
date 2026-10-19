@@ -14,12 +14,14 @@ import { testDocumentHTTP } from "./test-document-http.mjs";
 import { testDocumentBrowser } from "./test-document-browser.mjs";
 import { testWorkflowHTTP } from "./test-workflow-http.mjs";
 import { testWorkflowBrowser } from "./test-workflow-browser.mjs";
+import { launchExtension,testExtensionBrowser } from "./test-extension-browser.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
 let step = "isolated environment guard";
 let assertions = 0;
 let server;
+let extensionHarness;
 class TestFailure extends Error {}
 function expect(value, label) {
   if (!value) throw new TestFailure(label);
@@ -46,8 +48,10 @@ try {
   delete baseEnv.SUPABASE_SERVICE_ROLE_KEY;
   step = "production build";
   run(npm, ["run", "build"], baseEnv);
+  step = "unpacked extension startup";
+  extensionHarness=await launchExtension();
   const renderKey = randomBytes(32).toString("hex");
-  const runtimeEnv = { ...baseEnv, SUPABASE_SERVICE_ROLE_KEY: serviceKey, DOCUMENT_RENDER_SIGNING_KEY: renderKey, DOCUMENT_RENDER_KEY_ID: "primary", NODE_ENV: "production" };
+  const runtimeEnv = { ...baseEnv, SUPABASE_SERVICE_ROLE_KEY: serviceKey, DOCUMENT_RENDER_SIGNING_KEY: renderKey, DOCUMENT_RENDER_KEY_ID: "primary", EXTENSION_ALLOWED_ORIGIN: extensionHarness.origin, NODE_ENV: "production" };
   step = "production server startup";
   server = spawn(process.execPath, [fileURLToPath(import.meta.resolve("next/dist/bin/next")), "start", "--port", "3000"],
     { cwd: web, env: runtimeEnv, stdio: "ignore" });
@@ -281,6 +285,8 @@ try {
   const workflowFixture = await testWorkflowHTTP({call,command,identities,org:orgA,team:teamA,expect});
   step = "bid and interview browser acceptance";
   try { const checks=await testWorkflowBrowser({org:orgA,team:teamA,identities,password,...workflowFixture});expect(checks===15,"All 15 workflow browser checkpoints complete");console.log(JSON.stringify({result:"PASS",workflowBrowserCheckpoints:checks})); } catch(e){throw new TestFailure(e.message); }
+  step = "unpacked extension real-backend acceptance";
+  try { const checks=await testExtensionBrowser({harness:extensionHarness,call,command,identities,org:orgA,team:teamA,password,assert:expect});expect(checks===12,"All 12 extension browser checkpoints complete");console.log(JSON.stringify({result:"PASS",extensionBrowserCheckpoints:checks}));} catch(e){throw new TestFailure(e.message);}
   step = "current membership and grant revocation with existing tokens";
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);
   expect((await call(identities.memberA, candidatePath(first))).status === 403, "Unexpired token loses application access after deactivation");
@@ -356,5 +362,6 @@ try {
   process.exitCode = 1;
 } finally {
   server?.kill("SIGTERM");
+  await extensionHarness?.close();
 }
 
