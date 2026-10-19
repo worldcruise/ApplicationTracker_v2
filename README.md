@@ -77,6 +77,8 @@ The Supabase CLI is pinned as a root development dependency. Local defaults in `
 
 Versioned migrations now establish the Section 4–8 foundation, protected commands and forced RLS. Transaction-local synthetic fixtures exercise all four roles, multiple teams and two organizations; the seed remains empty. GitHub Actions runs migrations/tests on an isolated Supabase instance without hosted credentials. See [foundation setup, bootstrap, account flows, API and manual acceptance](docs/FOUNDATION.md). New schema changes require migrations and allow/deny tests; use `db:reset` only for intentional local reset.
 
+Candidate management adds `/candidates`, a searchable scoped directory and six-tab profile workspace with real persistence, ordered records, immutable revisions, explicit conflict recovery and archive/restore. Ready requires name, email, location and phone, following the user's C01 decision. See [candidate setup, APIs, limits and acceptance](docs/CANDIDATES.md). Apply the reviewed pending migrations to hosted development before using these pages; local Docker startup remains optional. Resume versions and full bid/interview workflows remain later tasks.
+
 ## Workspace layout
 
 | Path | Responsibility |

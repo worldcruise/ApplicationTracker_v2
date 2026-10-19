@@ -4,15 +4,23 @@ import { chromium, expect } from "@playwright/test";
 
 export async function testCandidateBrowser({ org, team, identities, password }) {
   const browser = await chromium.launch();
-  let step = "browser initialization"; let checks = 0;
+  let step = "browser initialization"; let checks = 0; let observedPage;
+  const statuses = [];
   const contexts = [];
   async function login(person) {
     const context = await browser.newContext(); contexts.push(context);
     const page = await context.newPage(); page.setDefaultTimeout(15000);
+    observedPage = page; step = "open sign-in page";
+    page.on("response", response => {
+      const path = new URL(response.url()).pathname;
+      if (["/auth/v1/token", "/sign-in", "/workspace", "/candidates"].includes(path)) statuses.push({ path, status: response.status() });
+    });
     await page.goto("http://localhost:3000/sign-in");
+    step = "fill sign-in form";
     await page.getByLabel("Email", { exact: true }).fill(person.email);
     await page.getByLabel("Password", { exact: true }).fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    step = "sign-in reaches authorized workspace";
     await page.waitForURL("**/workspace");
     return { context, page };
   }
@@ -24,10 +32,13 @@ export async function testCandidateBrowser({ org, team, identities, password }) 
   try {
     step = "real browser sign-in and draft creation";
     const admin = await login(identities.adminA); const page = admin.page;
+    step = "open candidate directory";
     await page.goto(`http://localhost:3000/candidates?organizationId=${org}`);
+    step = "fill candidate creation form";
     await page.getByLabel("Full name (optional)", { exact: true }).fill("Synthetic Browser Avery");
     await page.getByLabel("Owning team", { exact: true }).selectOption(team);
     await page.getByRole("button", { name: "Create draft", exact: true }).click();
+    step = "created draft opens profile workspace";
     await page.waitForURL(/\/candidates\/[a-f0-9-]+\?/);
     const detailURL = page.url();
     await expect(page.getByTestId("profile-version")).toHaveText("1"); checks++;
@@ -116,7 +127,8 @@ export async function testCandidateBrowser({ org, team, identities, password }) 
   } catch {
     // Playwright errors may embed DOM/network details. Only the fixed synthetic
     // test step is returned to CI output; credentials remain in memory.
-    throw new Error(`Candidate browser acceptance failed during: ${step}`);
+    const headings = observedPage ? await observedPage.locator('h1,h2,[role="alert"],[role="status"]').allTextContents().catch(() => []) : [];
+    throw new Error(`Candidate browser acceptance failed during: ${step}; UI: ${JSON.stringify(headings).slice(0, 800)}; statuses: ${JSON.stringify(statuses.slice(-8))}`);
   } finally {
     for (const context of contexts) await context.close();
     await browser.close();

@@ -20,7 +20,7 @@ The target structure is `apps/web`, `apps/extension`, `packages/contracts`, `pac
 
 | ID | PRD statement | Design statement | Classification and required action | Affected tasks |
 | --- | --- | --- | --- | --- |
-| C01 | P§7.1 lists Phone under required fields, then says validation must not assume every candidate has a phone number. | D§1 explicitly makes phone optional; D§6 requires name, email, and location for Ready profiles and permits incomplete drafts. | The design contradicts the PRD's required-phone list and follows its later qualification. The PRD is internally inconsistent. Product must confirm the completeness policy, including Draft versus Ready. Preserve both source statements; do not add a phone requirement or silently accept its removal. | T016–T017, T020; the Ready-profile acceptance gate remains pending confirmation. |
+| C01 | P§7.1 lists Phone under required fields, then says validation must not assume every candidate has a phone number. | D§1 explicitly makes phone optional; D§6 requires name, email, and location for Ready profiles and permits incomplete drafts. | The design contradicts the required-phone list and the PRD is internally inconsistent. **Resolved by the user on 18 October 2026:** Ready requires name, email, location **and phone**; Draft permits unknown facts. Preserve both source statements. | T016–T017, T020; CM01–CM03 implement the explicit disposition with backend, database and UI validation. |
 
 No other definite contradiction between mandatory requirements was identified in this comparison. The differences below are ambiguities, compatible refinements, or coverage gaps, rather than invented conflicts.
 

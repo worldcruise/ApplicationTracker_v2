@@ -16,7 +16,7 @@ export function TextField({ path, label, value, onChange, multiline = false, hin
   const props = { id, value: value ?? "", onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(e.target.value || null),
     className: control, "aria-invalid": issues.length > 0, "aria-describedby": `${id}-help` };
   return <div><label htmlFor={id} className="block text-sm font-medium">{label}</label>
-    {multiline ? <textarea {...props} rows={3} maxLength={path === "privateNotes" || path === "professionalSummary" ? 20000 : undefined} /> : <input {...props} maxLength={path === "email" || path.endsWith("url") ? 2048 : 200} />}
+    {multiline ? <textarea {...props} rows={3} maxLength={path === "privateNotes" || path === "professionalSummary" ? 8000 : undefined} /> : <input {...props} maxLength={path === "email" ? 320 : path === "phone" ? 40 : path.endsWith("url") ? 2048 : path === "location" ? 500 : 200} />}
     <div id={`${id}-help`} className="text-xs text-slate-600">{hint}{issues.map((e, i) => <p key={i} className="text-red-800">{e.message}</p>)}</div>
   </div>;
 }

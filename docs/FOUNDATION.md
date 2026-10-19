@@ -1,6 +1,6 @@
 # Foundation operations and boundaries
 
-This increment implements the Section 4–8 authorization foundation. It brings forward minimal candidate, draft-bid and interview permission anchors; complete profile children/revisions, company identity, scheduling, approvals, submissions, document versions and full OpenAPI remain their build-plan tasks. There is no submission command. `approval_policy = NULL` is undecided; it never authorizes a submission. Phone and Ready validation remain pending C01.
+This increment implements the Section 4–8 authorization foundation. It brings forward minimal candidate, draft-bid and interview permission anchors. [Candidate management](CANDIDATES.md) subsequently adds profile children/revisions, the directory and editor. Company identity, scheduling, submission approvals, submissions, document versions and full OpenAPI remain their build-plan tasks. There is no submission command. `approval_policy = NULL` is undecided; it never authorizes a submission. The user resolved C01: Ready requires name, email, location and phone.
 
 ## Database model
 
@@ -12,7 +12,7 @@ Assignment endings are immutable; rows are retained. Deactivation closes assignm
 
 Bidder access requires an unrevoked, unexpired, exactly-one-target grant and current membership in the target team. A bid grant never authorizes another bid or candidate-wide preparation. `get_bidder_candidate` uses a separate non-owner reader with access only to safe identity/contact columns and the separately approved summary. Email and phone are denied unless explicitly granted. Its fixed response excludes notes, profile content, assignments, unrelated activity and interview feedback. `documentReferences` is empty until immutable documents and their linkage checks exist (T026–T027); it never invents access to future versions. Raw candidates, summaries, interviews and feedback remain denied to bidders even through direct REST queries.
 
-No general capability override, team transfer, profile editing, interview mutation or submission RPC is introduced. The grant capabilities are constrained to preparation and future document read/export; they cannot grant candidate editing, resume generation or interview access. Later migrations must preserve these boundaries.
+The foundation introduces no general capability override, team transfer, interview mutation or submission RPC. Profile commands are documented in [CANDIDATES.md](CANDIDATES.md). Grant capabilities remain constrained to preparation and future document read/export; they cannot grant candidate editing, resume generation or interview access. Later migrations must preserve these boundaries.
 
 ## Isolated database checks
 
