@@ -5,13 +5,13 @@ export async function testWorkflowHTTP({call,command,identities,org,team,expect}
  const fixture={fullName:"Synthetic Workflow Avery",email:"workflow@example.invalid",phone:"+1 202 555 0120",location:"Synthetic City",seniorityPreference:null,professionalSummary:"Built synthetic tools.",privateNotes:"PRIVATE WORKFLOW NOTE",status:"ready",links:[],experiences:[],educations:[],certifications:[]};
  const created=await call(a,url("/candidates"),{teamId:team,ownerId:null,profile:fixture});expect(created.status===200,"Workflow synthetic candidate persists");const candidate=created.data.id;
  expect((await call(l,url("/candidates/"+candidate+"/assignments"),{userId:m.id,assign:true},1)).status===200,"Workflow member assigned");
- async function document(revision){
-  const assembly=await call(m,url("/prompt-assemblies"),{candidateId:candidate,profileRevision:revision,job:{company:"Synthetic Workflow Company",title:"Engineer",description:"Synthetic opportunity"}});expect(assembly.status===200,"Fresh workflow assembly freezes current facts");
+ async function document(revision,author=m){
+  const assembly=await call(author,url("/prompt-assemblies"),{candidateId:candidate,profileRevision:revision,job:{company:"Synthetic Workflow Company",title:"Engineer",description:"Synthetic opportunity"}});expect(assembly.status===200,"Fresh workflow assembly freezes current facts");
   const rawJson=JSON.stringify({company:"Synthetic Workflow Company",title:"Engineer",summary:revision===2?fixture.professionalSummary:"Changed verified facts.",skills:[],experience:[],education:[]});const review={experienceIds:[],educationIds:[],claims:{}};const renderedAt="2026-10-19T12:00:00.000Z";
-  const rendered=await call(m,url("/resume-renders"),{assemblyId:assembly.data.id,rawJson,review,renderedAt});expect(rendered.status===200,"Workflow uses real reviewed PDF bytes");
+  const rendered=await call(author,url("/resume-renders"),{assemblyId:assembly.data.id,rawJson,review,renderedAt});expect(rendered.status===200,"Workflow uses real reviewed PDF bytes");
   const payload={operationId:randomUUID(),assemblyId:assembly.data.id,schemaVersion:1,rawJson,review,render:{sha256:rendered.data.sha256,pageCount:rendered.data.pageCount,rendererVersion:rendered.data.rendererVersion,renderedAt}};
-  const source=await call(m,url("/resume-versions"),payload,undefined,{"Idempotency-Key":payload.operationId});expect(source.status===200,"Workflow immutable source saves");
-  const stored=await call(m,url("/documents"),{kind:"resume",sourceVersionId:source.data.id});expect(stored.status===200,"Workflow PDF is attested and stored");return stored.data.id;
+  const source=await call(author,url("/resume-versions"),payload,undefined,{"Idempotency-Key":payload.operationId});expect(source.status===200,"Workflow immutable source saves");
+  const stored=await call(author,url("/documents"),{kind:"resume",sourceVersionId:source.data.id});expect(stored.status===200,"Workflow PDF is attested and stored");return stored.data.id;
  }
  const doc1=await document(2),doc2=await document(2);const originalPdf=(await call(m,url("/documents/"+doc2+"/pdf"))).data.base64;
  const input={candidateId:candidate,teamId:team,ownerId:m.id,companyName:"Synthetic Workflow Company",jobTitle:"Engineer",jobDescription:"Synthetic verified opportunity",jobUrl:"https://example.invalid/jobs/synthetic-1",externalId:"synthetic-1",jobLocation:"Synthetic City",priority:"normal",followUpAt:new Date(Date.now()-3600000).toISOString(),lastContactAt:null,notes:"Synthetic notes",outcome:"",resumeDocumentId:doc1,coverLetterDocumentId:null};
@@ -117,6 +117,10 @@ export async function testWorkflowHTTP({call,command,identities,org,team,expect}
  expect((await transition(l,delegatedId,"approved")).status===200,"Independent reviewer approves delegated exact package");
  expect((await transition(bidder,delegatedId,"submitted",{submittedAt:new Date().toISOString(),attested:true})).status===200,"Bidder with explicit submit and export grants records actual submission");
  const projection=await call(bidder,url("/bids/"+delegatedId));expect(projection.status===200&&!JSON.stringify(projection.data).includes("PRIVATE WORKFLOW NOTE")&&!Object.hasOwn(projection.data,"profile"),"Bidder workflow response contains no unrestricted profile or feedback");
+ const leaderDocument=await document(4,l);const authored=await write(m,"/bids",{input:{...input,resumeDocumentId:leaderDocument,companyName:"Synthetic Document Author Review"}});expect(authored.status===200,"Document-author restriction fixture persists");
+ expect((await transition(m,authored.data.id,"resume_preparation")).status===200&&(await transition(m,authored.data.id,"ready_for_review")).status===200,"Independently prepared package selects leader-authored source");
+ expect((await transition(l,authored.data.id,"approved")).status===403,"Leader cannot approve their own document even when another person owns and prepares the bid");
+ expect((await transition(a,authored.data.id,"approved")).status===200,"Independent administrator approves leader-authored document");
  expect((await call(m,url("/candidates/"+candidate+"/archive"),{archived:true},4)).status===200,"Candidate archive retains bid history");
  expect((await save(bid,{...input,resumeDocumentId:doc2})).status===409,"Archived candidate blocks bid mutation");
  expect((await call(m,url("/bids/"+bid))).data.submissions.length===1,"Archived candidate retains authorized submission history");
