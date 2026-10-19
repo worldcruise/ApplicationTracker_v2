@@ -10,6 +10,8 @@ export async function testResumeBrowser({ org, candidate, identities, password }
     await page.goto(`http://localhost:3000/candidates/${candidate}/studio?organizationId=${org}`);
     step = "template search, selection and customization";
     await page.getByLabel("Search templates", { exact: true }).fill("Modern");
+    const thumbnail=page.getByAltText("Modern Professional: first page of the shared synthetic resume",{exact:true});
+    await expect(thumbnail).toBeVisible(); await expect.poll(()=>thumbnail.evaluate(image=>image.naturalWidth)).toBeGreaterThan(0);
     await page.getByRole("button", { name: "Select Modern Professional", exact: true }).click();
     await page.getByRole("button", { name: "Duplicate / customize Modern Professional", exact: true }).click();
     await page.getByLabel("Template name", { exact: true }).fill("Synthetic browser custom");

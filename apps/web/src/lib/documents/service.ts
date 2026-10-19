@@ -60,10 +60,10 @@ export async function storeDocument(client: SupabaseClient, scope: OrganizationS
   const key = process.env.DOCUMENT_RENDER_SIGNING_KEY; const keyId = process.env.DOCUMENT_RENDER_KEY_ID ?? "primary";
   if (!key || !/^[0-9a-f]{64}$/.test(key) || !/^[a-zA-Z0-9_-]{1,60}$/.test(keyId)) throw new ApiFailure(503, "SERVICE_UNAVAILABLE", "Exact PDF storage needs the server signing key and matching database key registration. Source versions and local PDFs remain available.");
   const { source, result } = await recoverPdf(client, scope, kind, id);
-  const filename = `${kind}_v${source.version}_${id.slice(0, 8)}.pdf`;
-  const message = ["document.v1", scope.organizationId, kind, id, result.sha256, source.templateVersionId, result.rendererVersion, result.pageCount, filename].join("|");
+  const filename = `${kind}_v${source.version}_${source.id.slice(0, 8)}.pdf`;
+  const message = ["document.v1", scope.organizationId, kind, source.id, result.sha256, source.templateVersionId, result.rendererVersion, result.pageCount, filename].join("|");
   const signature = createHmac("sha256", Buffer.from(key, "hex")).update(message, "utf8").digest("hex");
-  const documentId = await databaseResult<string>(client.rpc("store_rendered_document", { p_org: scope.organizationId, p_kind: kind, p_source: id, p_base64: Buffer.from(result.bytes).toString("base64"), p_filename: filename, p_key_id: keyId, p_signature: signature, p_request: requestId }));
+  const documentId = await databaseResult<string>(client.rpc("store_rendered_document", { p_org: scope.organizationId, p_kind: kind, p_source: source.id, p_base64: Buffer.from(result.bytes).toString("base64"), p_filename: filename, p_key_id: keyId, p_signature: signature, p_request: requestId }));
   return databaseResult(client.from("documents").select(documentColumns).eq("id", documentId).eq("organization_id", scope.organizationId).single());
 }
 export { renderReceipt };

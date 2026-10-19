@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { TEMPLATE_SECTIONS, classicLayout, type CandidateProfile, type OrganizationScope, type TemplateLayout, type TemplateVersion } from "@candidate/contracts";
 import { readApi } from "@/app/workspace/requests";
 import { button, control, primary } from "../../directory";
@@ -10,6 +11,7 @@ export function TemplateLibrary({ scope, profile, selected, onSelect, disabled, 
   useEffect(() => { let active = true; void readApi<TemplateVersion[]>(`/api/v1/templates?organizationId=${scope.organizationId}&candidateId=${profile.id}`).then(v => { if (active) setTemplates(v); }, e => { if (active) report(e instanceof Error ? e.message : "Templates unavailable."); }); return () => { active = false; }; }, [scope.organizationId, profile.id, tick, report]);
   return <section className="grid gap-3 rounded border bg-white p-4"><h2 className="font-semibold">Template library</h2><label htmlFor="template-search" className="text-sm">Search templates</label><input id="template-search" className={control} value={search} onChange={e => setSearch(e.target.value)} />
     <div className="grid max-h-96 gap-2 overflow-auto">{templates.filter(t => t.current && t.name.toLowerCase().includes(search.toLowerCase())).map(t => <article key={t.id} className={`rounded border p-2 ${selected === t.id ? "border-emerald-700 bg-emerald-50" : ""}`}>
+      {t.scope === "builtin" && <Image className="mx-auto mb-2 h-40 w-auto border bg-white object-contain" src={`/template-previews/${t.id}.png`} alt={`${t.name}: first page of the shared synthetic resume`} width={t.layout.page === "A4" ? 268 : 276} height={t.layout.page === "A4" ? 379 : 357} unoptimized />}
       <p className="font-medium">{t.name}</p><p className="text-xs">v{t.version} · {t.scope} · {t.sharing} · {t.layout.page}</p><div className="mt-2 flex flex-wrap gap-1"><button className={button} disabled={disabled || busy} onClick={() => onSelect(t.id)}>Select {t.name}</button>
         <button className={button} disabled={disabled || busy} onClick={() => { setEdit(t); setLayout(structuredClone(t.layout)); setDuplicate(true); setTarget("personal"); }}>Duplicate / customize {t.name}</button>
         {t.presetId && (scope.role === "admin" || t.scope === "personal" || t.scope === "candidate" || (t.scope === "team" && manager)) && <button className={button} disabled={disabled || busy} onClick={() => { setEdit(t); setLayout(structuredClone(t.layout)); setDuplicate(false); setTarget(t.scope); }}>Publish next version</button>}

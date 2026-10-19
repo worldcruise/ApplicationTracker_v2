@@ -38,11 +38,14 @@ const page = await unverifiedDoc.getPage(1); const viewport = page.getViewport({
 assert.ok((await page.getTextContent()).items.some(i => "str" in i && i.str === "UNVERIFIED")); await unverifiedTask.destroy();
 console.log(JSON.stringify({ result: "PASS", template: "ATS Classic v1", pages: result.pageCount, bytes: result.bytes.length, sha256: result.sha256, textItems: items, unicode: "verified", bounds: "verified", targetMetadataExcluded: true, repeatedBytes: "identical", emptyContent: "verified", unsupportedGlyph: "actionable failure", unverifiedWatermark: "verified" }));
 const sheet = createCanvas(900, 1400); const sheetContext = sheet.getContext("2d"); sheetContext.fillStyle = "#e5e7eb"; sheetContext.fillRect(0, 0, 900, 1400);
+const thumbnails = new URL("../../../apps/web/public/template-previews/",import.meta.url);
+if(process.argv.includes("--write-thumbnails")) await mkdir(thumbnails,{recursive:true});
 for (const [i, template] of builtInTemplates.entries()) {
   const rendered = await renderAtsClassic(fonts, { ...input, templateVersionId: template.id, template });
   const loading = getDocument({ data: rendered.bytes.slice(), useWasm: false, useWorkerFetch: false, isEvalSupported: false }); const document = await loading.promise;
   for (let n = 1; n <= document.numPages; n++) { const p = await document.getPage(n); for (const item of (await p.getTextContent()).items) if ("str" in item && item.str.trim()) { assert.ok(item.transform[4] >= template.layout.margin - 1); assert.ok(item.transform[4] + item.width <= p.view[2] - template.layout.margin + 1); assert.ok(item.transform[5] >= 27 && item.transform[5] < p.view[3]); } }
   const p = await document.getPage(1); const view = p.getViewport({ scale: .45 }); const image = createCanvas(Math.ceil(view.width), Math.ceil(view.height)); await p.render({ canvas: null, canvasContext: image.getContext("2d"), viewport: view }).promise;
+  if(process.argv.includes("--write-thumbnails")) await writeFile(new URL(`${template.id}.png`,thumbnails),image.toBuffer("image/png"));
   const x = (i % 3) * 300 + 12; const y = Math.floor(i / 3) * 465 + 35; sheetContext.drawImage(image, x, y); sheetContext.fillStyle = "#111827"; sheetContext.font = "14px sans-serif"; sheetContext.fillText(template.name, x, y - 12);
   assert.equal((await renderAtsClassic(fonts, { ...input, templateVersionId: template.id, template })).sha256, rendered.sha256); await loading.destroy();
 }
