@@ -185,7 +185,7 @@ begin
  if target='approved' then select * into a from public.bid_approvals where organization_id=p_org and bid_id=p_bid and id=v_approval;
  if not found or a.content_hash<>b.content_hash or a.policy_snapshot<>pol then target:='resume_preparation';v_approval:=null;end if;end if;
  else
- if not case old_status
+ if not (case old_status
  when 'draft' then target in ('resume_preparation','withdrawn','expired')
  when 'resume_preparation' then target in ('ready_for_review','submitted','on_hold','withdrawn')
  when 'ready_for_review' then target in ('approved','needs_changes','on_hold','withdrawn')
@@ -196,7 +196,7 @@ begin
  when 'shortlisted' then target in ('interview_invited','offer','on_hold','rejected','withdrawn','closed')
  when 'interview_invited' then target in ('offer','on_hold','rejected','withdrawn','closed')
  when 'offer' then target in ('closed','rejected','withdrawn') when 'on_hold' then target in ('withdrawn','expired','closed')
- when 'rejected' then target='closed' when 'withdrawn' then target='closed' when 'expired' then target='closed' else false end then raise exception 'INVALID_BID_TRANSITION' using errcode='22023';end if;
+ when 'rejected' then target='closed' when 'withdrawn' then target='closed' when 'expired' then target='closed' else false end) then raise exception 'INVALID_BID_TRANSITION' using errcode='22023';end if;
  end if;
  if coalesce(length(reason),0)=0 or length(reason)>4000 then raise exception 'TRANSITION_REASON_REQUIRED' using errcode='22023';end if;
  if target in ('ready_for_review','approved','submitted') then perform private.require_bid_documents(b,pol);end if;
