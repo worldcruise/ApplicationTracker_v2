@@ -21,7 +21,7 @@ export function TextField({ path, label, value, onChange, multiline = false, hin
   </div>;
 }
 function SelectField({ path, label, value, values, onChange }: { path: string; label: string; value: string; values: readonly string[]; onChange: (value: string) => void }) {
-  return <label className="block text-sm font-medium">{label}<select id={`field-${path}`} className={control} value={value} onChange={e => onChange(e.target.value)}>{values.map(v => <option key={v} value={v}>{v.replaceAll("_", " ")}</option>)}</select></label>;
+  return <div><label htmlFor={`field-${path}`} className="block text-sm font-medium">{label}</label><select id={`field-${path}`} className={control} value={value} onChange={e => onChange(e.target.value)}>{values.map(v => <option key={v} value={v}>{v.replaceAll("_", " ")}</option>)}</select></div>;
 }
 function Records<T extends { id: string }>({ title, rows, setRows, create, children }: { title: string; rows: T[]; setRows: (rows: T[]) => void; create: () => T; children: (row: T, i: number) => ReactNode }) {
   function move(i: number, delta: number) { const updated = [...rows]; [updated[i], updated[i + delta]] = [updated[i + delta]!, updated[i]!]; setRows(updated); }

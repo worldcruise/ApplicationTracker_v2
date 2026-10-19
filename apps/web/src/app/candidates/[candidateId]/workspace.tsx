@@ -108,7 +108,7 @@ export function CandidateWorkspace({ profile: initial, scope, initialTab, direct
           {manages && <button className={button} disabled={busy || dirty || archived || conflicted} onClick={() => { if (confirm("End this assignment? The member will lose assignment-based access.")) void mutate("/assignments", { userId: a.userId, assign: false }); }}>End assignment</button>}</li>)}</ul>
         {!profile.assignments.some(a => !a.endedAt) && <p>No active assignments.</p>}
         {manages && <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={e => { e.preventDefault(); const form = new FormData(e.currentTarget); void mutate("/assignments", { userId: form.get("userId"), assign: true }); }}>
-          <label className="text-sm">Assign team member<select name="userId" className={control} required disabled={busy || dirty || archived || conflicted || !workspace} defaultValue=""><option value="" disabled>Choose active member</option>{workspace?.assignees.filter(p => !profile.assignments.some(a => a.userId === p.id && !a.endedAt)).map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
+          <label className="text-sm">Assign team member<select aria-label="Assign team member" name="userId" className={control} required disabled={busy || dirty || archived || conflicted || !workspace} defaultValue=""><option value="" disabled>Choose active member</option>{workspace?.assignees.filter(p => !profile.assignments.some(a => a.userId === p.id && !a.endedAt)).map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
           <button className={button} disabled={busy || dirty || archived || conflicted || !workspace}>Assign member</button>
         </form>}
       </div>

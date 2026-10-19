@@ -1,6 +1,6 @@
 # Candidate Platform
 
-An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. The web app uses hosted Supabase with SSR sessions, organization/team/assignment authorization, safe bidder projections and account administration. The extension includes Phase 0 probes for existing-account sign-in, directory handles and synthetic PDF preview/export. Complete profile editing, document workflows and submission remain later tasks.
+An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. The web app uses hosted Supabase with SSR sessions, organization/team/assignment authorization, safe bidder projections, account administration and a versioned candidate profile editor. The extension includes Phase 0 probes for existing-account sign-in, directory handles and synthetic PDF preview/export. Document workflows and submission remain later tasks.
 
 ## Local setup
 
@@ -34,7 +34,7 @@ If using the task-local portable runtime instead of an installed Node, add its d
 | `npm run extension:build` | Compile shared packages and rebuild `apps/extension/dist/`. No web build required. |
 | `npm run feasibility:pdf` | Generate the two-page synthetic sample, parse/render it with PDF.js, verify text/bounds/repeated hash, and write `output/pdf/phase0-synthetic-resume.pdf` plus ignored page PNGs. Uses the native canvas development dependency. |
 | `npm run admin:bootstrap -- --organization-id <new UUID> --admin-user-id <confirmed Auth UUID> --name "Synthetic Development"` | Audited new-organization bootstrap; operator-only key in the ignored server environment. See FOUNDATION.md before running. |
-| `npm run test:foundation:http` | Isolated CI-only production build/Auth/API harness; refuses hosted settings and a configured `.env.local`. Requires the CI local Supabase stack. |
+| `npm run test:foundation:http` | Isolated CI-only production build/Auth/API and candidate Chromium harness; refuses hosted settings and a configured `.env.local`. Requires the CI local Supabase stack and installed Playwright Chromium. |
 | `npm run db:stop` | Stop this project's local Supabase services, preserving local data. |
 | `npm run db:reset` | Reset the **local** database, reapply migrations and seeds. Destructive to local development data; use intentionally. |
 | `npm run lint` / `npm run typecheck` / `npm test` | Run a single check. Type checking builds package declarations; tests use Node's built-in TypeScript test runner. |

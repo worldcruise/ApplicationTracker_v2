@@ -25,13 +25,13 @@ export function CandidateDirectoryView({ directory, scope, query, teams, people,
   return <div className="grid gap-6">
     <nav><Link className="underline" href="/workspace">Workspace and account</Link></nav>
     <form action="/candidates" className="grid gap-3 rounded border bg-white p-4 sm:grid-cols-3" aria-label="Directory filters">
-      <label>Organization<select name="organizationId" className={control} defaultValue={scope.organizationId}>{organizations.map(o => <option key={o.organizationId} value={o.organizationId}>{o.name}</option>)}</select></label>
+      <label>Organization<select aria-label="Organization" name="organizationId" className={control} defaultValue={scope.organizationId}>{organizations.map(o => <option key={o.organizationId} value={o.organizationId}>{o.name}</option>)}</select></label>
       <label>Search<input name="q" className={control} defaultValue={params.get("q") ?? ""} placeholder="Name, email or location" maxLength={200} /></label>
-      <label>Status<select name="status" className={control} defaultValue={params.get("status") ?? "active"}>{["active", "draft", "ready", "archived", "all"].map(v => <option key={v} value={v}>{v}</option>)}</select></label>
-      <label>Team<select name="teamId" className={control} defaultValue={params.get("teamId") ?? ""}><option value="">All visible teams</option>{teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-      <label>Owner<select name="ownerId" className={control} defaultValue={params.get("ownerId") ?? ""}><option value="">Any owner</option>{people.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
-      <label>Assigned member<select name="assigneeId" className={control} defaultValue={params.get("assigneeId") ?? ""}><option value="">Any member</option>{people.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
-      <label>Sort<select name="sort" className={control} defaultValue={params.get("sort") ?? "updated_desc"}><option value="updated_desc">Recently updated</option><option value="name_asc">Name A–Z</option><option value="name_desc">Name Z–A</option><option value="created_desc">Newest created</option></select></label>
+      <label>Status<select aria-label="Status" name="status" className={control} defaultValue={params.get("status") ?? "active"}>{["active", "draft", "ready", "archived", "all"].map(v => <option key={v} value={v}>{v}</option>)}</select></label>
+      <label>Team<select aria-label="Team" name="teamId" className={control} defaultValue={params.get("teamId") ?? ""}><option value="">All visible teams</option>{teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+      <label>Owner<select aria-label="Owner" name="ownerId" className={control} defaultValue={params.get("ownerId") ?? ""}><option value="">Any owner</option>{people.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
+      <label>Assigned member<select aria-label="Assigned member" name="assigneeId" className={control} defaultValue={params.get("assigneeId") ?? ""}><option value="">Any member</option>{people.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
+      <label>Sort<select aria-label="Sort" name="sort" className={control} defaultValue={params.get("sort") ?? "updated_desc"}><option value="updated_desc">Recently updated</option><option value="name_asc">Name A–Z</option><option value="name_desc">Name Z–A</option><option value="created_desc">Newest created</option></select></label>
       <label className="flex items-center gap-2"><input name="unassigned" type="checkbox" value="true" defaultChecked={params.get("unassigned") === "true"} />Unassigned only</label>
       <div className="flex items-end gap-3"><button className={primary}>Apply filters</button><Link className="underline" href={`/candidates?organizationId=${scope.organizationId}`}>Reset</Link></div>
     </form>
@@ -52,8 +52,8 @@ export function CandidateDirectoryView({ directory, scope, query, teams, people,
         } catch (cause) { setError(cause instanceof Error ? cause.message : "Creation failed."); setBusy(false); }
       }}>
         <label>Full name (optional)<input name="fullName" maxLength={200} className={control} /></label>
-        <label>Owning team<select value={team} onChange={e => setTeam(e.target.value)} className={control}>{managed.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-        <label>Candidate owner<select name="ownerId" key={team} className={control}><option value="">No owner</option>{eligible.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
+        <label>Owning team<select aria-label="Owning team" value={team} onChange={e => setTeam(e.target.value)} className={control}>{managed.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+        <label>Candidate owner<select aria-label="Candidate owner" name="ownerId" key={team} className={control}><option value="">No owner</option>{eligible.map(p => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
         <button className={`${primary} w-fit`} disabled={busy}>{busy ? "Creating…" : "Create draft"}</button>
       </form>{error && <p role="alert" className="mt-3">{error}</p>}
     </section>}
