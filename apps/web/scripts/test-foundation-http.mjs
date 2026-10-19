@@ -7,6 +7,7 @@ import { setTimeout as pause } from "node:timers/promises";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { testCandidateBrowser } from "./test-candidate-browser.mjs";
+import { testResumeHTTP } from "./test-resume-http.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -249,6 +250,8 @@ try {
   const oldAssignment = await identities.leaderA.client.rpc("change_candidate_assignment", { p_org: orgA, p_candidate: managedId,
     p_user: identities.memberA.id, p_assign: true, p_request: randomUUID() });
   expect(oldAssignment.error?.code === "42501", "Legacy assignment RPC cannot bypass version checks");
+  step = "resume prompt/source Auth and HTTP acceptance";
+  await testResumeHTTP({ call, identities, org: orgA, team: teamA, expect });
   step = "candidate headless Chromium acceptance";
   try {
     const browserChecks = await testCandidateBrowser({ org: orgA, team: teamA, identities, password });

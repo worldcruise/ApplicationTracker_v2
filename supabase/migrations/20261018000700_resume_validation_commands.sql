@@ -58,6 +58,12 @@ declare v_evidence jsonb:=private.resume_evidence(p_snapshot); v_claims jsonb:='
  v_id text; v_seen text[]:='{}'; v_allowed jsonb; v_proof text; v_auto boolean; v_source jsonb; token text; v_selected jsonb;
 begin
  if jsonb_typeof(p_map) is distinct from 'object' or not p_map ?& array['experienceIds','educationIds','claims'] or jsonb_typeof(p_map->'experienceIds') is distinct from 'array' or jsonb_typeof(p_map->'educationIds') is distinct from 'array' or jsonb_typeof(p_map->'claims') is distinct from 'object' then raise exception 'INVALID_REVIEW' using errcode='22023'; end if;
+ if (select count(*) from jsonb_object_keys(p_map))<>3 or jsonb_array_length(p_map->'experienceIds')>100 or jsonb_array_length(p_map->'educationIds')>100 or (select count(*) from jsonb_object_keys(p_map->'claims'))>1000 then raise exception 'INVALID_REVIEW' using errcode='22023'; end if;
+ if exists(select 1 from jsonb_array_elements((p_map->'experienceIds')||(p_map->'educationIds')) x where jsonb_typeof(x) not in ('string','null')) then raise exception 'INVALID_REVIEW' using errcode='22023'; end if;
+ for r in select * from jsonb_each(p_map->'claims') loop
+  if r.key !~ '^/(summary$|skills/|experience/)' or length(r.key)>400 or jsonb_typeof(r.value) is distinct from 'object' or jsonb_typeof(r.value->'attested') is distinct from 'boolean' or jsonb_typeof(r.value->'sources') is distinct from 'array' then raise exception 'INVALID_REVIEW' using errcode='22023'; end if;
+  if (select count(*) from jsonb_object_keys(r.value))<>2 or jsonb_array_length(r.value->'sources')>100 or exists(select 1 from jsonb_array_elements(r.value->'sources') x where jsonb_typeof(x)<>'string' or length(x #>> '{}')>100) then raise exception 'INVALID_REVIEW' using errcode='22023'; end if;
+ end loop;
  if jsonb_array_length(p_map->'experienceIds')<>jsonb_array_length(p_content->'experience') or jsonb_array_length(p_map->'educationIds')<>jsonb_array_length(p_content->'education') then return false; end if;
  if p_snapshot->>'status'<>'ready' then return false; end if;
  v_claims:=jsonb_build_array(jsonb_build_object('path','/summary','text',p_content->>'summary','work',null));
