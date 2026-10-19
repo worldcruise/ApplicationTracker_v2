@@ -26,7 +26,7 @@ insert into public.bids(id,organization_id,candidate_id,team_id,owner_id,company
 insert into public.bid_access_grants(id,organization_id,bid_id,user_id,capability,allow_email,created_by) values
 ('00000000-0000-4000-8000-000000000600','00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000400','00000000-0000-4000-8000-000000000004','bid.prepare',true,'00000000-0000-4000-8000-000000000001');
 insert into public.interviews(id,organization_id,bid_id,round_number,created_by) values('00000000-0000-4000-8000-000000000500','00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000400',1,'00000000-0000-4000-8000-000000000001');
-insert into public.interview_feedback(organization_id,interview_id,feedback,created_by) values('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000500','PRIVATE INTERVIEW FEEDBACK','00000000-0000-4000-8000-000000000001');
+insert into public.interview_feedback(organization_id,interview_id,feedback,created_by,revision_number) values('00000000-0000-4000-8000-000000000100','00000000-0000-4000-8000-000000000500','PRIVATE INTERVIEW FEEDBACK','00000000-0000-4000-8000-000000000001',1);
 select ok((select not rolcanlogin and not rolbypassrls from pg_roles where rolname='app_command'),'command role cannot login or bypass RLS');
 select ok((select not rolcanlogin and not rolbypassrls from pg_roles where rolname='app_bidder_reader'),'projection role cannot login or bypass RLS');
 select is((select count(*)::int from pg_class c join pg_namespace n on n.oid=c.relnamespace join pg_roles r on r.oid=c.relowner where n.nspname='public' and c.relkind='r' and r.rolname in ('app_command','app_permission_reader','app_bidder_reader')),0,'runtime roles never own tables');
