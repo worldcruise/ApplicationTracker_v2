@@ -48,7 +48,9 @@ alter policy visible on public.workflow_notifications using(recipient_id=private
 create trigger immutable before update or delete on public.interview_revisions for each row execute function private.immutable_revision();
 grant select,insert,update on public.interviews to app_command;
 grant select,insert on public.interview_feedback to app_command;
-create policy command_read on public.interviews for select to app_command using(private.reads_interview(organization_id,id));
+-- RETURNING must authorize using the inserted row's bid, rather than looking up
+-- that new interview through a STABLE helper in the same SQL statement.
+create policy command_read on public.interviews for select to app_command using(private.org_role(organization_id)<>'bidder' and private.reads_bid(organization_id,bid_id));
 create policy command_insert on public.interviews for insert to app_command with check(private.org_role(organization_id)<>'bidder' and private.reads_bid(organization_id,bid_id));
 create policy command_update on public.interviews for update to app_command using(private.reads_interview(organization_id,id)) with check(private.reads_interview(organization_id,id));
 create policy command_read on public.interview_feedback for select to app_command using(private.reads_interview(organization_id,interview_id));

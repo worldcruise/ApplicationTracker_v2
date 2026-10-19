@@ -188,7 +188,7 @@ Continue after RP03. Complete TP01, TP02, then TP03. Exporting a linked frozen P
 
 ### Scoped implementation increments (19 October 2026)
 
-The user approved D04: approval required by default, leader/admin reviewers, no self-review by owner/package editor/document author except an audited admin override with reason; letters optional unless team policy requires one. Preserve all original source requirements. Complete the following increments in order; each receives checks/progress before the next.
+The user approved D04: approval required by default, leader/admin reviewers, no self-review by owner/package editor/document author except an audited admin override with reason; letters optional unless team policy requires one. The user also resolved the pending-package D09 question: changed candidate facts require fresh reviewed versions, while previously recorded submissions stay immutable. Preserve all original source requirements. Complete the following increments in order; each receives checks/progress before the next.
 
 | ID | Increment | Dependencies / design | Acceptance |
 | --- | --- | --- | --- |
