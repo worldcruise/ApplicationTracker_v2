@@ -77,7 +77,9 @@ The Supabase CLI is pinned as a root development dependency. Local defaults in `
 
 Versioned migrations now establish the Section 4–8 foundation, protected commands and forced RLS. Transaction-local synthetic fixtures exercise all four roles, multiple teams and two organizations; the seed remains empty. GitHub Actions runs migrations/tests on an isolated Supabase instance without hosted credentials. See [foundation setup, bootstrap, account flows, API and manual acceptance](docs/FOUNDATION.md). New schema changes require migrations and allow/deny tests; use `db:reset` only for intentional local reset.
 
-Candidate management adds `/candidates`, a searchable scoped directory and six-tab profile workspace with real persistence, ordered records, immutable revisions, explicit conflict recovery and archive/restore. Ready requires name, email, location and phone, following the user's C01 decision. See [candidate setup, APIs, limits and acceptance](docs/CANDIDATES.md). Apply the reviewed pending migrations to hosted development before using these pages; local Docker startup remains optional. Resume versions and full bid/interview workflows remain later tasks.
+Candidate management adds `/candidates`, a searchable scoped directory and six-tab profile workspace with real persistence, ordered records, immutable revisions, explicit conflict recovery and archive/restore. Ready requires name, email, location and phone, following the user's C01 decision. See [candidate setup, APIs, limits and acceptance](docs/CANDIDATES.md). Apply the reviewed pending migrations to hosted development before using these pages; local Docker startup remains optional. Full bid/interview/submission workflows remain later tasks.
+
+Resume Studio now includes canonical-v1 validation, scoped exact prompts, factual review, nine immutable template presets and customization, same-byte PDF.js preview/export, source history, cover letters and authorized frozen document history. See [workflow, APIs, signing-key registration and exact retrieval prerequisites](docs/RESUME_WORKFLOW.md). `npm run resume:verify` checks synthetic multipage layouts and all presets. Optional `npm run documents:configure` registers an operator-supplied server signing key for attested exact-PDF storage; it is unnecessary for source saving/local export. No hosted schema or signing-key change was performed by these tasks.
 
 ## Workspace layout
 
@@ -85,9 +87,9 @@ Candidate management adds `/candidates`, a searchable scoped directory and six-t
 | --- | --- |
 | `apps/web` | Next.js App Router, React, TypeScript, Tailwind, account pages and user-context `/api/v1` foundation. |
 | `apps/extension` | TypeScript MV3 event worker and React workspace; esbuild bundles local artifacts. |
-| `packages/contracts` | Unchanged canonical resume v1, foundation roles/context/commands, API/error/operation types. Canonical validator remains pending. |
+| `packages/contracts` | Unchanged canonical resume v1, precompiled validator, template/document/review/API/error/operation contracts. |
 | `packages/domain` | Shared business rules, starting with independent operation progress. |
-| `packages/resume-engine` | Typed rendering boundary plus a fixed synthetic pdf-lib/fontkit feasibility renderer. Production validators/templates are pending. |
+| `packages/resume-engine` | Measured pdf-lib/fontkit rendering, pinned licensed fonts, nine presets, letter layout and synthetic PDF verification. |
 | `packages/ui` | Shared accessible shell components and styles; no server credentials or database imports. |
 | `supabase` | Local configuration, migration directory, synthetic seed boundary and pgTAP tests. |
 | `docs` | Design transcription, build plan, decisions, progress, and implementation evidence. |

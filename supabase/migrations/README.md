@@ -1,6 +1,6 @@
 # Database migrations
 
-The foundation migrations establish organizations, role/team memberships, ownership/assignment scope, bidder grants/projection, audit and account commands. Candidate, bid and interview tables are minimum permission anchors; full profile/workflow/document tasks remain in BUILD_PLAN.md. Add further timestamped SQL migrations here with `npx supabase migration new <name>`.
+The migrations establish foundation permissions/accounts, full candidate profiles and immutable revisions, scoped prompts/templates, immutable resume/letter sources and private frozen PDF storage/export. Bid and interview tables remain minimum permission anchors; their full workflow/submission tasks remain in BUILD_PLAN.md. See [document storage/key prerequisites](../../docs/RESUME_WORKFLOW.md). Add further timestamped SQL migrations here with `npx supabase migration new <name>`.
 
 Every database change, including constraints, RLS policies, grants, helper functions, and command functions, belongs in a migration. Never enable client access to a business table without its scoped backend and database rules.
 
