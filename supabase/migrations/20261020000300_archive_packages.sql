@@ -7,7 +7,9 @@ grant execute on function private.actor_id(),private.org_role(uuid),private.docu
 grant select on public.documents,public.bid_document_links to app_archive_exporter;
 create policy archive_export on public.documents for select to app_archive_exporter using(private.document_access(organization_id,id,true));
 create policy archive_export on public.bid_document_links for select to app_archive_exporter using(private.document_access(organization_id,document_id,true));
-grant select(id,organization_id,raw_json,parsed_content,template_snapshot,render_receipt,reviewed) on public.resume_versions to app_archive_exporter;
+grant select(id,organization_id,assembly_id,raw_json,parsed_content,template_snapshot,render_receipt,reviewed) on public.resume_versions to app_archive_exporter;
+grant select(id,organization_id,profile_revision) on public.prompt_assemblies to app_archive_exporter;
+create policy archive_export on public.prompt_assemblies for select to app_archive_exporter using(exists(select 1 from public.resume_versions r where r.organization_id=prompt_assemblies.organization_id and r.assembly_id=prompt_assemblies.id));
 grant select(id,organization_id,body_text,template_snapshot,render_receipt,reviewed) on public.cover_letter_versions to app_archive_exporter;
 create policy archive_export on public.resume_versions for select to app_archive_exporter using(exists(select 1 from public.documents d where d.organization_id=resume_versions.organization_id and d.resume_version_id=resume_versions.id and private.document_access(d.organization_id,d.id,true)));
 create policy archive_export on public.cover_letter_versions for select to app_archive_exporter using(exists(select 1 from public.documents d where d.organization_id=cover_letter_versions.organization_id and d.cover_letter_version_id=cover_letter_versions.id and private.document_access(d.organization_id,d.id,true)));
@@ -20,7 +22,7 @@ begin
  select * into d from public.documents where organization_id=p_org and id=p_document;
  if not found or not d.reviewed then raise exception 'VERIFIED_DOCUMENTS_REQUIRED' using errcode='22023';end if;
  if d.kind='resume' then
-  select jsonb_build_object('rawJson',r.raw_json,'template',r.template_snapshot,'render',r.render_receipt) into result from public.resume_versions r where r.id=d.resume_version_id and r.organization_id=p_org and r.reviewed
+  select jsonb_build_object('profileRevision',(select profile_revision from public.prompt_assemblies where organization_id=p_org and id=r.assembly_id),'rawJson',r.raw_json,'template',r.template_snapshot,'render',r.render_receipt) into result from public.resume_versions r where r.id=d.resume_version_id and r.organization_id=p_org and r.reviewed
    -- A bidder must never receive hidden, unsupported raw JSON properties. Do not rewrite the original.
    and (private.org_role(p_org)<>'bidder' or r.raw_json::jsonb=r.parsed_content);
  else
@@ -109,6 +111,16 @@ end $$;
 alter function public.archive_operation_result(uuid,uuid) owner to app_command;
 revoke all on function public.archive_operation_result(uuid,uuid) from public,anon;
 grant execute on function public.archive_operation_result(uuid,uuid) to authenticated;
+create function public.archive_operation_receipt(p_org uuid,p_operation uuid,p_hash text) returns jsonb language plpgsql security definer set search_path='' as $$
+declare result jsonb; expected text;
+begin
+ result:=public.archive_operation_result(p_org,p_operation);if result is null then return null;end if;
+ select request_hash into expected from public.archive_operations where organization_id=p_org and operation_id=p_operation;
+ if expected is distinct from p_hash then raise exception 'KEY_PAYLOAD_MISMATCH';end if;return result;
+end $$;
+alter function public.archive_operation_receipt(uuid,uuid,text) owner to app_command;
+revoke all on function public.archive_operation_receipt(uuid,uuid,text) from public,anon;
+grant execute on function public.archive_operation_receipt(uuid,uuid,text) to authenticated;
 
 -- The API signs its exact text after user-context validation of frozen bytes and matching.
 -- This is a capability attestation, never a privileged database client or client-side secret.
