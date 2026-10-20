@@ -38,6 +38,7 @@ revoke all on function public.export_archive_source(uuid,uuid) from public,anon;
 grant execute on function public.export_archive_source(uuid,uuid) to authenticated,app_command;
 
 -- Explicit frozen export can be archived without granting edit or submission permission.
+grant select(company_name,job_title,job_url,job_description,external_id) on public.bids to app_permission_reader;
 grant create on schema public to app_permission_reader;
 create function public.archive_bid_job(p_org uuid,p_bid uuid,p_document uuid) returns jsonb language sql stable security definer set search_path='' as $$
  select jsonb_build_object('candidateId',b.candidate_id,'teamId',b.team_id,'company',b.company_name,'title',b.job_title,'url',coalesce(b.job_url,''),'description',b.job_description,'externalId',coalesce(b.external_id,''))

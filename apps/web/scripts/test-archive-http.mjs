@@ -40,9 +40,12 @@ export async function testArchiveHTTP({call,command,identities,org,team,assert,r
  const forged=await m.client.rpc("save_archive_package",{p_envelope:JSON.stringify({input:first}),p_key_id:"primary",p_signature:"00".repeat(32),p_request:randomUUID()});assert(!!forged.error,"Direct forged synchronization cannot bypass API validation");
  const mutation=await m.client.from("archive_operations").insert({organization_id:org,operation_id:randomUUID()});assert(!!mutation.error,"Archive ledger has no direct user mutation grant");
  for(const doc of [frozen.doc,unsafe.doc])assert((await call(a,url("/documents/"+doc.id+"/links"),{bidId:receipt.bidId})).status===200,"Manager links prepared artifact");
- const grant=await command(a,org,{command:"grantBidderAccess",userId:b.id,candidateId:candidate,bidId:null,capability:"document.export",allowEmail:false,allowPhone:false,expiresAt:null});
+ const hidden=await command(a,org,{command:"createDraftBid",candidateId:candidate,companyName:"Synthetic Private Other Opportunity",jobTitle:"Engineer"});assert((await call(a,url("/documents/"+frozen.doc.id+"/links"),{bidId:hidden.id})).status===200,"Same frozen document may be linked to an unrelated bid");
+ const grant=await command(a,org,{command:"grantBidderAccess",userId:b.id,candidateId:null,bidId:receipt.bidId,capability:"document.export",allowEmail:false,allowPhone:false,expiresAt:null});
  const safe=await call(b,url("/documents/"+frozen.doc.id+"/archive-source"));assert(safe.status===200&&safe.data.rawJson===frozen.rawJson,"Export-only bidder receives only the exact rendered original source");
  assert(!JSON.stringify(safe.data).includes("PRIVATE ARCHIVE PROFILE")&&!JSON.stringify(safe.data).includes("snapshot"),"Prepared source projection excludes unrestricted profile snapshots");
+ assert(safe.data.bidIds.length===1&&safe.data.bidIds[0]===receipt.bidId,"Prepared export does not reveal other bids sharing the document");
+ assert((await call(b,url("/documents/"+frozen.doc.id+"/archive-source")+"&bidId="+hidden.id)).status===403,"A link to the same PDF cannot grant another bid's job details");
  assert((await call(b,url("/documents/"+unsafe.doc.id+"/archive-source"))).status===403,"Bidder cannot receive unrendered unsupported JSON fields");
  assert((await b.client.from("resume_versions").select("raw_json")).data?.length===0,"Prepared export grants no source-table read access");
  const bidderInput=await input();bidderInput.actorId=b.id;bidderInput.existingBidId=receipt.bidId;
