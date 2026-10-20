@@ -9,3 +9,4 @@ export * from "./production.js";
 export * from "./templates.js";
 export * from "./documents.js";
 export * from "./workflow.js";
+export * from "./history.js";

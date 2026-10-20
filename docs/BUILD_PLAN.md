@@ -221,6 +221,14 @@ The user approved D04: approval required by default, leader/admin reviewers, no 
 
 ## Milestone 4A History lookup
 
+Requested Quick Application Check increments: complete QC01, QC02, then QC03. They implement the read-only T046–T049 subset. Strong-identifier save locks, duplicate overrides and package writing remain T050–T053; lookup never creates or submits an application.
+
+| ID | Scoped increment | Acceptance |
+| --- | --- | --- |
+| QC01 | Shared versioned normalization/evidence and indexed history API | Recompute reviewed identifiers; current organization/candidate and RLS; company/exact/possible results, bounded/truncated scope, authorized status only; matching and deny fixtures. |
+| QC02 | Shared capture and direct archive index lookup/repair | Shortcut/menu share bounded user-triggered capture; review before lookup; no credentials in injected code; direct scoped paths, manifest/file hashes, denied/corrupt/incomplete states and explicit company-only repair. |
+| QC03 | Concurrent result panel and acceptance | Database/local start independently with allSettled; errors never become absence, source/evidence/status displayed separately; real isolated backend/MV3 checks and manual Chrome instructions. |
+
 | ID | Scoped task | Dependencies | Design sections | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | T046 | Implement versioned job/company matching and history API. | T003, T036–T037; D08 | D§7–9, 15 | Original identifiers persist; Unicode/company aliases, provider IDs, posting-specific URLs and JD hashes have fixtures. Preserve unknown/job-bearing URL parameters; company/exact/possible matches include evidence and checkedAt within authorized scope. Fingerprint similarity never silently merges. |

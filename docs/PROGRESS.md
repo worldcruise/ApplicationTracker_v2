@@ -40,6 +40,8 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 ## Current work
 
+**QC01 — Quick Application Check matching contracts and authorized history API.** Implement the newly requested T046–T049 subset in sequence: QC01 shared normalization/evidence and indexed user-context database history; QC02 common shortcut/context-menu capture, reviewed context and direct archive lookup/repair; QC03 concurrent result UI, real-backend verification and runbook. Strong-match save locking and package orchestration remain T050–T053; this read-only check does not create or submit applications.
+
 **Requested extension milestone complete — EX01–EX03.** Resume/Profile reuse the existing shared API/contracts/renderer with durable scoped drafts, immutable operations and independent saving outcomes. Real isolated unpacked-browser/backend evidence and the runbook are recorded above. Final code at f6a9642 passes local check/extension build and the complete isolated CI suite. No further implementation task is active. Hosted migration/accounts/key configuration and interactive acceptance remain separate prerequisites; no hosted change or real application submission has been performed.
 
 **Foundation milestone complete.** FN01–FN03 were implemented and verified before CM01. Hosted setup remains an operator prerequisite; this task has not migrated or configured the hosted project.

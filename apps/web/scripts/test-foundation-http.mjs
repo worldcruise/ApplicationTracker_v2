@@ -15,6 +15,7 @@ import { testDocumentBrowser } from "./test-document-browser.mjs";
 import { testWorkflowHTTP } from "./test-workflow-http.mjs";
 import { testWorkflowBrowser } from "./test-workflow-browser.mjs";
 import { launchExtension,testExtensionBrowser } from "./test-extension-browser.mjs";
+import { testHistoryHTTP } from "./test-history-http.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -288,6 +289,8 @@ try {
   step = "unpacked extension real-backend acceptance";
   try { const checks=await testExtensionBrowser({harness:extensionHarness,call,command,identities,org:orgA,team:teamA,password,assert:expect});expect(checks===12,"All 12 extension browser checkpoints complete");console.log(JSON.stringify({result:"PASS",extensionBrowserCheckpoints:checks}));} catch(e){throw new TestFailure(e.message);}
   step = "current membership and grant revocation with existing tokens";
+  step="application history HTTP";
+  await testHistoryHTTP({call,command,identities,org:orgA,team:teamA,assert:expect});
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);
   expect((await call(identities.memberA, candidatePath(first))).status === 403, "Unexpired token loses application access after deactivation");
   const after = await identities.memberA.client.from("candidates").select("id");
