@@ -16,5 +16,19 @@ select ok(exists(select 1 from pg_trigger where tgrelid='public.processing_obser
 set local role authenticated;
 select throws_ok($$select public.operational_dashboard('00000000-0000-4000-8000-000000000100')$$,'42501','FORBIDDEN','identity without active membership cannot report');
 reset role;
+select ok(not has_function_privilege('anon','public.consume_api_request()','EXECUTE'),'anonymous callers cannot consume another user quota');
+select ok(not has_table_privilege('authenticated','private.api_request_windows','SELECT'),'rate counters are private');
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000999","role":"authenticated"}',true);
+set local role authenticated;
+select ok(public.consume_api_request(),'first authenticated request allowed');
+-- PostgREST uses one transaction per request. Transaction time also makes this
+-- boundary check deterministic when the test starts immediately before a minute.
+select is((select count(*) from generate_series(1,999) s where public.consume_api_request()),999::bigint,'remaining requests share the database quota');
+select ok(not public.consume_api_request(),'shared per-user quota rejects excess requests');
+reset role;
+select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000998","role":"authenticated"}',true);
+set local role authenticated;
+select ok(public.consume_api_request(),'another user retains an independent quota');
+reset role;
 select * from finish();
 rollback;

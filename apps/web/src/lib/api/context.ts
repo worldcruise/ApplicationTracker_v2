@@ -25,6 +25,7 @@ export async function requestContext(request?: Request) {
   if (context.userId !== identity.data.user.id) throw new ApiFailure(401, "UNAUTHENTICATED", "The session identity could not be verified.");
   const operationActor = request?.headers.get("x-operation-actor");
   if (operationActor !== null && operationActor !== undefined && operationActor !== context.userId) throw new ApiFailure(403, "FORBIDDEN", "This local operation belongs to another account. Sign back in as its original actor; its frozen payload has been retained.");
+  if (request && !await databaseResult<boolean>(client.rpc("consume_api_request"))) throw new ApiFailure(429, "RATE_LIMITED", "Too many API requests. Wait until the next minute; retain original operation IDs and reconcile before retrying writes.", true);
   return { client, context, token };
 }
 

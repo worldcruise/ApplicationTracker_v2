@@ -10,7 +10,7 @@ export function preventSessionCaching(response: NextResponse) {
 /** Use when replacing a session response, including every future auth redirect. */
 export function preserveSessionResponse(source: NextResponse, target: NextResponse) {
   source.cookies.getAll().forEach(cookie => target.cookies.set(cookie));
-  for (const name of ["cache-control", "expires", "pragma"]) {
+  for (const name of ["cache-control", "expires", "pragma", "content-security-policy", "x-content-type-options", "referrer-policy", "permissions-policy"]) {
     const value = source.headers.get(name);
     if (value !== null) target.headers.set(name, value);
   }

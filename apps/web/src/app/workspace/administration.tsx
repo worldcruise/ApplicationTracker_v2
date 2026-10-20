@@ -38,6 +38,7 @@ export function Administration({ snapshot, refresh }: { snapshot: FoundationSnap
   }
   return <section className="grid gap-6 rounded border bg-white p-5">
     <h2 className="text-lg font-semibold">Organization administration</h2>
+    <p className="text-sm">This setup panel shows up to 100 entries per roster. Manage candidate assignments through the scoped candidate directory and Overview controls. Larger roster pagination remains a release prerequisite.</p>
     <p role="status">{message}</p>
     <form className="grid gap-3" onSubmit={invite}>
       <h3 className="font-semibold">Invite or attach an account</h3>

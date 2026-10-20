@@ -305,7 +305,7 @@ try {
   step="operational reporting API/RLS";
   const operationsFixture=await testOperationsHTTP({call,command,identities,org:orgA,team:teamA,fixture:workflowFixture,assert:expect});
   step="role dashboard browser acceptance";
-  const operationChecks=await testOperationsBrowser({org:orgA,identities,password,fixture:operationsFixture});expect(operationChecks===10,"All ten operational dashboard browser checkpoints complete");console.log(JSON.stringify({result:"PASS",operationsBrowserCheckpoints:operationChecks}));
+  const operationChecks=await testOperationsBrowser({org:orgA,identities,password,fixture:operationsFixture});expect(operationChecks===11,"All eleven operational dashboard browser checkpoints complete");console.log(JSON.stringify({result:"PASS",operationsBrowserCheckpoints:operationChecks}));
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);
   expect((await call(identities.memberA, candidatePath(first))).status === 403, "Unexpired token loses application access after deactivation");
   const after = await identities.memberA.client.from("candidates").select("id");
@@ -374,7 +374,7 @@ try {
   }
   inspect(`${web}/.next/static`);
   inspect(`${root}/apps/extension/dist`);
-  console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "85 headless Chromium checkpoints including role dashboards, unpacked MV3 Quick Check and package recovery; hosted native shortcut/menu and Windows filesystem gates pending" }));
+  console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "86 headless Chromium checkpoints including role dashboards, CSP, unpacked MV3 Quick Check and package recovery; hosted native shortcut/menu and Windows filesystem gates pending" }));
 } catch (error) {
   console.error(JSON.stringify({ result: "FAIL", step, message: error instanceof TestFailure ? error.message : "Integration harness failed; inspect the isolated service health and current step." }));
   process.exitCode = 1;

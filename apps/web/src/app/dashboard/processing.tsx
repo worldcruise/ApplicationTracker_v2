@@ -6,7 +6,7 @@ interface Notice { id: string; candidateId: string; bidId: string | null; title:
 interface Observation { eventId: string; operationId: string; actorId: string; candidateId: string; bidId: string | null; stage: string; state: string; code: string; reportedAt: string }
 interface Report { asOf: string; total: number; page: number; pageSize: number; counts: Record<string, number>; items: Observation[] }
 const box="grid gap-3 rounded border bg-white p-5";
-export function ProcessingPanel({ org, actor, refresh }: { org: string; actor: string; refresh: number }) {
+export function ProcessingPanel({ org, actor, refresh, bidder }: { org: string; actor: string; refresh: number; bidder: boolean }) {
  const [data,setData]=useState<Report|null>(null),[error,setError]=useState("");
  const [notices,setNotices]=useState<Notice[]|null>(null),[noticeError,setNoticeError]=useState("");
  const [page,setPage]=useState(1),[resolved,setResolved]=useState(false),[tick,setTick]=useState(0);
@@ -17,7 +17,7 @@ export function ProcessingPanel({ org, actor, refresh }: { org: string; actor: s
    readApi<Notice[]>(`/api/v1/operational-notifications?organizationId=${org}`).then(r=>{if(live)setNotices(r);}).catch(e=>{if(live)setNoticeError(e.message);}),
   ]);return()=>{live=false;};
  },[org,actor,page,resolved,refresh,tick]);
- const href=(r:{bidId:string|null;candidateId:string})=>r.bidId?`/bids/${r.bidId}?organizationId=${org}`:`/candidates/${r.candidateId}?organizationId=${org}`;
+ const href=(r:{bidId:string|null;candidateId:string})=>r.bidId?`/bids/${r.bidId}?organizationId=${org}`:bidder?`/documents?organizationId=${org}&candidateId=${r.candidateId}`:`/candidates/${r.candidateId}?organizationId=${org}`;
  return <>
   <section className={box}><h3 className="text-lg font-semibold">Processing and synchronization</h3>
    <p>Dated client reports, scoped to the owner and authorized supervisors. These do not prove a file still exists or that an application was submitted. Offline or unreported device work is unknown to this service; inspect its original workspace journal.</p>

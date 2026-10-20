@@ -1,4 +1,5 @@
 begin;
+grant create on schema public to app_command;
 -- A dated, device/client-reported outcome is never proof of a file or submission.
 grant create on schema private to app_permission_reader;
 create function private.operational_team(p_org uuid,p_candidate uuid,p_bid uuid) returns uuid
@@ -119,4 +120,5 @@ begin
 end $$;
 revoke all on function public.operational_processing(uuid,integer,boolean) from public,anon;
 grant execute on function public.operational_processing(uuid,integer,boolean) to authenticated;
+revoke create on schema public from app_command;
 commit;

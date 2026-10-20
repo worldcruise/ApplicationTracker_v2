@@ -44,7 +44,9 @@ export async function api(request: Request, work: (requestId: string) => Promise
       code: failure.code, message: failure.message, fieldErrors: failure.fieldErrors, retryable: failure.retryable,
       ...(failure.currentVersion === undefined ? {} : { currentVersion: failure.currentVersion }),
     } };
-    return headers(request, NextResponse.json(body, { status: failure.status }));
+    const response = headers(request, NextResponse.json(body, { status: failure.status }));
+    if (failure.status === 429) response.headers.set("Retry-After", "60");
+    return response;
   }
 }
 
