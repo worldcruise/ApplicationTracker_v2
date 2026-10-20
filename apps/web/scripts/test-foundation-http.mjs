@@ -21,6 +21,7 @@ import { testArchiveHTTP } from "./test-archive-http.mjs";
 import { testPackageBrowser } from "./test-package-browser.mjs";
 import { testOperationsHTTP } from "./test-operations-http.mjs";
 import { testOperationsBrowser } from "./test-operations-browser.mjs";
+import { testRecovery } from "./test-recovery.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -374,6 +375,8 @@ try {
   }
   inspect(`${web}/.next/static`);
   inspect(`${root}/apps/extension/dist`);
+  step = "encrypted backup and isolated restore";
+  await testRecovery({identities,assert:expect});
   console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "86 headless Chromium checkpoints including role dashboards, CSP, unpacked MV3 Quick Check and package recovery; hosted native shortcut/menu and Windows filesystem gates pending" }));
 } catch (error) {
   console.error(JSON.stringify({ result: "FAIL", step, message: error instanceof TestFailure ? error.message : "Integration harness failed; inspect the isolated service health and current step." }));

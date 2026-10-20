@@ -1,0 +1,58 @@
+// Invoked after the real synthetic Auth/API/browser suite has populated the DB.
+// This restores the backup; a fresh migration/reset alone is NOT recovery proof.
+import {spawn,spawnSync} from 'node:child_process';
+import {randomBytes,randomUUID,createHash} from 'node:crypto';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
+import {Readable} from 'node:stream';
+import {encryptBackup,openBackup} from '../../../scripts/lib/backup.mjs';
+export async function testRecovery({identities,assert}){
+ if(process.env.CI!=='true')throw Error('Recovery rehearsal is isolated CI only.');
+ const container='supabase_db_application-tracker-v2',target='atv2_restore_'+randomUUID().replaceAll('-',''),folder='output/recovery';
+ await mkdir(folder,{recursive:true});
+ const sql=(database,query)=>{const result=spawnSync('docker',['exec','-i',container,'psql','-X','-At','-U','postgres','-d',database,'--set=ON_ERROR_STOP=1'],{input:query,encoding:'utf8',maxBuffer:16*1024*1024});if(result.status!==0)throw Error('Recovery SQL failed (credentials and SQL contents suppressed).');return result.stdout.trim();};
+ const schemas=['public','private','auth','supabase_migrations','extensions'];
+ // Compare every restored row, without exporting any row content into logs.
+ function fingerprints(database){
+  const tables=JSON.parse(sql(database,"select coalesce(json_agg(format('%I.%I',schemaname,tablename) order by schemaname,tablename),'[]') from pg_tables where schemaname in ('auth','public','private','supabase_migrations');"));
+  const rows={};for(const table of tables)rows[table]=sql(database,`select count(*)||':'||md5(coalesce(string_agg(j::text,E'\\n' order by j::text),'')) from (select to_jsonb(t) j from ${table} t) s;`);
+  const security=sql(database,"select md5(string_agg(v,E'\\n' order by v)) from (select n.nspname||'.'||c.relname||':'||pg_get_userbyid(c.relowner)||':'||c.relrowsecurity||':'||c.relforcerowsecurity||':'||coalesce(c.relacl::text,'') v from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname in ('public','private') union all select schemaname||'.'||tablename||':'||policyname||':'||coalesce(qual,'')||':'||coalesce(with_check,'')||':'||roles::text from pg_policies where schemaname in ('public','private') union all select n.nspname||'.'||p.proname||':'||pg_get_userbyid(p.proowner)||':'||p.prosecdef||':'||coalesce(p.proacl::text,'')||':'||coalesce(p.proconfig::text,'') from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private')) s;");
+  return {rows,security};
+ }
+ const started=Date.now(),key=randomBytes(32).toString('hex'),path=folder+'/synthetic-database.aes';
+ const before=fingerprints('postgres');
+ const child=spawn('docker',['exec',container,'pg_dump','-U','postgres','-d','postgres','--format=custom',...schemas.map(s=>'--schema='+s)],{stdio:['ignore','pipe','ignore']});
+ const exit=new Promise((ok,fail)=>{child.once('error',fail);child.once('exit',c=>c===0?ok():fail(Error('Isolated pg_dump failed.')));});exit.catch(()=>{});
+ const input=Readable.from((async function*(){for await(const b of child.stdout)yield b;await exit;})());
+ const backup=await encryptBackup(input,path,key,{projectRef:'isolated-ci-only',createdAt:new Date().toISOString(),schemas,postgresMajor:17});
+ const backupMs=Date.now()-started;
+ assert(JSON.stringify(before)===JSON.stringify(fingerprints('postgres')),'Source was quiescent across the backup snapshot');
+ const frozen=await openBackup(path,key),restoreStarted=Date.now();
+ try{
+  sql('postgres',`create database ${target} template template0;`);
+  const p=spawn('docker',['exec','-i',container,'pg_restore','-U','postgres','-d',target,'--single-transaction','--exit-on-error'],{stdio:['pipe','ignore','pipe']});
+  p.stderr.resume();
+  const done=new Promise((ok,fail)=>{p.once('error',fail);p.once('exit',c=>c===0?ok():fail(Error('Isolated pg_restore failed; database contents and credentials suppressed.'))));});done.catch(()=>{});
+  try{await frozen.pipeTo(p.stdin);await done;}catch(e){p.kill();throw e;}
+ }finally{await frozen.close();}
+ const restoreMs=Date.now()-restoreStarted,after=fingerprints(target);
+ assert(JSON.stringify(before)===JSON.stringify(after),'All Auth/app/private/migration rows, RLS policies, owners and grants match restored backup');
+ const bytes=sql(target,"select count(*)||':'||coalesce(sum(octet_length(pdf_bytes)),0) from public.document_blobs;").split(':').map(Number);
+ assert(bytes[0]>0&&bytes[1]>0,'Restored backup includes actual immutable PDF bytes');
+ assert(Number(sql(target,'select count(*) from private.document_render_keys;'))>0,'Restored backup includes private document verification keys');
+ const scoped=(id,query)=>sql(target,`begin;set local role authenticated;select set_config('request.jwt.claims','${JSON.stringify({sub:id,role:'authenticated'})}',true);${query};rollback;`).split('\n').filter(v=>/^\d+$/.test(v)).at(-1);
+ assert(Number(scoped(identities.adminA.id,'select count(*) from public.candidates'))>0,'Restored active administrator can read authorized candidate rows');
+ assert(scoped(identities.bidderA.id,'select count(*) from public.candidates')==='0','Restored bidder cannot read unrestricted candidate profiles');
+ assert(scoped(identities.bidderA.id,'select count(*) from public.interview_feedback')==='0','Restored bidder cannot read interview feedback');
+ assert(scoped(randomUUID(),'select count(*) from public.candidates')==='0','Restored unrelated identity cannot read candidates');
+ const report={result:'PASS',backupMs,restoreMs,verifiedTables:Object.keys(after.rows).length,storedPdfs:bytes[0],storedPdfBytes:bytes[1],encryptedSha256:backup.encryptedSha256,securityFingerprint:after.security,
+  scope:'AES-256-GCM logical backup restored into empty separate database on isolated CI PostgreSQL 17 cluster; all rows, immutable PDF bytes, private keys, RLS, owners and grants verified',
+  limitations:['Synthetic data volume; not pilot load or hosted RTO/RPO acceptance','Existing cluster roles reused; hosted global roles/platform Auth configuration and encryption root key recovery require operator rehearsal','No provider failover, SMTP, remote project reconfiguration or offsite credential recovery claimed']};
+ await writeFile(folder+'/result.json',JSON.stringify(report,null,2)+'\n');
+ // The ephemeral CI encryption key is deliberately not published. Only the
+ // non-sensitive result is an artifact; hosted offsite keys need separate escrow.
+ assert(!(await readFile(path)).includes(Buffer.from(key)),'Encryption key is absent from encrypted backup');
+ assert(createHash('sha256').update(await readFile(path)).digest('hex')===backup.encryptedSha256,'Encrypted backup checksum verifies');
+ console.log(JSON.stringify(report));
+ // The entire isolated stack is destroyed by CI. Never drop a caller's database.
+ return report;
+}
