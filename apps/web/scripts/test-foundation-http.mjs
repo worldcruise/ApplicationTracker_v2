@@ -17,6 +17,7 @@ import { testWorkflowBrowser } from "./test-workflow-browser.mjs";
 import { launchExtension,testExtensionBrowser } from "./test-extension-browser.mjs";
 import { testHistoryHTTP } from "./test-history-http.mjs";
 import { testHistoryBrowser } from "./test-history-browser.mjs";
+import { testArchiveHTTP } from "./test-archive-http.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -285,6 +286,8 @@ try {
   } catch (error) { throw new TestFailure(error.message); }
   step = "bid and interview production API acceptance";
   const workflowFixture = await testWorkflowHTTP({call,command,identities,org:orgA,team:teamA,expect});
+  step="archive package HTTP";
+  await testArchiveHTTP({call,command,identities,org:orgA,team:teamA,assert:expect});
   step = "bid and interview browser acceptance";
   try { const checks=await testWorkflowBrowser({org:orgA,team:teamA,identities,password,...workflowFixture});expect(checks===15,"All 15 workflow browser checkpoints complete");console.log(JSON.stringify({result:"PASS",workflowBrowserCheckpoints:checks})); } catch(e){throw new TestFailure(e.message); }
   step = "unpacked extension real-backend acceptance";

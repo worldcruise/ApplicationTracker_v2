@@ -1,0 +1,17 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select no_plan();
+select ok(not has_table_privilege('authenticated','public.archive_operations','INSERT'),'ordinary users cannot insert archive ledger records');
+select ok(not has_table_privilege('authenticated','public.archive_operations','UPDATE'),'ordinary users cannot edit archive records');
+select ok(not has_table_privilege('authenticated','public.archive_operations','SELECT'),'ledger raw frozen input is not a source-table shortcut');
+select ok(not has_function_privilege('anon','public.save_archive_package(text,text,text,uuid)','EXECUTE'),'anonymous sync denied');
+select ok(not has_function_privilege('anon','public.export_archive_source(uuid,uuid)','EXECUTE'),'anonymous source export denied');
+select ok(not has_function_privilege('authenticated','private.save_bid_unlocked(uuid,uuid,bigint,jsonb,uuid,uuid)','EXECUTE'),'unlocked bid mutation is private');
+select ok(not has_column_privilege('app_archive_exporter','public.resume_versions','candidate_snapshot','SELECT'),'archive reader has no candidate snapshot privilege');
+select ok(not has_table_privilege('app_archive_exporter','public.candidate_profile_revisions','SELECT'),'archive reader cannot read profile history');
+select ok(not rolcanlogin and not rolbypassrls,'archive reader is non-login and cannot bypass RLS') from pg_roles where rolname='app_archive_exporter';
+select ok(relrowsecurity and relforcerowsecurity,'archive ledger forces RLS') from pg_class where oid='public.archive_operations'::regclass;
+select ok(exists(select 1 from pg_trigger where tgrelid='public.archive_operations'::regclass and tgname='immutable'),'archive results are immutable');
+select ok(exists(select 1 from pg_trigger where tgrelid='public.bids'::regclass and tgname='archive_candidate_lock'),'legacy bid inserts serialize with archive duplicate checks');
+select * from finish();rollback;

@@ -30,6 +30,8 @@ export function databaseFailure(error: DatabaseFailure): ApiFailure {
   if (error.message && workflowMessages[error.message]) return new ApiFailure(422,"SCHEMA_INVALID",workflowMessages[error.message]!);
   if (error.message === "RENDER_ATTESTATION_REQUIRED") return new ApiFailure(503, "SERVICE_UNAVAILABLE", "The server render signing key is not registered or does not match the database. Ask the operator to configure document storage. Source versions and local PDFs are retained.");
   if (error.message === "PDF_HASH_MISMATCH") return new ApiFailure(409, "VERSION_CONFLICT", "The PDF failed its recorded integrity check. Exact export is blocked; no replacement was substituted.");
+  if (error.message === "PACKAGE_SOURCE_UNSAFE") return new ApiFailure(403,"FORBIDDEN","The original JSON includes content outside this reviewed document. Ask an authorized preparer for a clean reviewed frozen version; the original was not rewritten.");
+  if (error.message === "DUPLICATE_JOB") return new ApiFailure(409,"DUPLICATE_JOB","Multiple exact opportunities exist. Explicitly select the intended bid.");
   if (error.message === "CANDIDATE_ARCHIVED") return new ApiFailure(409, "SCHEMA_INVALID", "This candidate is archived. Restore it before making changes.");
   if (error.code === "42501") return new ApiFailure(403, "FORBIDDEN", "Access is not permitted in your current scope.");
   if (error.code === "40001") return new ApiFailure(409, "VERSION_CONFLICT", "This record changed. Reload its current version.");
