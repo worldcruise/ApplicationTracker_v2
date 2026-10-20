@@ -4,6 +4,7 @@ export type PackageReference={kind:"operation";operationId:string}|{kind:"docume
 export interface FrozenPackageInput {
   version:1; operationId:string; actorId:string; organizationId:string; candidateId:string; deviceId:string; createdAt:string;
   candidateName:string; context:ReviewedJobContext; identifiers:HistoryIdentifiers; relativePath:string[];
+  capturedAt?:string|null;
   resume:{reference:PackageReference;rawJson:string;pdfSha256:string;pageCount:number;schemaVersion:1;profileRevision:number;template:FrozenTemplate;rendererVersion:string;renderedAt:string};
   coverLetter:{reference:PackageReference;text:string}|null;
   existingBidId:string|null;

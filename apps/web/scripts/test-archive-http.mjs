@@ -1,5 +1,5 @@
 import {randomUUID,createHash} from "node:crypto";
-import {identifyJob,packagePaths} from "@candidate/domain";
+import {identifyJob,packagePaths,packageJobDetails} from "@candidate/domain";
 export async function testArchiveHTTP({call,command,identities,org,team,assert}){
  const a=identities.adminA,m=identities.memberA,b=identities.bidderA,l=identities.leaderA,url=p=>p+"?organizationId="+org;
  const profile={fullName:"Synthetic Archive Avery",email:"archive@example.invalid",phone:"+1 202 555 0175",location:"Synthetic City",seniorityPreference:null,professionalSummary:"Built synthetic tools.",privateNotes:"PRIVATE ARCHIVE PROFILE",status:"ready",links:[],experiences:[],educations:[],certifications:[]};
@@ -58,5 +58,13 @@ export async function testArchiveHTTP({call,command,identities,org,team,assert})
  assert((await call(m,url("/candidates/"+candidate),{...profile,professionalSummary:"Changed synthetic facts after archival."},2,{},"PATCH")).status===200,"Later candidate facts can change independently");
  assert((await call(m,url("/documents/"+frozen.doc.id+"/archive-source"))).data.rawJson===frozen.rawJson,"Later facts do not change the archived original source");
  assert(JSON.stringify((await save(m,first)).data)===JSON.stringify(receipt),"Historical package receipt remains immutable after later profile changes");
+ const sha=text=>createHash("sha256").update(text).digest("hex");
+ const observation={deviceId:first.deviceId,checkedAt:new Date().toISOString(),fileHashes:{"Resume.pdf":bundle.pdfSha256,"Resume.json":sha(first.resume.rawJson),"JobDetails.txt":sha(packageJobDetails(first)),"CoverLetter.txt":sha(first.coverLetter.text)},metadataSha256:sha("Synthetic device-reported metadata")};
+ const report=(person,value)=>call(person,url("/archive-packages/"+first.operationId+"/observations"),value);
+ const observed=await report(m,observation);assert(observed.status===200&&observed.data.reportedByDevice,"Local verification is explicitly stored as a dated device report");
+ assert(JSON.stringify((await report(m,observation)).data)===JSON.stringify(observed.data),"Lost device-report response replays the same immutable observation");
+ assert((await report(m,{...observation,metadataSha256:"0".repeat(64)})).code==="KEY_PAYLOAD_MISMATCH","Device-report replay cannot change its frozen hashes");
+ assert((await report(m,{...observation,deviceId:randomUUID()})).status===403,"Another device cannot replace the original operation's report");
+ assert((await report(identities.memberB,observation)).status===403,"Another account cannot record this operation's local state");
  return {candidate,job,first,receipt,source:frozen,bundle,letter:letterDoc.data,letterText:profile.professionalSummary};
 }

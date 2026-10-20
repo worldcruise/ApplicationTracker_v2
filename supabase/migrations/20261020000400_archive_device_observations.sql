@@ -20,7 +20,7 @@ begin
  select * into op from public.archive_operations where organization_id=p_org and operation_id=p_operation;
  if device is distinct from (op.frozen_input->>'deviceId')::uuid then raise exception 'FORBIDDEN' using errcode='42501';end if;
  if jsonb_typeof(p_input)<>'object' or (select count(*) from jsonb_object_keys(p_input))<>4 or not p_input ?& array['deviceId','checkedAt','fileHashes','metadataSha256'] or stamp is null or stamp>now()+interval '5 minutes' or p_input->>'metadataSha256' !~ '^[0-9a-f]{64}$' or jsonb_typeof(hashes)<>'object'
- or not hashes ?& array['Resume.pdf','Resume.json','JobDetails.txt'] or (select count(*) from jsonb_object_keys(hashes))<>case when op.frozen_input->'coverLetter'='null'::jsonb then 3 else 4 end
+ or not hashes ?& array['Resume.pdf','Resume.json','JobDetails.txt'] or (select count(*) from jsonb_object_keys(hashes))<>(case when op.frozen_input->'coverLetter'='null'::jsonb then 3 else 4 end)
  or exists(select 1 from jsonb_each(hashes) v where jsonb_typeof(v.value)<>'string')
  or exists(select 1 from jsonb_each_text(hashes) v where v.key not in ('Resume.pdf','Resume.json','JobDetails.txt','CoverLetter.txt') or v.value is null or v.value !~ '^[0-9a-f]{64}$')
  or hashes->>'Resume.pdf' is distinct from op.frozen_input->'resume'->>'pdfSha256' or hashes->>'Resume.json' is distinct from encode(sha256(convert_to(op.frozen_input->'resume'->>'rawJson','UTF8')),'hex') then raise exception 'SCHEMA_INVALID' using errcode='22023';end if;

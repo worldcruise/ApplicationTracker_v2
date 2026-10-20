@@ -1,5 +1,7 @@
 # Extension Resume and Profile workflow
 
+Bid package saving is documented in [ARCHIVE_PACKAGES.md](ARCHIVE_PACKAGES.md). It uses frozen reviewed sources/prepared exports and independently records local writing, database synchronization, metadata/index reconciliation and path copying. Saving never submits an application.
+
 EX01–EX03 implement the requested subset of design §14 and PRD §13. The full MV3 workspace uses the same Supabase project, user UUID, `/api/v1` authorization, canonical resume v1 and pinned renderer as the web application. The existing email/password test-account flow is retained; web cookies are not copied into the extension. Saving or exporting never submits an application.
 
 ## Build, install and reload

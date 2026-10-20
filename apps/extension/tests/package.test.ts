@@ -70,6 +70,7 @@ async function filesystem(){
 test("package reservation survives new journal instances and simultaneous clicks without replacing original input",async()=>{
  const f=await frozen();const [a,b]=await Promise.all([f.journal.freeze(f.value,f.pdf),f.journal.freeze(f.value,f.pdf)]);assert.equal(a.id,b.id);assert.equal((await f.journal.list(actor,org)).length,1);
  const reopened=packageJournal(f.factory),op=await reopened.get(a.id,actor,org);assert.equal(op.input.resume.rawJson,raw);await assert.rejects(reopened.get(a.id,"another-account",org),/another account/);
+ assert.equal(new TextDecoder().decode(op.frozenFiles!["Resume.json"]),raw);assert.equal(await historyHash(op.frozenFiles!["Resume.pdf"]!),op.input.resume.pdfSha256);
  const changed=await reopened.freeze(f.value,f.pdf,"explicit-new-intent");assert.notEqual(changed.id,a.id);
  const store=localStore(f.factory);await store.put("archive-package:"+a.id,{...op,input:{...op.input,candidateName:"Changed"}});await assert.rejects(reopened.get(a.id,actor,org),/integrity/);
 });

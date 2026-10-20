@@ -1,5 +1,5 @@
 import type {ArchiveManifestV1,FrozenPackageInput} from "@candidate/contracts";
-import {historyHash,packageJobDetails} from "@candidate/domain";
+import {historyHash} from "@candidate/domain";
 import {buildArchiveIndex,readManifest,safeSegment,validateArchiveIndex} from "./archive";
 import {DIRECTORY_KEY,localStore} from "./local-store";
 import {packageJournal,packageLock,type PackageOperation} from "./package-journal";
@@ -13,7 +13,10 @@ const prefix=(part:Uint8Array,full:Uint8Array)=>part.length<full.length&&part.ev
 async function existing(dir:FileSystemDirectoryHandle,name:string){try{return await dir.getFileHandle(name);}catch(error){if(isMissing(error))return null;throw error;}}
 async function replace(file:FileSystemFileHandle,value:Uint8Array){const stream=await file.createWritable();try{await stream.write(new Uint8Array(value));await stream.close();}catch(error){await stream.abort().catch(()=>{});throw error;}if(await historyHash(await bytes(file))!==await historyHash(value))throw Error("Closed file failed hash readback.");}
 export async function frozenPackageFiles(op:PackageOperation){
-  const files:Record<string,Uint8Array>={"JobDetails.txt":encoded(packageJobDetails(op.input)),"Resume.json":encoded(op.input.resume.rawJson),"Resume.pdf":new Uint8Array(op.pdf)};
+  if(op.frozenFiles)return structuredClone(op.frozenFiles);
+  // Original AP01 journals retain their formatter rather than substituting newer bytes on retry.
+  const legacyJob=["Target company: "+op.input.context.company,"Job title: "+op.input.context.title,"Original URL: "+op.input.context.url,"Posting identifier: "+op.input.context.externalId,"Captured/frozen at: "+op.input.createdAt,"Operation: "+op.input.operationId,"","Reviewed job description:",op.input.context.description,""].join("\n");
+  const files:Record<string,Uint8Array>={"JobDetails.txt":encoded(legacyJob),"Resume.json":encoded(op.input.resume.rawJson),"Resume.pdf":new Uint8Array(op.pdf)};
   if(op.input.coverLetter)files["CoverLetter.txt"]=encoded(op.input.coverLetter.text);
   return files;
 }
@@ -24,7 +27,7 @@ function metadata(op:PackageOperation,files:ArchiveManifestV1["files"],complete:
     schemaVersion:1,templateVersionId:i.resume.template.id,rendererVersion:i.resume.rendererVersion,files,inputHash:op.inputHash,createdAt:i.createdAt,deviceId:i.deviceId,
     profileRevision:i.resume.profileRevision,templateVersion:i.resume.template.version,templateLayoutHash:i.resume.template.layoutHash,fontAndAssetHashes:i.resume.template.assetHashes,pdfSha256:i.resume.pdfSha256,
     synchronization:{state:op.outcomes.database.state,checkedAt:op.outcomes.database.updatedAt,resumeVersionId:op.result?.resumeVersionId??null,resumeDocumentId:op.result?.resumeDocumentId??null,coverLetterVersionId:op.result?.coverLetterVersionId??null},
-    relativePath:i.relativePath.join("/"),submissionRecorded:false};
+    capturedAt:i.capturedAt??null,relativePath:i.relativePath.join("/"),submissionRecorded:false};
 }
 function ownManifest(value:unknown,op:PackageOperation,expected:ArchiveManifestV1["files"]){
   const raw=value as Record<string,unknown>;
