@@ -71,7 +71,7 @@ export async function classifyHistory(context: ReviewedJobContext, rows: History
   for (const row of rows) {
     const ids = await identifyJob({ company: row.companyName, title: row.jobTitle, url: row.jobUrl ?? "", description: row.jobDescription, externalId: row.externalId ?? "" });
     const match = matchIdentifiers(query,ids);
-    const item: HistoryMatch = { id: row.id, company: row.companyName, title: row.jobTitle, status: row.status, submittedAt: row.submittedAt, evidence: match.evidence };
+    const item: HistoryMatch = { id: row.id, observationId:row.observationId??row.id,submissionId:row.submissionId??null, company: row.companyName, title: row.jobTitle, status: row.status, submittedAt: row.submittedAt, evidence: match.evidence };
     if (match.company) result.company.push(item);
     if (match.exact) result.exact.push(item);
     if (match.possible) result.possible.push(item);

@@ -291,7 +291,7 @@ try {
   try { const checks=await testExtensionBrowser({harness:extensionHarness,call,command,identities,org:orgA,team:teamA,password,assert:expect});expect(checks===12,"All 12 extension browser checkpoints complete");console.log(JSON.stringify({result:"PASS",extensionBrowserCheckpoints:checks}));} catch(e){throw new TestFailure(e.message);}
   step = "current membership and grant revocation with existing tokens";
   step="application history HTTP";
-  const historyFixture=await testHistoryHTTP({call,command,identities,org:orgA,team:teamA,assert:expect});
+  const historyFixture=await testHistoryHTTP({call,command,identities,org:orgA,team:teamA,assert:expect,workflowFixture});
   step="quick application check browser";
   try{const checks=await testHistoryBrowser({harness:extensionHarness,fixture:historyFixture,identities,org:orgA,password,assert:expect});expect(checks===9,"All nine Quick Check browser checkpoints complete");console.log(JSON.stringify({result:"PASS",historyBrowserCheckpoints:checks}));}catch(error){throw new TestFailure(error.message);}
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);

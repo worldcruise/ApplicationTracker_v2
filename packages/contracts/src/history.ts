@@ -23,6 +23,8 @@ export interface HistoryIdentifiers {
 export type MatchEvidence = "company_key" | "company_name_similarity" | "posting_url" | "url_reused_or_changed" | "generic_url" | "description_fingerprint" | "similar_title" | "unverified_external_id";
 export interface HistoryRecord {
   id: string;
+  observationId?: string;
+  submissionId?: string | null;
   companyName: string;
   jobTitle: string;
   jobUrl: string | null;
@@ -34,6 +36,8 @@ export interface HistoryRecord {
 }
 export interface HistoryMatch {
   id: string;
+  observationId?: string;
+  submissionId?: string | null;
   company: string;
   title: string;
   status: BidStatus | null;

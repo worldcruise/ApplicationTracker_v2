@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-export async function testHistoryHTTP({call,command,identities,org,team,assert}) {
+export async function testHistoryHTTP({call,command,identities,org,team,assert,workflowFixture}) {
   const a=identities.adminA,m=identities.memberA,b=identities.bidderA;
   const url=p=>p+"?organizationId="+org;
   const created=await call(a,url("/candidates"),{teamId:team,ownerId:null,profile:{fullName:"Synthetic History Candidate",email:"history@example.invalid",phone:"+1 202 555 0190",location:"Synthetic City",seniorityPreference:null,professionalSummary:"",privateNotes:"PRIVATE HISTORY PROFILE",status:"ready",links:[],experiences:[],educations:[],certifications:[]}});
@@ -29,5 +29,12 @@ export async function testHistoryHTTP({call,command,identities,org,team,assert})
   assert(!JSON.stringify(scoped.data).includes("PRIVATE HISTORY"),"Bidder gets only safe history metadata");
   await command(identities.leaderA,org,{command:"changeAssignment",candidateId:candidate,userId:m.id,assign:false});
   assert((await lookup(m)).status===403,"Revocation applies to existing tokens");
+  const historical=await call(m,url("/bids/"+workflowFixture.second));
+  const prior=historical.data.submissions.find(s=>s.job_snapshot.jobDescription!==historical.data.bid.jobDescription);
+  assert(!!prior,"Reopened bid fixture retains older submitted job details");
+  const frozen=prior.job_snapshot;
+  const past=await call(m,url("/application-history"),{candidateId:workflowFixture.candidate,context:{company:frozen.companyName,title:frozen.jobTitle,url:frozen.jobUrl??"",description:frozen.jobDescription,externalId:frozen.externalId??""}});
+  assert(past.status===200&&past.data.exact.some(row=>row.submissionId===prior.id&&row.id===workflowFixture.second),"Historical exact job remains discoverable after later bid details change");
+  assert(Date.parse(past.data.exact.find(row=>row.submissionId===prior.id).submittedAt)===Date.parse(prior.submitted_at),"History retains exact immutable submission timestamp");
   return {candidate,job,exact};
 }
