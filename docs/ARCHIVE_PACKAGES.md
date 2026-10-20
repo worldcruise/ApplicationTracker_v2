@@ -73,6 +73,8 @@ D08's verified-alias/provider-ID/reposting override authority remains a separate
 
 Transient unknown database results retain an exponential, jittered suggested retry time. Workspace retries are explicit; there is no background business-write replay or continuous scheduler. Permission/validation/conflict failures are not automatically retried. Do not use a new create key to bypass an unknown response. An explicit new package copy creates another archive directory and receipt, while strong database duplicate handling still reuses the opportunity.
 
+Source operations that were never synchronized still obey the existing current-facts creation guard. If candidate facts changed before their first source save, synchronization can require fresh factual review and a new source/package; retain the original local-only package unchanged. Already persisted frozen versions remain retrievable under current permissions. Archiving a historical version does not approve it for a new submission; the existing fresh-facts and exact-document approval gates still apply.
+
 Web Locks coordinate tabs in the same extension/browser profile. They are not distributed filesystem locks across Chrome profiles or devices. Use separate device roots; server idempotency and matching still operate across clients. Folder moves, deleted IndexedDB, externally edited files, disk failures and operating-system interruption can require explicit relinking or restoration. Do not infer an absent archive from a failed source or use a download event as proof that an archive directory exists. Ordinary PDF downloads remain a separate export fallback, not a complete package save.
 
 ## Verification and remaining manual acceptance

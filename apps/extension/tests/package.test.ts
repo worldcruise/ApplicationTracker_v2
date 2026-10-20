@@ -51,6 +51,7 @@ test("package branches settle independently and original receipt recovery avoids
  const partial=await saving;assert.equal(partial.outcomes.database.state,"unknown");assert.equal(partial.outcomes.local.state,"succeeded");assert.equal(partial.outcomes.clipboard.state,"failed");assert.equal(partial.result,null);
  const reopened=packageJournal(f.factory),recovered=await packageProduction(api,reopened,files,undefined,async()=>{}).run(await reopened.get(op.id,actor,org),{local:false,database:true});
  assert.equal(posts,1);assert.equal(recovered.id,op.id);assert.deepEqual(recovered.result,receipt);assert.equal(recovered.outcomes.database.state,"succeeded");assert.equal(recovered.outcomes.reconciliation.state,"succeeded");assert.equal(recovered.outcomes.clipboard.state,"failed");
+ files.reconcile=async()=>{await reopened.stage(op.id,"reconciliation","conflict","Conflicting index entry");throw Error("Conflicting index entry");};const conflicted=await packageProduction(api,reopened,files,undefined,async()=>{}).run(recovered,{local:false,database:false});assert.equal(conflicted.outcomes.reconciliation.state,"conflict");assert.equal(conflicted.outcomes.local.state,"succeeded");assert.equal(conflicted.outcomes.database.state,"succeeded");
 });
 test("database-only success persists across local denial and another identity cannot reconcile the queue",async t=>{
  installLocks(t);Object.assign(navigator,{clipboard:{writeText:async()=>{}}});const f=await frozen(),op=await f.journal.freeze(f.value,f.pdf);

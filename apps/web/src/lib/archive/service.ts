@@ -68,9 +68,11 @@ export async function savePackage(client:SupabaseClient,input:FrozenPackageInput
  }
  for(let attempt=0;attempt<3;attempt++){
   if(!input.existingBidId&&!previous){
-   const history=await phase("Duplicate history",databaseResult<{rows:HistoryRecord[];truncated:boolean;token:string;historyVersion:number;companyKey:string}>(client.rpc("archive_history_snapshot",{p_org:org,p_candidate:input.candidateId,p_company:input.context.company})));
-   if(history.truncated||history.historyVersion!==2||history.companyKey!==input.identifiers.companyKey)throw new ApiFailure(409,"DUPLICATE_JOB","History is incomplete or normalization differs. Review existing bids and explicitly select the intended opportunity.");
-   exactBidIds=[...new Set((await classifyHistory(input.context,history.rows)).exact.map(x=>x.id))];historyToken=history.token;
+   const history=await phase("Duplicate history",databaseResult<{rows:HistoryRecord[];truncated:boolean;token:string;historyVersion:number;companyKey:string;companyLooseKey:string}>(client.rpc("archive_history_snapshot",{p_org:org,p_candidate:input.candidateId,p_company:input.context.company})));
+   if(history.truncated||history.historyVersion!==2||history.companyKey!==input.identifiers.companyKey||history.companyLooseKey!==input.identifiers.companyLooseKey)throw new ApiFailure(409,"DUPLICATE_JOB","History is incomplete or normalization differs. Review existing bids and explicitly select the intended opportunity.");
+   const matches=await classifyHistory(input.context,history.rows);const included=new Set([...matches.company,...matches.possible].map(x=>x.observationId??x.id));
+   if(history.rows.some(row=>!included.has(row.observationId??row.id)))throw new ApiFailure(503,"SERVICE_UNAVAILABLE","Stored company normalization differs from this matching version. Duplicate history remains unknown.");
+   exactBidIds=[...new Set(matches.exact.map(x=>x.id))];historyToken=history.token;
    if(exactBidIds.length>1)throw new ApiFailure(409,"DUPLICATE_JOB","Multiple exact opportunities exist. Explicitly select the intended bid before freezing a new package.");
   }
   const envelope=JSON.stringify({input,requestHash,resumeDocumentId:r.documentId,letterDocumentId:l?.documentId??null,exactBidIds,historyToken,existingJob});

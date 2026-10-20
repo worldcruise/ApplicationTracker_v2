@@ -60,7 +60,7 @@ export function packageProduction(api:ExtensionApi,journal:Journal=packageJourna
   await Promise.allSettled([...(branches.local?[local()]:[]),...(branches.database?[database(op)]:[])]);
   op=await get(op);
   if(op.outcomes.local.state==="succeeded"){
-   try{await authorize(op);await api.withActor(op.input.actorId,()=>files.reconcile(op));}catch(error){await journal.stage(op.id,"reconciliation","pending",error instanceof Error?error.message:"Current authorization or metadata reconciliation failed; earlier saving results are retained.");}
+   try{await authorize(op);await api.withActor(op.input.actorId,()=>files.reconcile(op));}catch(error){const failed=await get(op);if(!["failed","conflict"].includes(failed.outcomes.reconciliation.state))await journal.stage(op.id,"reconciliation","pending",error instanceof Error?error.message:"Current authorization or metadata reconciliation failed; earlier saving results are retained.");}
    op=await get(op);if(op.outcomes.reconciliation.state==="succeeded")try{await observe(op);}catch(error){await journal.stage(op.id,"reconciliation","pending",error instanceof Error?error.message:"Device observation confirmation is pending. Local files and database receipt are retained.");}
    if(op.outcomes.clipboard.state!=="succeeded")try{await copy(op);}catch{/* copying never changes successful saving */}
   }
