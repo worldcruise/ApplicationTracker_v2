@@ -20,8 +20,9 @@ export async function GET(request: Request, route: { params: Promise<{ organizat
       scope.role === "admin" ? databaseResult(client.from("administrative_operations")
         .select("operationId:operation_id,targetUserId:target_user_id,state,lastErrorCode:last_error_code,email,displayName:display_name,desiredRole:desired_role").eq("organization_id", org).limit(100)) : Promise.resolve([]),
     ]);
-    const people = memberships.length ? await databaseResult<FoundationSnapshot["people"]>(client.from("users")
-      .select("id,displayName:display_name").in("id", memberships.map(m => m.userId))) : [];
+    const userIds = [...new Set([...memberships.map(m => m.userId), ...teamMemberships.map(m => m.userId)])];
+    const people = userIds.length ? await databaseResult<FoundationSnapshot["people"]>(client.from("users")
+      .select("id,displayName:display_name").in("id", userIds)) : [];
     return { scope, teams, memberships, teamMemberships, assignments, grants, operations, people };
   });
 }

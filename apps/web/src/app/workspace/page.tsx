@@ -5,9 +5,10 @@ import { requestContext } from "@/lib/api/context";
 import { ApiFailure } from "@/lib/api/errors";
 import { SignOut } from "./sign-out";
 import { FoundationWorkspace } from "./workspace";
+import { currentOrganization, uuid } from "@/lib/api/guards";
 
 export const dynamic = "force-dynamic";
-export default async function Workspace() {
+export default async function Workspace({ searchParams }: { searchParams: Promise<{ organizationId?: string }> }) {
   let context;
   try { context = (await requestContext()).context; }
   catch (error) {
@@ -18,7 +19,7 @@ export default async function Workspace() {
   }
   return <WorkspaceShell title="Candidate workspace" description="Your access follows your current organization, team and assignments.">
     <div className="mb-5 flex items-center justify-between gap-4"><p className="text-sm">Account: {context.userId}</p><SignOut /></div>
-    {context.organizations.length ? <FoundationWorkspace context={context} /> :
+    {context.organizations.length ? <FoundationWorkspace context={context} initialOrganization={currentOrganization(context, uuid((await searchParams).organizationId ?? context.organizations[0]?.organizationId)).organizationId} /> :
       <div role="status" className="rounded border p-5"><h2 className="font-semibold">No active organization membership</h2><p>Ask an organization administrator to check your invitation or activation. Signing in alone does not grant access.</p></div>}
   </WorkspaceShell>;
 }

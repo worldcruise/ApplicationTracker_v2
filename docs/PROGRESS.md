@@ -8,6 +8,8 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 | Task | Result | Evidence |
 | --- | --- | --- |
+| OP01 | Added versioned operational metrics, a single invoker/RLS query for totals and paginated details, distinct submitted-bid cohorts and role-specific projections. | Local check passes 53 tests, lint and types. First isolated run passes migration/reset and SQL tests; expanded production API verification is pending. |
+| OP02 code | Added four role dashboards, URL filters, workload/conversions, exact metric lists, workflow notifications, redacted paginated activity and protected administration navigation. | Local check passes; added nine real browser checkpoints for all roles, paging, retained filters, independent failures and administration. Isolated browser verification pending. |
 | AP03 | Added the full workspace package controls, frozen static bytes, independent save/reconciliation/clipboard outcomes, immutable dated device observations and original-operation recovery. Added [setup and recovery instructions](ARCHIVE_PACKAGES.md). | Final [fa0bdc5 isolated CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39478686624) passes 24 migrations, 258 SQL assertions, 53 unit tests, both builds, 1,568 Auth/API assertions and 75 browser checkpoints. Seven new package checkpoints cover real OPFS bytes, held/local-only failure, lost committed response, account isolation/restart, receipt reconciliation, repeated saves and interrupted writes/database-only success. Local check/build pass. Native Windows and hosted-user gates remain manual. |
 | AP02 | Added signed, user-context package synchronization with forced RLS, immutable receipts, candidate-lock duplicate serialization and narrow prepared-source export. | [03b0a00 isolated CI](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39455042602) passes 23 migrations, 253 SQL assertions, 51 unit tests, both production builds, 1,463 Auth/API assertions and 68 existing browser checkpoints. Concurrent/repeated saves, changed keys, export-only bidder archives, hidden shared-document links and revocation pass. No save changes submission status. |
 | AP01 | Added atomic frozen package reservations, account-scoped journals, Windows-safe paths, exact original JSON/PDF writes, verified hashes and scoped index reconciliation. Partial matching writes can resume; conflicting bytes are preserved. | Local root check passes 51 tests, lint and types. Six package tests cover concurrent repeated clicks, journal reopening/account isolation, interrupted data/metadata writes, denied permission with retained database results, local-only success, conflicts and explicit index repair. Database/API orchestration and unpacked-browser acceptance remain AP02/AP03. |
@@ -46,7 +48,7 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 ## Current work
 
-**OP01 — Scoped operational reporting.** Added the versioned contract, invoker-context single-query dashboard projection and paginated API. Local checks and isolated SQL/API scope tests are being run before OP02. The full §22 audit is OP04; existing archive evidence is retained.
+**OP03 — Failure observations and assignment notifications.** OP01/OP02 code and local checks are complete; isolated acceptance is running. Preserve independent saving results, current target scope and original operation IDs. The full §22 audit is OP04; existing archive evidence is retained.
 
 **Requested package milestone complete — AP01–AP03.** Final code at fa0bdc5 passes the complete isolated suite and local check/build. Saving and recovery never submit an application. Hosted schema/key/account setup and native Windows acceptance remain explicit prerequisites; no hosted mutation or real application submission was performed.
 
@@ -248,7 +250,7 @@ Application checks could not run during context preparation because there was no
 
 ## Next task
 
-**OP02 — Role dashboards and operational navigation**, after OP01 checks. Reuse current protected workflow and administration controls. OP03 adds redacted failure observations; OP04 records all §22 acceptance criteria and remaining release gates.
+**OP04 — Full design §22 acceptance audit**, after OP03. Record all 20 base/15 archive criteria, concurrency and platform gates with direct evidence; retain unresolved release prerequisites.
 
 ## Update instructions
 

@@ -12,6 +12,7 @@ export interface DashboardFilters { teamId?: string; ownerId?: string; status?: 
 export interface DashboardItem { id: string; kind: "bid" | "candidate" | "task" | "interview"; bidId: string | null; candidateId: string; teamId: string; ownerId: string | null; label: string; status: string; dueAt: string | null; timezone: string | null; updatedAt: string }
 export interface DashboardReport {
   version: typeof reportingVersion; asOf: string; role: string; filters: DashboardFilters;
+  teams: { id: string; name: string }[];
   cohort: { from: string; toExclusive: string }; upcomingTo: string;
   counts: Partial<Record<DashboardMetric, number>>;
   detail: { metric: DashboardMetric; total: number; page: number; pageSize: number; items: DashboardItem[] };

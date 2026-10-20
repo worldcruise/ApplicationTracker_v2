@@ -6,7 +6,7 @@ returns jsonb language plpgsql stable security invoker set search_path='' as $$
 declare v_role text:=private.org_role(p_org); v_now timestamptz:=statement_timestamp(); v_from timestamptz; v_to timestamptz; v_end timestamptz; v_result jsonb;
 begin
  if v_role is null then raise exception 'FORBIDDEN' using errcode='42501';end if;
- if jsonb_typeof(p_filters)<>'object' or exists(select 1 from jsonb_object_keys(p_filters) k where k not in ('teamId','ownerId','status','company','from','to','windowDays'))
+ if jsonb_typeof(p_filters) is distinct from 'object' or exists(select 1 from jsonb_object_keys(p_filters) k where k not in ('teamId','ownerId','status','company','from','to','windowDays'))
  or p_page is null or p_page not between 1 and 100000 or p_metric is null or p_metric not in ('active_candidates','active_bids','awaiting_review','awaiting_response','draft_bids','document_work','pending_offers','open_tasks','overdue_followups','upcoming_interviews','pending_feedback','submitted','interview_converted','offer_converted','all_bids')
  then raise exception 'INVALID_REPORT' using errcode='22023';end if;
  if v_role='bidder' and p_metric in ('active_candidates','document_work','upcoming_interviews','pending_feedback','interview_converted') then raise exception 'FORBIDDEN' using errcode='42501';end if;
@@ -70,6 +70,7 @@ begin
  select jsonb_build_object('version','operations/1','asOf',v_now,'role',v_role,'filters',p_filters,'cohort',jsonb_build_object('from',v_from,'toExclusive',v_to),'upcomingTo',v_end,
   'counts',(select jsonb_object_agg(k,coalesce((select n from metrics where m=k),0)) from unnest(array['active_bids','awaiting_review','awaiting_response','draft_bids','pending_offers','open_tasks','overdue_followups','submitted','offer_converted','all_bids']||case when v_role='bidder' then array[]::text[] else array['active_candidates','document_work','upcoming_interviews','pending_feedback','interview_converted'] end) k),
   'detail',jsonb_build_object('metric',p_metric,'total',(select count(*) from detail),'page',p_page,'pageSize',25,'items',coalesce((select jsonb_agg(jsonb_build_object('id',r.id,'kind',r.kind,'bidId',r.bid_id,'candidateId',r.candidate_id,'teamId',r.team_id,'ownerId',r.owner_id,'label',r.label,'status',r.status,'dueAt',r.due_at,'timezone',r.timezone,'updatedAt',r.updated_at) order by r.due_at nulls last,r.updated_at desc,r.id) from (select * from detail order by due_at nulls last,updated_at desc,id limit 25 offset (p_page-1)*25) r),'[]'::jsonb)),
+  'teams',coalesce((select jsonb_agg(jsonb_build_object('id',t.id,'name',t.name) order by t.name,t.id) from public.teams t where t.organization_id=p_org),'[]'::jsonb),
   'workload',coalesce((select jsonb_agg(jsonb_build_object('teamId',team_id,'ownerId',owner_id,'activeBids',active_bids,'openTasks',open_tasks) order by team_id,owner_id) from workload),'[]'::jsonb),
   'assignments',coalesce((select jsonb_agg(x) from (select c.owning_team_id "teamId",count(*) candidates,count(*) filter(where not exists(select 1 from public.candidate_assignments a where a.organization_id=p_org and a.candidate_id=c.id and a.ended_at is null and a.active_from<=v_now)) unassigned from candidates c group by c.owning_team_id) x),'[]'::jsonb),
   'stages',coalesce((select jsonb_agg(x) from (select status,count(*) bids from bids group by status order by status) x),'[]'::jsonb),
