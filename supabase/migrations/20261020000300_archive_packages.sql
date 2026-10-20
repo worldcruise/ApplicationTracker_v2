@@ -141,6 +141,7 @@ begin
  end if;
  r:=public.export_archive_source(org,doc);
  if r->>'candidateId'<>cand::text or r->>'kind'<>'resume' or r->>'rawJson' is distinct from f->'resume'->>'rawJson' or r->>'pdfSha256' is distinct from f->'resume'->>'pdfSha256' then raise exception 'FORBIDDEN' using errcode='42501';end if;
+ if (f->'coverLetter'='null'::jsonb) is distinct from (letter is null) then raise exception 'FORBIDDEN' using errcode='42501';end if;
  if letter is not null then l:=public.export_archive_source(org,letter);if l->>'candidateId'<>cand::text or l->>'kind'<>'cover_letter' or l->>'text' is distinct from f->'coverLetter'->>'text' then raise exception 'FORBIDDEN' using errcode='42501';end if;end if;
  target:=(f->>'existingBidId')::uuid;
  if target is null then

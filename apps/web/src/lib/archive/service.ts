@@ -1,8 +1,9 @@
 import "server-only";
 import {createHash,createHmac} from "node:crypto";
+import {isDeepStrictEqual} from "node:util";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import type {FrozenPackageInput,HistoryRecord,PackageReference,PackageSyncResult} from "@candidate/contracts";
-import {validateResume} from "@candidate/contracts";
+import {validateResume,validTemplateLayout} from "@candidate/contracts";
 import {classifyHistory,identifyJob,normalizedText,validateHistoryContext} from "@candidate/domain";
 import {ApiFailure,databaseResult} from "@/lib/api/errors";
 import {uuid} from "@/lib/api/guards";
@@ -17,6 +18,8 @@ export function packageInput(value:unknown,actor:string,org:string):FrozenPackag
  if(typeof b.candidateName!=="string"||b.candidateName.length>200||/[\u0000-\u001f]/u.test(b.candidateName))throw new ApiFailure(422,"SCHEMA_INVALID","Invalid candidate display name.");
  if(!Array.isArray(b.relativePath)||b.relativePath.length!==3||b.relativePath.some(x=>typeof x!=="string"||x.length>120||!x||/^[. ]|[. ]$|[\u0000-\u001f<>:"/\\|?*]/u.test(x)||/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/iu.test(x))||b.relativePath.join("/").length>240)throw new ApiFailure(422,"SCHEMA_INVALID","Invalid relative archive path.");
  const r=strictObject(b.resume,["reference","rawJson","pdfSha256","pageCount","schemaVersion","profileRevision","template","rendererVersion","renderedAt"]);
+ const t=strictObject(r.template,["id","name","version","layout","layoutHash","assetHashes","rendererVersion"]);uuid(t.id);
+ if(!validTemplateLayout(t.layout)||typeof t.name!=="string"||t.name.length>200||!Number.isInteger(t.version)||Number(t.version)<1||typeof t.layoutHash!=="string"||!/^[0-9a-f]{64}$/.test(t.layoutHash)||!t.assetHashes||typeof t.assetHashes!=="object"||Array.isArray(t.assetHashes)||Object.values(t.assetHashes).some(v=>typeof v!=="string"||!/^[0-9a-f]{64}$/.test(v))||!Number.isInteger(r.profileRevision)||Number(r.profileRevision)<1||typeof r.rendererVersion!=="string"||typeof r.renderedAt!=="string")throw new ApiFailure(422,"SCHEMA_INVALID","Use the recorded frozen template, assets, renderer and profile revision.");
  const ref=(v:unknown)=>{const kind=(v&&typeof v==="object"&&!Array.isArray(v))?(v as Record<string,unknown>).kind:undefined;const p=strictObject(v,kind==="operation"?["kind","operationId"]:["kind","documentId"]);if(p.kind==="operation"&&Object.keys(p).length===2)uuid(p.operationId);else if(p.kind==="document"&&Object.keys(p).length===2)uuid(p.documentId);else throw new ApiFailure(422,"SCHEMA_INVALID","Choose a frozen source operation or authorized document.");};ref(r.reference);
  if(typeof r.rawJson!=="string"||Buffer.byteLength(r.rawJson)>1048576||!validateResume(r.rawJson).content||r.schemaVersion!==1||typeof r.pdfSha256!=="string"||!/^[0-9a-f]{64}$/.test(r.pdfSha256)||!Number.isInteger(r.pageCount)||Number(r.pageCount)<1)throw new ApiFailure(422,"SCHEMA_INVALID","Supply valid original schema-v1 JSON and a recorded PDF hash.");
  if(b.coverLetter!==null){const l=strictObject(b.coverLetter,["reference","text"]);ref(l.reference);if(typeof l.text!=="string"||Buffer.byteLength(l.text)>204800)throw new ApiFailure(422,"SCHEMA_INVALID","Use frozen cover letter text up to 200 KiB.");}
@@ -40,9 +43,9 @@ export async function savePackage(client:SupabaseClient,input:FrozenPackageInput
  const org=input.organizationId,actor=input.actorId;
  const key=process.env.DOCUMENT_RENDER_SIGNING_KEY,keyId=process.env.DOCUMENT_RENDER_KEY_ID??"primary";
  if(!key||!/^[0-9a-f]{64}$/.test(key))throw new ApiFailure(503,"SERVICE_UNAVAILABLE","Database package synchronization requires the document signing key and matching database registration. Local files are independent.");
- if(JSON.stringify(await identifyJob(input.context))!==JSON.stringify(input.identifiers))throw new ApiFailure(422,"SCHEMA_INVALID","Frozen job identifiers do not match the reviewed input.");
+ if(!isDeepStrictEqual(await identifyJob(input.context),input.identifiers))throw new ApiFailure(422,"SCHEMA_INVALID","Frozen job identifiers do not match the reviewed input.");
  const r=await phase("Frozen resume export",source(client,org,input.candidateId,actor,input.resume.reference,"resume"));
- if(r.rawJson!==input.resume.rawJson||r.pdfSha256!==input.resume.pdfSha256||r.pageCount!==input.resume.pageCount||r.template.id!==input.resume.template.id||r.template.layoutHash!==input.resume.template.layoutHash||r.render.rendererVersion!==input.resume.rendererVersion||r.render.renderedAt!==input.resume.renderedAt)throw new ApiFailure(409,"VERSION_CONFLICT","Frozen source, template or PDF differs from this package. No replacement was substituted.");
+ if(r.rawJson!==input.resume.rawJson||r.pdfSha256!==input.resume.pdfSha256||r.pageCount!==input.resume.pageCount||r.profileRevision!==input.resume.profileRevision||!isDeepStrictEqual(r.template,input.resume.template)||r.render.rendererVersion!==input.resume.rendererVersion||r.render.renderedAt!==input.resume.renderedAt)throw new ApiFailure(409,"VERSION_CONFLICT","Frozen source, template or PDF differs from this package. No replacement was substituted.");
  const content=validateResume(r.rawJson!).content!;if(content.company.trim()&&normalizedText(content.company)!==normalizedText(input.context.company))throw new ApiFailure(422,"SCHEMA_INVALID","The frozen resume targets a different company.");
  const l=input.coverLetter?await source(client,org,input.candidateId,actor,input.coverLetter.reference,"cover_letter"):null;
  if(l&&l.text!==input.coverLetter!.text)throw new ApiFailure(409,"VERSION_CONFLICT","Frozen cover letter text differs from this package.");

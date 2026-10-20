@@ -17,12 +17,18 @@ export async function testArchiveHTTP({call,command,identities,org,team,assert,r
  }
  const frozen=await document(),unsafe=await document({privateUnsupported:"PRIVATE UNRENDERED VALUE"});
  const exported=await call(m,url("/documents/"+frozen.doc.id+"/archive-source"));assert(exported.status===200&&exported.data.rawJson===frozen.rawJson,"Authorized original JSON preserves whitespace");const bundle=exported.data;
+ assert(bundle.profileRevision===2,"Prepared source retains its immutable profile revision without exposing a snapshot");
+ const letterInput={candidateId:candidate,profileRevision:2,templateVersionId:bundle.template.id,bodyText:profile.professionalSummary,review,renderedAt};
+ const letterRender=await call(m,url("/cover-letter-renders"),letterInput);assert(letterRender.status===200,"Archive letter renders");
+ const letterPayload={...letterInput,operationId:randomUUID(),bidId:null,schemaVersion:1,render:{sha256:letterRender.data.sha256,pageCount:letterRender.data.pageCount,rendererVersion:letterRender.data.rendererVersion,renderedAt}};delete letterPayload.renderedAt;
+ const letterSource=await call(m,url("/cover-letter-versions"),letterPayload,undefined,{"Idempotency-Key":letterPayload.operationId});assert(letterSource.status===200,"Archive letter source persists");
+ const letterDoc=await call(m,url("/documents"),{kind:"cover_letter",sourceVersionId:letterSource.data.id});assert(letterDoc.status===200,"Archive letter frozen artifact stores");
  async function input(context=job){const id=randomUUID(),createdAt=renderedAt;return {version:1,operationId:id,actorId:m.id,organizationId:org,candidateId:candidate,deviceId:randomUUID(),createdAt,candidateName:profile.fullName,context,identifiers:await identifyJob(context),relativePath:await packagePaths(profile.fullName,candidate,context,id,createdAt),resume:{reference:{kind:"document",documentId:frozen.doc.id},rawJson:frozen.rawJson,pdfSha256:bundle.pdfSha256,pageCount:bundle.pageCount,schemaVersion:1,profileRevision:2,template:bundle.template,rendererVersion:bundle.render.rendererVersion,renderedAt:bundle.render.renderedAt},coverLetter:null,existingBidId:null};}
  const save=(who,value)=>call(who,url("/archive-packages"),value,undefined,{"Idempotency-Key":value.operationId});
- const first=await input(),second=await input();const results=await Promise.all([save(m,first),save(m,second)]);
+ const first=await input(),second=await input();first.coverLetter={reference:{kind:"document",documentId:letterDoc.data.id},text:profile.professionalSummary};const results=await Promise.all([save(m,first),save(m,second)]);
  if(results.some(r=>r.status!==200)){
   const history=await m.client.rpc("archive_history_snapshot",{p_org:org,p_candidate:candidate,p_company:job.company});
-  const envelope=JSON.stringify({input:first,requestHash:createHash("sha256").update(JSON.stringify(first)).digest("hex"),resumeDocumentId:frozen.doc.id,letterDocumentId:null,exactBidIds:[],historyToken:history.data?.token});
+  const envelope=JSON.stringify({input:first,requestHash:createHash("sha256").update(JSON.stringify(first)).digest("hex"),resumeDocumentId:frozen.doc.id,letterDocumentId:letterDoc.data.id,exactBidIds:[],historyToken:history.data?.token});
   const signature=createHmac("sha256",Buffer.from(renderKey,"hex")).update("archive.v1|"+envelope).digest("hex");
   const diagnostic=await m.client.rpc("save_archive_package",{p_envelope:envelope,p_key_id:"primary",p_signature:signature,p_request:randomUUID()});
   // Only a controlled SQL error classification is reported; credentials/envelope/signature never print.
@@ -39,7 +45,7 @@ export async function testArchiveHTTP({call,command,identities,org,team,assert,r
  assert((await call(identities.leaderBeta,url("/documents/"+frozen.doc.id+"/archive-source"))).status===403,"Other team cannot export archive source");
  const forged=await m.client.rpc("save_archive_package",{p_envelope:JSON.stringify({input:first}),p_key_id:"primary",p_signature:"00".repeat(32),p_request:randomUUID()});assert(!!forged.error,"Direct forged synchronization cannot bypass API validation");
  const mutation=await m.client.from("archive_operations").insert({organization_id:org,operation_id:randomUUID()});assert(!!mutation.error,"Archive ledger has no direct user mutation grant");
- for(const doc of [frozen.doc,unsafe.doc])assert((await call(a,url("/documents/"+doc.id+"/links"),{bidId:receipt.bidId})).status===200,"Manager links prepared artifact");
+ for(const doc of [frozen.doc,unsafe.doc,letterDoc.data])assert((await call(a,url("/documents/"+doc.id+"/links"),{bidId:receipt.bidId})).status===200,"Manager links prepared artifact");
  const hidden=await command(a,org,{command:"createDraftBid",candidateId:candidate,companyName:"Synthetic Private Other Opportunity",jobTitle:"Engineer"});assert((await call(a,url("/documents/"+frozen.doc.id+"/links"),{bidId:hidden.id})).status===200,"Same frozen document may be linked to an unrelated bid");
  const grant=await command(a,org,{command:"grantBidderAccess",userId:b.id,candidateId:null,bidId:receipt.bidId,capability:"document.export",allowEmail:false,allowPhone:false,expiresAt:null});
  const safe=await call(b,url("/documents/"+frozen.doc.id+"/archive-source"));assert(safe.status===200&&safe.data.rawJson===frozen.rawJson,"Export-only bidder receives only the exact rendered original source");
@@ -55,5 +61,5 @@ export async function testArchiveHTTP({call,command,identities,org,team,assert,r
  await command(a,org,{command:"revokeBidderAccess",grantId:grant.id});
  assert((await call(b,url("/archive-packages")+"&operationId="+bidderInput.operationId)).status===403,"Current export revocation blocks receipt reconciliation");
  const otherJob={...job,url:"https://jobs.example.invalid/jobs/archive-2",externalId:"archive-2"};const other=await save(m,await input(otherJob));assert(other.status===200&&other.data.bidId!==receipt.bidId,"Fingerprint alone does not merge separate opportunities");
- return {candidate,job,first,receipt,source:frozen,bundle};
+ return {candidate,job,first,receipt,source:frozen,bundle,letter:letterDoc.data,letterText:profile.professionalSummary};
 }
