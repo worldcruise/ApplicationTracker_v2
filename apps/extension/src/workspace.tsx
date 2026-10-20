@@ -8,6 +8,7 @@ import {extensionApi,type ExtensionApi} from "./api";
 import {localStore} from "./local-store";
 import {ProductionWorkspace} from "./components/ProductionWorkspace";
 import {QuickApplicationCheck} from "./components/QuickApplicationCheck";
+import {PackageWorkspace} from "./components/PackageWorkspace";
 import {ACTIVE_CAPTURE_SCOPE} from "./capture";
 import {PreparedDocuments} from "./components/PreparedDocuments";
 export function App(){
@@ -40,6 +41,7 @@ function AuthorizedWorkspace({api,scope,actor}:{api:ExtensionApi;scope:Organizat
  return <div><nav className="workspace-views" aria-label="Workspace views"><button aria-pressed={view==="resume"} onClick={()=>setView("resume")}>Resume</button><button aria-pressed={view==="profile"} onClick={()=>setView("profile")}>Profile</button></nav>
  <section className="workspace-card"><h2>Candidate selection</h2>{scope.role!=="bidder"&&<label>Search candidates<input aria-label="Search candidates" value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}}/></label>}<label>Candidate<select aria-label="Candidate" value={selected} onChange={e=>setSelected(e.target.value)}><option value="">Choose candidate</option>{selected&&!rows.some(r=>r.id+"|"+(r.bidId??"")===selected)&&<option value={selected}>Saved candidate reference</option>}{rows.map(r=><option key={r.id+"|"+(r.bidId??"")} value={r.id+"|"+(r.bidId??"")}>{r.name}</option>)}</select></label>{scope.role!=="bidder"&&<div className="probe-actions"><button disabled={page===1} onClick={()=>setPage(n=>n-1)}>Previous candidates</button><p>Page {page} · {total} in current scope</p><button disabled={page*25>=total} onClick={()=>setPage(n=>n+1)}>Next candidates</button></div>}{error&&<p role="alert">{error}</p>}</section>
  {candidate&&<QuickApplicationCheck key={actor+":"+org+":"+candidate} api={api} scope={{actorId:actor,organizationId:org,candidateId:candidate}} web={web}/>}
+ {candidate&&<PackageWorkspace key={"package:"+actor+":"+org+":"+candidate} api={api} actor={actor} org={org} candidate={candidate} name={profile?.fullName??safe?.fullName??"Candidate"} bidder={scope.role==="bidder"}/>}
  {profile&&<ProductionWorkspace key={actor+":"+org+":"+profile.id} api={api} actor={actor} org={org} profile={profile} view={view} web={web}/>}
  {scope.role==="bidder"&&candidate&&<><section className="workspace-card"><h2>Authorized profile summary</h2>{safe?<><p>{safe.fullName} · {safe.location}</p><p>{safe.email} {safe.phone}</p><p className="preserve">{safe.approvedSummary??"No approved summary."}</p></>:<p>Profile details are not available through your current preparation scope.</p>}<p>Resume generation, raw profile configuration and letter editing require profile-editor permission. Candidate status is not included in the safe bidder projection.</p><a href={web("candidates/"+candidate)} target="_blank" rel="noreferrer">Open full web candidate workspace (current permissions apply)</a></section><PreparedDocuments key={actor+":"+org+":"+candidate} api={api} actor={actor} org={org} candidate={candidate}/></>}
  </div>;

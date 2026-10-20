@@ -7,6 +7,8 @@ import {packageJournal,type PackageOperation} from "../src/package-journal";
 import {packageFiles} from "../src/package-files";
 import {DIRECTORY_KEY,localStore} from "../src/local-store";
 import {archiveHistory} from "../src/archive";
+import {packageProduction} from "../src/package-production";
+import {ExtensionApiError,type ExtensionApi} from "../src/api";
 
 const actor="a9000000-0000-4000-9000-000000000001",org="a9000000-0000-4000-9000-000000000100",candidate="a9000000-0000-4000-9000-000000000200";
 const raw=' {\n"company":"Synthetic Package Co","title":"Engineer","summary":"Synthetic tools","skills":[],"experience":[],"education":[],"original_extension":"preserved"\n}\n';
@@ -36,6 +38,28 @@ function installLocks(t:{after:(fn:()=>void)=>void}){
  Object.defineProperty(globalThis,"navigator",{configurable:true,value:{locks:{request}}});
  t.after(()=>{if(previous)Object.defineProperty(globalThis,"navigator",previous);});
 }
+test("package branches settle independently and original receipt recovery avoids a second mutation after timeout",async t=>{
+ installLocks(t);Object.assign(navigator,{clipboard:{writeText:async()=>{throw Error("Denied");}}});
+ const f=await frozen();const op=await f.journal.freeze({...f.value,resume:{...f.value.resume,reference:{kind:"document",documentId:crypto.randomUUID()}},coverLetter:null},f.pdf);
+ const receipt:PackageSyncResult={operationId:op.id,bidId:crypto.randomUUID(),reusedBid:false,resumeDocumentId:crypto.randomUUID(),resumeVersionId:crypto.randomUUID(),coverLetterVersionId:null,createdAt:op.input.createdAt};
+ let committed:PackageSyncResult|null=null,posts=0;let release!:()=>void;const held=new Promise<void>(r=>{release=r;});
+ const api={withActor:async<T>(_actor:string,work:()=>Promise<T>)=>work(),request:async(path:string,options?:{body?:unknown})=>{if(path==="me")return {organizations:[{organizationId:org,role:"team_member"}]};if(path.startsWith("documents/"))return {};if(!options?.body)return committed;posts++;committed=receipt;await held;throw new ExtensionApiError(0,"NETWORK_ERROR","Synthetic lost response");}} as ExtensionApi;
+ const files={writeLocal:async()=>{await f.journal.stage(op.id,"local","succeeded");return f.journal.get(op.id,actor,org);},reconcile:async()=>{const current=await f.journal.get(op.id,actor,org);await f.journal.stage(op.id,"reconciliation",current.result?"succeeded":"pending");return f.journal.get(op.id,actor,org);}};
+ const saving=packageProduction(api,f.journal,files,undefined,async()=>{}).run(op);
+ for(let tries=0;tries<50;tries++){if((await f.journal.get(op.id,actor,org)).outcomes.local.state==="succeeded")break;await new Promise(r=>setTimeout(r,2));}
+ assert.equal((await f.journal.get(op.id,actor,org)).outcomes.local.state,"succeeded");assert.equal((await f.journal.get(op.id,actor,org)).outcomes.database.state,"pending");release();
+ const partial=await saving;assert.equal(partial.outcomes.database.state,"unknown");assert.equal(partial.outcomes.local.state,"succeeded");assert.equal(partial.outcomes.clipboard.state,"failed");assert.equal(partial.result,null);
+ const reopened=packageJournal(f.factory),recovered=await packageProduction(api,reopened,files,undefined,async()=>{}).run(await reopened.get(op.id,actor,org),{local:false,database:true});
+ assert.equal(posts,1);assert.equal(recovered.id,op.id);assert.deepEqual(recovered.result,receipt);assert.equal(recovered.outcomes.database.state,"succeeded");assert.equal(recovered.outcomes.reconciliation.state,"succeeded");assert.equal(recovered.outcomes.clipboard.state,"failed");
+});
+test("database-only success persists across local denial and another identity cannot reconcile the queue",async t=>{
+ installLocks(t);Object.assign(navigator,{clipboard:{writeText:async()=>{}}});const f=await frozen(),op=await f.journal.freeze(f.value,f.pdf);
+ const receipt:PackageSyncResult={operationId:op.id,bidId:crypto.randomUUID(),reusedBid:false,resumeDocumentId:crypto.randomUUID(),resumeVersionId:crypto.randomUUID(),coverLetterVersionId:null,createdAt:op.input.createdAt};
+ let revoked=false,posts=0;const api={withActor:async<T>(_actor:string,work:()=>Promise<T>)=>{if(revoked)throw Error("Account changed");return work();},request:async(path:string,options?:{body?:unknown})=>{if(revoked)throw new ExtensionApiError(403,"ACCOUNT_CHANGED","Account changed");if(path==="me")return {organizations:[{organizationId:org,role:"team_member"}]};if(path.startsWith("candidates/"))return {};if(options?.body){posts++;return receipt;}return null;}} as ExtensionApi;
+ const files={writeLocal:async()=>{await f.journal.stage(op.id,"local","failed","Permission denied");throw Error("Permission denied");},reconcile:async()=>{throw Error("Not yet local");}};
+ const noSourceSync=async()=>({}) as never;const partial=await packageProduction(api,f.journal,files,noSourceSync,async()=>{}).run(op);assert.equal(partial.outcomes.local.state,"failed");assert.equal(partial.outcomes.database.state,"succeeded");assert.deepEqual(partial.result,receipt);assert.equal(posts,1);
+ revoked=true;const denied=await packageProduction(api,f.journal,files,noSourceSync,async()=>{}).run(op,{local:false,database:true});assert.equal(posts,1);assert.equal(denied.outcomes.database.state,"failed");assert.deepEqual(denied.result,receipt);
+});
 async function filesystem(){
  const f=await frozen(),op=await f.journal.freeze(f.value,f.pdf),root=new Dir("Synthetic root");const records=new Map<string,unknown>([[DIRECTORY_KEY,root]]);
  const store={get:async<T>(key:string)=>records.get(key) as T|undefined,put:async(key:string,value:unknown)=>{records.set(key,value);}} as ReturnType<typeof localStore>;

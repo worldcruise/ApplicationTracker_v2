@@ -14,4 +14,6 @@ select ok(not rolcanlogin and not rolbypassrls,'archive reader is non-login and 
 select ok(relrowsecurity and relforcerowsecurity,'archive ledger forces RLS') from pg_class where oid='public.archive_operations'::regclass;
 select ok(exists(select 1 from pg_trigger where tgrelid='public.archive_operations'::regclass and tgname='immutable'),'archive results are immutable');
 select ok(exists(select 1 from pg_trigger where tgrelid='public.bids'::regclass and tgname='archive_candidate_lock'),'legacy bid inserts serialize with archive duplicate checks');
+select ok(not has_table_privilege('authenticated','public.archive_device_observations','INSERT'),'local observations require the protected current-authorized command');
+select ok(not has_function_privilege('anon','public.record_archive_device(uuid,uuid,jsonb)','EXECUTE'),'anonymous device observations are denied');
 select * from finish();rollback;

@@ -18,6 +18,7 @@ import { launchExtension,testExtensionBrowser } from "./test-extension-browser.m
 import { testHistoryHTTP } from "./test-history-http.mjs";
 import { testHistoryBrowser } from "./test-history-browser.mjs";
 import { testArchiveHTTP } from "./test-archive-http.mjs";
+import { testPackageBrowser } from "./test-package-browser.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -287,7 +288,7 @@ try {
   step = "bid and interview production API acceptance";
   const workflowFixture = await testWorkflowHTTP({call,command,identities,org:orgA,team:teamA,expect});
   step="archive package HTTP";
-  await testArchiveHTTP({call,command,identities,org:orgA,team:teamA,assert:expect,renderKey});
+  const archiveFixture=await testArchiveHTTP({call,command,identities,org:orgA,team:teamA,assert:expect});
   step = "bid and interview browser acceptance";
   try { const checks=await testWorkflowBrowser({org:orgA,team:teamA,identities,password,...workflowFixture});expect(checks===15,"All 15 workflow browser checkpoints complete");console.log(JSON.stringify({result:"PASS",workflowBrowserCheckpoints:checks})); } catch(e){throw new TestFailure(e.message); }
   step = "unpacked extension real-backend acceptance";
@@ -297,6 +298,8 @@ try {
   const historyFixture=await testHistoryHTTP({call,command,identities,org:orgA,team:teamA,assert:expect,workflowFixture});
   step="quick application check browser";
   try{const checks=await testHistoryBrowser({harness:extensionHarness,fixture:historyFixture,identities,org:orgA,password,assert:expect});expect(checks===9,"All nine Quick Check browser checkpoints complete");console.log(JSON.stringify({result:"PASS",historyBrowserCheckpoints:checks}));}catch(error){throw new TestFailure(error.message);}
+  step="package save and recovery browser";
+  try{const checks=await testPackageBrowser({harness:extensionHarness,fixture:archiveFixture,identities,org:orgA,password,call,assert:expect});expect(checks===7,"All seven package browser checkpoints complete");console.log(JSON.stringify({result:"PASS",packageBrowserCheckpoints:checks}));}catch(error){throw new TestFailure(error.message);}
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);
   expect((await call(identities.memberA, candidatePath(first))).status === 403, "Unexpired token loses application access after deactivation");
   const after = await identities.memberA.client.from("candidates").select("id");
