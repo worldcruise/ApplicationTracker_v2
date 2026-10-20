@@ -1,0 +1,6 @@
+{
+  "publicKeyFormat": "SPKI DER base64",
+  "extensionId": "egidlmfmpaelbkicmhoheoonleejbfkg",
+  "origin": "chrome-extension://egidlmfmpaelbkicmhoheoonleejbfkg",
+  "distribution": "unpacked pilot only; store signing not configured"
+}

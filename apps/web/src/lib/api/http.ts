@@ -3,6 +3,7 @@ import type { ApiErrorResponse } from "@candidate/contracts";
 import { preventSessionCaching } from "@/lib/supabase/response";
 import { ApiFailure } from "./errors";
 import { applicationOrigin } from "./guards";
+import { checkClientVersion } from "./compatibility";
 
 function permittedOrigin(request: Request): string | null {
   const origin = request.headers.get("origin");
@@ -18,7 +19,7 @@ function headers(request: Request, response: NextResponse): NextResponse {
   const origin = permittedOrigin(request);
   if (origin) {
     response.headers.set("Access-Control-Allow-Origin", origin);
-    response.headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type, If-Match, Idempotency-Key, X-Operation-Actor");
+    response.headers.set("Access-Control-Allow-Headers", "Authorization, Content-Type, If-Match, Idempotency-Key, X-Operation-Actor, X-Candidate-Client");
     response.headers.set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
     response.headers.set("Access-Control-Expose-Headers", "ETag");
   }
@@ -32,6 +33,7 @@ export function preflight(request: Request) {
 export async function api(request: Request, work: (requestId: string) => Promise<unknown>) {
   const requestId = crypto.randomUUID();
   try {
+    checkClientVersion(request);
     const data = await work(requestId);
     const response = headers(request, NextResponse.json({ requestId, data }));
     if (data && typeof data === "object" && "rowVersion" in data && Number.isSafeInteger(data.rowVersion)) {

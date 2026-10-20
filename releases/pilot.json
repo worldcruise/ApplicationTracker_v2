@@ -1,0 +1,12 @@
+{
+  "release": "0.2.0-pilot.1",
+  "extensionVersion": "0.2.0",
+  "apiContract": "v1",
+  "resumeSchema": 1,
+  "renderer": "template-engine/2.0.0",
+  "minimumExtensionVersion": "0.1.0",
+  "legacyUnversionedV1": true,
+  "developmentProjectRef": "xsyxlxpsglhkmvzlmhih",
+  "hosting": "render-node",
+  "dataScope": "synthetic-only-until-owner-approval"
+}

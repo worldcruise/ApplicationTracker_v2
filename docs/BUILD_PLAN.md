@@ -257,6 +257,15 @@ AP01–AP03 are complete for the requested milestone. See [verification evidence
 
 ## Milestone 5 Administration analytics and release
 
+Pilot deployment preparation is scoped as follows. External project creation/billing and real-data retention require supplied account details/owner decisions; preparation and synthetic isolated recovery proceed independently.
+
+| ID | Scoped task | Design | Acceptance |
+| --- | --- | --- | --- |
+| PD01 | Production configuration isolation, hosting build, stable extension identity, v1 compatibility and versioned release packaging. | §14, 20–22 | Production cannot fall back to development config; deterministic identity and public-only artifact; old unversioned v1 remains supported; exact release metadata/hashes. |
+| PD02 | Encrypted backup and isolated restore rehearsal. | §20–22 | Recover Auth identities, app/private schemas, immutable snapshots, stored PDF bytes/hashes, command owners/grants/RLS and signing keys from an encrypted backup in a separate test database; record measured recovery and limits. |
+| PD03 | Hosted deployment/environment/Auth/migration/rollback/retention runbooks and synthetic smoke tooling. | §20–24 | Exact selected-provider commands, ordered reviewed migrations, role-scoped synthetic smoke, private storage decision, quotas and explicit readiness gates. No real-data purge without accepted policy. |
+| PD04 | Clean-checkout CI, tagged extension test release and acceptance evidence. | §21–22 | Fresh npm ci/check/build, migration/RLS/recovery/browser gates, release contents/secret scan, tag and reproducible artifact. Actual hosted deployment/manual results reported without assumptions. |
+
 The operational-interface request is implemented in these scoped increments, reusing the completed foundation, workflow and archive milestones. These do not waive retention, recovery, hosting or native browser release gates.
 
 | ID | Task and dependencies | Design | Acceptance |

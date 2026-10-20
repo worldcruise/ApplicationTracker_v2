@@ -3,7 +3,8 @@ export type ApiErrorCode =
   | "INVALID_JSON" | "SCHEMA_INVALID" | "FACTUAL_REVIEW_REQUIRED"
   | "UNAUTHENTICATED" | "FORBIDDEN" | "VERSION_CONFLICT"
   | "DUPLICATE_JOB" | "KEY_PAYLOAD_MISMATCH"
-  | "RATE_LIMITED" | "SERVICE_UNAVAILABLE";
+  | "RATE_LIMITED" | "SERVICE_UNAVAILABLE" | "CLIENT_UPGRADE_REQUIRED";
+// Additive error: unsupported clients retain their local operations until upgraded.
 
 export interface ApiErrorResponse {
   requestId: string;

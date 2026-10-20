@@ -18,7 +18,7 @@ export function extensionApi(client:SupabaseClient,config:ExtensionConfig,lock?:
     for(let attempt=0;attempt<(method==="GET"?2:1);attempt++){
      const session=await client.auth.getSession();if(session.error||!session.data.session||session.data.session.user.id!==identity!.id)throw new ExtensionApiError(401,"UNAUTHENTICATED","The session changed. Sign in again; no queued write was replayed.");
      try{response=await fetch(new URL(resource,base),{method,credentials:"omit",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(30000),
-      headers:{Authorization:"Bearer "+session.data.session.access_token,"X-Operation-Actor":identity!.id,...(body===undefined?{}:{"Content-Type":"application/json"}),...(options.operationId?{"Idempotency-Key":options.operationId}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
+      headers:{Authorization:"Bearer "+session.data.session.access_token,"X-Operation-Actor":identity!.id,"X-Candidate-Client":"extension/"+(config.clientVersion??"0.1.0"),...(body===undefined?{}:{"Content-Type":"application/json"}),...(options.operationId?{"Idempotency-Key":options.operationId}:{})},...(body===undefined?{}:{body:JSON.stringify(body)})});
      }catch{throw new ExtensionApiError(0,"NETWORK_ERROR","Shared API is unreachable. The original operation and PDF are retained; synchronization may be unknown.");}
      if(response.status!==401||method!=="GET"||attempt===1)break;
      if((await client.auth.refreshSession()).error)throw new ExtensionApiError(401,"UNAUTHENTICATED","Refresh failed. Sign in again.");

@@ -1,0 +1,39 @@
+# Proposed paid service; review account, region, budget and environment before creation.
+services:
+  - type: web
+    name: applicationtracker-pilot
+    runtime: node
+    plan: standard
+    region: virginia
+    autoDeployTrigger: off
+    buildCommand: npm ci && npm run production:build
+    startCommand: npm run production:start
+    healthCheckPath: /healthz
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - key: NODE_VERSION
+        value: 24.22.0
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: APPLICATION_ENV
+        value: production
+      - key: PILOT_DATA_MODE
+        value: synthetic-only
+      - key: FEASIBILITY_API_ENABLED
+        value: "false"
+      - key: PRODUCTION_SUPABASE_PROJECT_REF
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: DOCUMENT_RENDER_KEY_ID
+        value: pilot-2026-01
+      - key: DOCUMENT_RENDER_SIGNING_KEY
+        sync: false
+      - key: EXTENSION_ALLOWED_ORIGIN
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

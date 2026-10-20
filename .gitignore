@@ -10,6 +10,8 @@ out/
 coverage/
 tmp/
 output/
+backups/
+.vercel/
 *.tsbuildinfo
 *.log
 apps/web/next-env.d.ts

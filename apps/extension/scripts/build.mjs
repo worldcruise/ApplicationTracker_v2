@@ -3,6 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
 import { createHash } from "node:crypto";
+import { productionConfig } from "../../../scripts/lib/production-config.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const output = new URL("../dist/", import.meta.url);
@@ -14,13 +15,17 @@ async function readSettings(url) {
   catch (error) { if (error.code === "ENOENT") return {}; throw error; }
 }
 // Explicit public allowlist only. Never inject process.env or a server credential.
-const web = await readSettings(new URL("../../web/.env.local", import.meta.url));
-const local = await readSettings(new URL("../.env.local", import.meta.url));
+const production=process.env.EXTENSION_BUILD_PROFILE==="production";
+const web = production?{}:await readSettings(new URL("../../web/.env.local", import.meta.url));
+const local = production?{}:await readSettings(new URL("../.env.local", import.meta.url));
+const release=JSON.parse(await readFile(new URL("../../../releases/pilot.json",import.meta.url),"utf8"));
 const config = {
   supabaseUrl: process.env.EXTENSION_PUBLIC_SUPABASE_URL ?? local.EXTENSION_PUBLIC_SUPABASE_URL ?? web.NEXT_PUBLIC_SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
   publishableKey: process.env.EXTENSION_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? local.EXTENSION_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? web.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "",
   apiUrl: process.env.EXTENSION_PUBLIC_API_URL ?? local.EXTENSION_PUBLIC_API_URL ?? "http://localhost:3000/api/v1",
+  clientVersion: production?release.extensionVersion:manifest.version,
 };
+if(production){productionConfig(process.env,true);manifest.version=release.extensionVersion;manifest.version_name=release.release;manifest.key=(await readFile(new URL("../../../releases/extension-public-key.txt",import.meta.url),"utf8")).trim();}
 const origins = [new URL(config.apiUrl)];
 if (config.supabaseUrl) origins.push(new URL(config.supabaseUrl));
 for (const url of origins) {
