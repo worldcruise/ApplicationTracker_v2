@@ -85,6 +85,10 @@ Candidate management adds `/candidates`, a searchable scoped directory and six-t
 
 Resume Studio now includes canonical-v1 validation, scoped exact prompts, factual review, nine immutable template presets and customization, same-byte PDF.js preview/export, source history, cover letters and authorized frozen document history. See [workflow, APIs, signing-key registration and exact retrieval prerequisites](docs/RESUME_WORKFLOW.md). `npm run resume:verify` checks synthetic multipage layouts and all presets. Optional `npm run documents:configure` registers an operator-supplied server signing key for attested exact-PDF storage; it is unnecessary for source saving/local export. No hosted schema or signing-key change was performed by these tasks.
 
+## Pilot deployment
+
+Pilot preparation uses a separate production Supabase project and a proposed Render Node service. It is **not ready for real candidate onboarding** until the remaining acceptance gates and owner decisions pass. Read the [deployment commands and Auth/environment setup](docs/PILOT_DEPLOYMENT.md), [tagged extension installation/reload](docs/RELEASING.md), [encrypted backup/restore and rollback](docs/RECOVERY.md), [provider limits](docs/PROVIDER_LIMITS.md) and [actual deployment results](docs/DEPLOYMENT_RESULTS.md). Production scripts reject development fallback; no paid resource or hosted migration has been provisioned by this preparation.
+
 ## Workspace layout
 
 | Path | Responsibility |

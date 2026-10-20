@@ -21,8 +21,9 @@ The target structure is `apps/web`, `apps/extension`, `packages/contracts`, `pac
 | ID | PRD statement | Design statement | Classification and required action | Affected tasks |
 | --- | --- | --- | --- | --- |
 | C01 | P§7.1 lists Phone under required fields, then says validation must not assume every candidate has a phone number. | D§1 explicitly makes phone optional; D§6 requires name, email, and location for Ready profiles and permits incomplete drafts. | The design contradicts the required-phone list and the PRD is internally inconsistent. **Resolved by the user on 18 October 2026:** Ready requires name, email, location **and phone**; Draft permits unknown facts. Preserve both source statements. | T016–T017, T020; CM01–CM03 implement the explicit disposition with backend, database and UI validation. |
+| C02 | P§22.20 expects initial operation within available free-tier limits, subject to quotas. | D§20–21 requires accepted recovery/quotas and moving to a plan that can meet them. | Deployment tradeoff identified 20 October 2026: proposed Supabase Pro plus Render paid Node compute/workspace does not meet a literal free-tier acceptance claim. Owner must approve budget and disposition B20; source requirements remain unchanged and B20 stays unverified. | D07, T059–T062, PD03–PD04. |
 
-No other definite contradiction between mandatory requirements was identified in this comparison. The differences below are ambiguities, compatible refinements, or coverage gaps, rather than invented conflicts.
+The initial source comparison found no other definite mandatory contradiction. C02 records the later deployment proposal's acceptance tradeoff; it is not an approval to rewrite either source. The differences below are ambiguities, compatible refinements, or coverage gaps.
 
 ### Clarifications and coverage gaps
 

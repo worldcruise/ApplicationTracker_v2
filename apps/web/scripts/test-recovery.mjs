@@ -35,7 +35,10 @@ export async function testRecovery({identities,assert}){
   phase='create isolated target';
   sql('postgres',`create database ${target} template template0;`);
   phase='restore archive';
-  const p=spawn('docker',['exec','-i',container,'pg_restore','-U','postgres','-d',target,'--single-transaction','--exit-on-error'],{stdio:['pipe','ignore','pipe']});
+  // Restoring managed Auth ownership needs the isolated maintenance superuser.
+  // Supabase's limited migration role cannot SET ROLE supabase_admin. Never
+  // grant those privileges to a production application/migration role.
+  const p=spawn('docker',['exec','-i',container,'pg_restore','-U','supabase_admin','-d',target,'--single-transaction','--exit-on-error'],{stdio:['pipe','ignore','pipe']});
   let errorText='';p.stderr.on('data',b=>{if(errorText.length<8000)errorText+=b.toString();});
   const done=new Promise((ok,fail)=>{p.once('error',fail);p.once('exit',c=>c===0?ok():fail(Error('Isolated pg_restore failed '+diagnostic(errorText)+'; contents suppressed.')));});done.catch(()=>{});
   try{await frozen.pipeTo(p.stdin);await done;}catch(e){p.kill();throw e;}
@@ -45,6 +48,7 @@ export async function testRecovery({identities,assert}){
  assert(JSON.stringify(before)===JSON.stringify(after),'All Auth/app/private/migration rows, RLS policies, owners and grants match restored backup');
  const bytes=sql(target,"select count(*)||':'||coalesce(sum(octet_length(pdf_bytes)),0) from public.document_blobs;").split(':').map(Number);
  assert(bytes[0]>0&&bytes[1]>0,'Restored backup includes actual immutable PDF bytes');
+ assert(sql(target,"select count(*) from public.document_blobs b join public.documents d on d.id=b.document_id where encode(sha256(b.pdf_bytes),'hex')<>d.pdf_sha256 or octet_length(b.pdf_bytes)<>d.byte_size;")==='0','Every restored PDF matches its immutable SHA-256 and byte count');
  assert(Number(sql(target,'select count(*) from private.document_render_keys;'))>0,'Restored backup includes private document verification keys');
  const scoped=(id,query)=>sql(target,`begin;set local role authenticated;select set_config('request.jwt.claims','${JSON.stringify({sub:id,role:'authenticated'})}',true);${query};rollback;`).split('\n').filter(v=>/^\d+$/.test(v)).at(-1);
  assert(Number(scoped(identities.adminA.id,'select count(*) from public.candidates'))>0,'Restored active administrator can read authorized candidate rows');

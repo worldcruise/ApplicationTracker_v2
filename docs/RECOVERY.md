@@ -38,7 +38,7 @@ Copy the encrypted file to the owner's approved **offsite, versioned, access-con
 
 ## Isolated restore and verification
 
-For a new **empty isolated PostgreSQL database**, created by a qualified operator with required managed roles/extensions available, set the target `PG*` environment, `PGDATABASE=atv2_restore_<unique-id>`, and the original backup key:
+For a new **empty isolated PostgreSQL database**, created by a qualified operator with required managed roles/extensions available, set the target `PG*` environment, `PGDATABASE=atv2_restore_<unique-id>`, and the original backup key. Exact ownership restoration requires the isolated maintenance **superuser**: hosted Supabase's limited `postgres` role cannot restore `supabase_admin` ownership. The command rejects that insufficient role; never grant superuser to a hosted migration/application role to bypass this limitation.
 
 ```powershell
 npm run backup:verify -- backups/<file>.aes
@@ -51,7 +51,7 @@ For a hosted disaster, first isolate/stop writes and preserve the damaged projec
 
 Before switching traffic, compare all application/Auth/private/migration table counts and row hashes privately, stored PDF SHA-256s against document metadata, history references, key IDs, object counts if object storage is later introduced, ownership, function execution grants and RLS policies. Verify four-role allow/deny access and exact historical export with synthetic accounts; verify login, refresh, recovery and invitation delivery. Reconfigure project URL/public key, server secrets, Auth origins and the paired extension build only after verifying the target. Record backup snapshot age, download/decryption/restore/validation time and actual recovery point/time. CI does not measure download, provider recreation or operator response.
 
-The CI rehearsal is called at the end of `npm run test:foundation:http`. It encrypts the populated real synthetic Auth/application database, restores into a new `atv2_restore_*` database, compares every included row plus owners/grants/RLS, verifies stored PDFs/private keys and rechecks administrator/bidder/unrelated-user access. It uses an ephemeral key which is never uploaded. Only redacted counts/hashes/timings are evidence; no plaintext database, session, password or private key is an artifact. Existing cluster roles are reused, so this is not proof of global-role reconstruction or a new hosted Auth service.
+The CI rehearsal is called at the end of `npm run test:foundation:http`. It encrypts the populated real synthetic Auth/application database, restores into a new `atv2_restore_*` database using the isolated cluster's `supabase_admin` maintenance role, compares every included row plus owners/grants/RLS, verifies stored PDFs/private keys and rechecks administrator/bidder/unrelated-user access. It uses an ephemeral key which is never uploaded. Only redacted counts/hashes/timings are evidence; no plaintext database, session, password or private key is an artifact. Existing cluster roles are reused, so this is not proof of global-role reconstruction or a new hosted Auth service. The first attempt using the limited `postgres` role failed on managed ownership; it did not lead to a production privilege change.
 
 ## Rollback and retention
 

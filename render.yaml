@@ -3,6 +3,7 @@ services:
   - type: web
     name: applicationtracker-pilot
     runtime: node
+    branch: codex/pilot-release
     plan: standard
     region: virginia
     autoDeployTrigger: off

@@ -31,6 +31,7 @@ try{
   if(!file||!/^atv2_restore_[a-z0-9_]+$/.test(process.env.PGDATABASE??''))throw Error('Restore only accepts an explicitly created, isolated atv2_restore_* database. It never clears a database.');
   const backup=await openBackup(file,key);
   try{
+   if(await query('select rolsuper from pg_roles where rolname=current_user;')!=='t')throw Error('Exact managed-object ownership restoration needs an isolated maintenance superuser. Do not grant this to hosted postgres; use the provider recovery workflow.');
    const count=await query("select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname not in ('pg_catalog','information_schema') and n.nspname not like 'pg_toast%' and c.relkind in ('r','p');");
    if(count!=='0')throw Error('Restore target contains user tables. Refusing to overwrite.');
    const {p,done}=client('pg_restore',['--single-transaction','--exit-on-error','--no-password','--dbname='+process.env.PGDATABASE]);p.stdout.resume();const observed=done;observed.catch(()=>{});

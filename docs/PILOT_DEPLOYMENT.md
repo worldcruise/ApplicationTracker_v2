@@ -116,7 +116,7 @@ Sign in at `/sign-in`; there is no self-registration page. An administrator invi
 
 ## Render deployment
 
-Install the [Render CLI](https://render.com/docs/cli) (reference checked against 2.30.0). Connect the GitHub repository and authorize its read access in the approved Render workspace. Review `render.yaml`, then create the service through **New Blueprint** with that file and enter the `sync: false` values privately when prompted. This is the one-time dashboard/account/secret step; no secret command-line flags are necessary. Do not enable production preview environments against the production database.
+Install the [Render CLI](https://render.com/docs/cli) (reference checked against 2.30.0). Connect the GitHub repository and authorize its read access in the approved Render workspace. Review `render.yaml`, select the `codex/pilot-release` source branch, then create the service through **New Blueprint** with that file and enter the `sync: false` values privately when prompted. This is the one-time dashboard/account/secret step; no secret command-line flags are necessary. The default branch may not contain this preparation yet. Do not enable production preview environments against the production database.
 
 After the account exists, exact operator commands are:
 
@@ -158,7 +158,7 @@ PILOT_SMOKE_SYNTHETIC_CONFIRMED=true
 node --env-file=.env.production.local --env-file=.env.smoke.local scripts/pilot-smoke.mjs
 ```
 
-The test separately checks service settings, web liveness, real password Auth, active membership, denied anonymous/unsupported client requests, a newly persisted synthetic candidate via the real API, direct authenticated RLS read and retained archive cleanup. It never submits an application or hard-deletes records. A failure after creation reports the synthetic candidate UUID for follow-up. It is also exercised against the isolated CI backend; hosted execution remains pending. Missing tables, inactive membership, invalid credentials or network failures must be investigated separately, never worked around with service-role product queries.
+The test uses only public production configuration and its synthetic user's password; it does not require or use an administrative key/signing secret. A dedicated smoke env file may omit those server secrets. It separately checks service settings, web liveness, real password Auth, active membership, denied anonymous/unsupported client requests, a newly persisted synthetic candidate via the real API, direct authenticated RLS read and retained archive cleanup. It never submits an application or hard-deletes records. A failure after creation reports the synthetic candidate UUID for follow-up; a timeout before receiving that UUID may have committed and needs directory inspection, not blind write replay. It is also exercised against the isolated CI backend; hosted execution remains pending. Missing tables, inactive membership, invalid credentials or network failures must be investigated separately, never worked around with service-role product queries.
 
 Then complete [RELEASING.md](RELEASING.md) and native Chrome/Windows checks in [ACCEPTANCE.md](ACCEPTANCE.md). Record service/project/domain, release commit/tag, migration checksums, signing-key ID (never value), provider quota snapshot, operator/time, smoke evidence, backup receipt/restore measurement and every manual result in [DEPLOYMENT_RESULTS.md](DEPLOYMENT_RESULTS.md).
 
