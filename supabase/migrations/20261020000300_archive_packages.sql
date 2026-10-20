@@ -11,6 +11,7 @@ grant select(id,organization_id,raw_json,parsed_content,template_snapshot,render
 grant select(id,organization_id,body_text,template_snapshot,render_receipt,reviewed) on public.cover_letter_versions to app_archive_exporter;
 create policy archive_export on public.resume_versions for select to app_archive_exporter using(exists(select 1 from public.documents d where d.organization_id=resume_versions.organization_id and d.resume_version_id=resume_versions.id and private.document_access(d.organization_id,d.id,true)));
 create policy archive_export on public.cover_letter_versions for select to app_archive_exporter using(exists(select 1 from public.documents d where d.organization_id=cover_letter_versions.organization_id and d.cover_letter_version_id=cover_letter_versions.id and private.document_access(d.organization_id,d.id,true)));
+grant execute on function private.bidder_grants(uuid,uuid,uuid,text) to app_archive_exporter;
 grant create on schema public to app_archive_exporter;
 create function public.export_archive_source(p_org uuid,p_document uuid) returns jsonb language plpgsql security definer set search_path='' as $$
 declare d public.documents; result jsonb;
@@ -27,7 +28,7 @@ begin
  end if;
  if result is null then raise exception 'PACKAGE_SOURCE_UNSAFE' using errcode='42501';end if;
  return result||jsonb_build_object('documentId',d.id,'candidateId',d.candidate_id,'kind',d.kind,'sourceId',coalesce(d.resume_version_id,d.cover_letter_version_id),'pdfSha256',d.pdf_sha256,'pageCount',d.page_count,'schemaVersion',d.schema_version,
-  'bidIds',coalesce((select jsonb_agg(distinct bid_id) from public.bid_document_links where organization_id=p_org and document_id=d.id),'[]'::jsonb));
+  'bidIds',coalesce((select jsonb_agg(distinct bid_id) from public.bid_document_links where organization_id=p_org and document_id=d.id and (private.reads_candidate(p_org,d.candidate_id) or exists(select 1 from private.bidder_grants(p_org,d.candidate_id,bid_id,'document.export')))),'[]'::jsonb));
 end $$;
 alter function public.export_archive_source(uuid,uuid) owner to app_archive_exporter;
 revoke create on schema public from app_archive_exporter;
@@ -39,7 +40,7 @@ grant create on schema public to app_permission_reader;
 create function public.archive_bid_job(p_org uuid,p_bid uuid,p_document uuid) returns jsonb language sql stable security definer set search_path='' as $$
  select jsonb_build_object('candidateId',b.candidate_id,'teamId',b.team_id,'company',b.company_name,'title',b.job_title,'url',coalesce(b.job_url,''),'description',b.job_description,'externalId',coalesce(b.external_id,''))
  from public.bids b where b.organization_id=p_org and b.id=p_bid and private.org_role(p_org) is not null and
- (private.reads_bid(p_org,p_bid) or exists(select 1 from public.bid_document_links l where l.organization_id=p_org and l.bid_id=p_bid and l.document_id=p_document and private.document_access(p_org,p_document,true)))
+ (private.reads_bid(p_org,p_bid) or exists(select 1 from public.bid_document_links l where l.organization_id=p_org and l.bid_id=p_bid and l.document_id=p_document and private.document_access(p_org,p_document,true) and exists(select 1 from private.bidder_grants(p_org,b.candidate_id,b.id,'document.export'))))
 $$;
 alter function public.archive_bid_job(uuid,uuid,uuid) owner to app_permission_reader;
 revoke create on schema public from app_permission_reader;
