@@ -47,5 +47,5 @@ export async function synchronizeOperation(api:ExtensionApi,id:string,actor:stri
   }catch(e){await journal.stage(id,"databaseSync",e instanceof ExtensionApiError&&e.status>0&&e.status<500?"failed":"unknown",e instanceof Error?e.message:"No confirmed synchronization result.");throw e;}
  });
 }
-export function exportFilename(op:ExtensionOperation){const safe=(v:string)=>v.normalize("NFKC").replace(/[\u0000-\u001f<>:"/\\|?*]/g,"_").replace(/[. ]+$/g,"").slice(0,40)||"Unknown";return `${op.kind==="resume"?"Resume":"CoverLetter"}_${safe(op.input.snapshot.fullName??"Candidate")}_${safe(op.input.assembly?.job.company??"Letter")}_${op.createdAt.slice(0,10)}__${op.id}.pdf`;}
+export function exportFilename(op:ExtensionOperation){const safe=(v:string)=>v.normalize("NFKC").replace(/[\u0000-\u001f<>:"/\\|?*]/g,"_").replace(/[. ]+$/g,"").slice(0,40)||"Unknown";return `${op.kind==="resume"?"Resume":"CoverLetter"}_${safe(op.input.snapshot.fullName??"Candidate")}_${safe(op.input.assembly?.job.company??"Letter")}_${safe(op.input.assembly?.job.title??"Letter")}_${op.createdAt.slice(0,10)}__${op.id}.pdf`;}
 export async function checkedBytes(op:ExtensionOperation){if(!op.pdf||await sha256(op.pdf.bytes)!==op.pdf.sha256)throw Error("Generate and verify the frozen PDF first.");return op.pdf.bytes.slice();}
