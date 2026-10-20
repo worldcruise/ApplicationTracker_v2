@@ -10,7 +10,7 @@ create policy archive_export on public.bid_document_links for select to app_arch
 grant select(id,organization_id,assembly_id,raw_json,parsed_content,template_snapshot,render_receipt,reviewed) on public.resume_versions to app_archive_exporter;
 grant select(id,organization_id,profile_revision) on public.prompt_assemblies to app_archive_exporter;
 create policy archive_export on public.prompt_assemblies for select to app_archive_exporter using(exists(select 1 from public.resume_versions r where r.organization_id=prompt_assemblies.organization_id and r.assembly_id=prompt_assemblies.id));
-grant select(id,organization_id,body_text,template_snapshot,render_receipt,reviewed) on public.cover_letter_versions to app_archive_exporter;
+grant select(id,organization_id,bid_id,body_text,template_snapshot,render_receipt,reviewed) on public.cover_letter_versions to app_archive_exporter;
 create policy archive_export on public.resume_versions for select to app_archive_exporter using(exists(select 1 from public.documents d where d.organization_id=resume_versions.organization_id and d.resume_version_id=resume_versions.id and private.document_access(d.organization_id,d.id,true)));
 create policy archive_export on public.cover_letter_versions for select to app_archive_exporter using(exists(select 1 from public.documents d where d.organization_id=cover_letter_versions.organization_id and d.cover_letter_version_id=cover_letter_versions.id and private.document_access(d.organization_id,d.id,true)));
 grant execute on function private.bidder_grants(uuid,uuid,uuid,text) to app_archive_exporter;
@@ -24,9 +24,9 @@ begin
  if d.kind='resume' then
   select jsonb_build_object('profileRevision',(select profile_revision from public.prompt_assemblies where organization_id=p_org and id=r.assembly_id),'rawJson',r.raw_json,'template',r.template_snapshot,'render',r.render_receipt) into result from public.resume_versions r where r.id=d.resume_version_id and r.organization_id=p_org and r.reviewed
    -- A bidder must never receive hidden, unsupported raw JSON properties. Do not rewrite the original.
-   and (private.org_role(p_org)<>'bidder' or r.raw_json::jsonb=r.parsed_content);
+   and (private.org_role(p_org)<>'bidder' or ((r.raw_json is json object with unique keys) and r.raw_json::jsonb=r.parsed_content));
  else
-  select jsonb_build_object('text',l.body_text,'template',l.template_snapshot,'render',l.render_receipt) into result from public.cover_letter_versions l where l.id=d.cover_letter_version_id and l.organization_id=p_org and l.reviewed;
+  select jsonb_build_object('text',l.body_text,'boundBidId',l.bid_id,'template',l.template_snapshot,'render',l.render_receipt) into result from public.cover_letter_versions l where l.id=d.cover_letter_version_id and l.organization_id=p_org and l.reviewed;
  end if;
  if result is null then raise exception 'PACKAGE_SOURCE_UNSAFE' using errcode='42501';end if;
  return result||jsonb_build_object('documentId',d.id,'candidateId',d.candidate_id,'kind',d.kind,'sourceId',coalesce(d.resume_version_id,d.cover_letter_version_id),'pdfSha256',d.pdf_sha256,'pageCount',d.page_count,'schemaVersion',d.schema_version,
@@ -151,6 +151,7 @@ begin
   if jsonb_array_length(ids)>1 then raise exception 'DUPLICATE_JOB';end if;
   if jsonb_array_length(ids)=1 then target:=(ids->>0)::uuid;end if;
  end if;
+ if (l->>'boundBidId') is not null and (l->>'boundBidId')::uuid is distinct from target then raise exception 'LETTER_BID_MISMATCH' using errcode='22023';end if;
  if target is not null then
   job:=public.archive_bid_job(org,target,doc);if job is null or job->>'candidateId'<>cand::text then raise exception 'FORBIDDEN' using errcode='42501';end if;
   if (f->>'existingBidId') is not null and job is distinct from e->'existingJob' then raise exception 'ARCHIVE_HISTORY_CHANGED' using errcode='40001';end if;

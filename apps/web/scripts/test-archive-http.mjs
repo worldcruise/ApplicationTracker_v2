@@ -8,14 +8,15 @@ export async function testArchiveHTTP({call,command,identities,org,team,assert,r
  const job={company:"Synthetic Archive Company",title:"Engineer",url:"https://jobs.example.invalid/jobs/archive-1",description:"Synthetic archive opportunity",externalId:"archive-1"};
  const assembly=await call(m,url("/prompt-assemblies"),{candidateId:candidate,profileRevision:2,job:{company:job.company,title:job.title,description:job.description}});assert(assembly.status===200,"Archive assembly freezes facts");
  const review={experienceIds:[],educationIds:[],claims:{}},renderedAt="2026-10-20T12:00:00.000Z";
- async function document(extra={}){
-  const rawJson=" \n"+JSON.stringify({company:job.company,title:job.title,summary:profile.professionalSummary,skills:[],experience:[],education:[],...extra},null,2)+"\n";
+ async function document(extra={},original){
+  const rawJson=original??" \n"+JSON.stringify({company:job.company,title:job.title,summary:profile.professionalSummary,skills:[],experience:[],education:[],...extra},null,2)+"\n";
   const rendered=await call(m,url("/resume-renders"),{assemblyId:assembly.data.id,rawJson,review,renderedAt});assert(rendered.status===200,"Archive PDF renders");
   const payload={operationId:randomUUID(),assemblyId:assembly.data.id,schemaVersion:1,rawJson,review,render:{sha256:rendered.data.sha256,pageCount:rendered.data.pageCount,rendererVersion:rendered.data.rendererVersion,renderedAt}};
   const source=await call(m,url("/resume-versions"),payload,undefined,{"Idempotency-Key":payload.operationId});assert(source.status===200,"Archive original source persists");
   const doc=await call(m,url("/documents"),{kind:"resume",sourceVersionId:source.data.id});assert(doc.status===200,"Archive frozen PDF stores");return {rawJson,doc:doc.data,operationId:payload.operationId};
  }
  const frozen=await document(),unsafe=await document({privateUnsupported:"PRIVATE UNRENDERED VALUE"});
+ const duplicated=await document({},'{"summary":"PRIVATE UNRENDERED DUPLICATE",'+JSON.stringify(JSON.parse(frozen.rawJson)).slice(1));assert(duplicated.doc.reviewed,"Duplicate-key fixture has a reviewed rendered projection");
  const exported=await call(m,url("/documents/"+frozen.doc.id+"/archive-source"));assert(exported.status===200&&exported.data.rawJson===frozen.rawJson,"Authorized original JSON preserves whitespace");const bundle=exported.data;
  assert(bundle.profileRevision===2,"Prepared source retains its immutable profile revision without exposing a snapshot");
  const letterInput={candidateId:candidate,profileRevision:2,templateVersionId:bundle.template.id,bodyText:profile.professionalSummary,review,renderedAt};
@@ -39,14 +40,21 @@ export async function testArchiveHTTP({call,command,identities,org,team,assert,r
  assert((await call(identities.leaderBeta,url("/documents/"+frozen.doc.id+"/archive-source"))).status===403,"Other team cannot export archive source");
  const forged=await m.client.rpc("save_archive_package",{p_envelope:JSON.stringify({input:first}),p_key_id:"primary",p_signature:"00".repeat(32),p_request:randomUUID()});assert(!!forged.error,"Direct forged synchronization cannot bypass API validation");
  const mutation=await m.client.from("archive_operations").insert({organization_id:org,operation_id:randomUUID()});assert(!!mutation.error,"Archive ledger has no direct user mutation grant");
- for(const doc of [frozen.doc,unsafe.doc,letterDoc.data])assert((await call(a,url("/documents/"+doc.id+"/links"),{bidId:receipt.bidId})).status===200,"Manager links prepared artifact");
+ for(const doc of [frozen.doc,unsafe.doc,duplicated.doc,letterDoc.data])assert((await call(a,url("/documents/"+doc.id+"/links"),{bidId:receipt.bidId})).status===200,"Manager links prepared artifact");
  const hidden=await command(a,org,{command:"createDraftBid",candidateId:candidate,companyName:"Synthetic Private Other Opportunity",jobTitle:"Engineer"});assert((await call(a,url("/documents/"+frozen.doc.id+"/links"),{bidId:hidden.id})).status===200,"Same frozen document may be linked to an unrelated bid");
+ const boundPayload={...letterPayload,operationId:randomUUID(),bidId:hidden.id};
+ const boundSource=await call(m,url("/cover-letter-versions"),boundPayload,undefined,{"Idempotency-Key":boundPayload.operationId});assert(boundSource.status===200,"Bid-bound letter source persists");
+ const boundDocument=await call(m,url("/documents"),{kind:"cover_letter",sourceVersionId:boundSource.data.id});assert(boundDocument.status===200,"Bid-bound letter artifact stores");
+ const wrongLetter=await input();wrongLetter.existingBidId=receipt.bidId;wrongLetter.coverLetter={reference:{kind:"document",documentId:boundDocument.data.id},text:profile.professionalSummary};
+ assert((await save(m,wrongLetter)).status===422,"A letter bound to another bid cannot be attached to this archive receipt");
  const grant=await command(a,org,{command:"grantBidderAccess",userId:b.id,candidateId:null,bidId:receipt.bidId,capability:"document.export",allowEmail:false,allowPhone:false,expiresAt:null});
  const safe=await call(b,url("/documents/"+frozen.doc.id+"/archive-source"));assert(safe.status===200&&safe.data.rawJson===frozen.rawJson,"Export-only bidder receives only the exact rendered original source");
  assert(!JSON.stringify(safe.data).includes("PRIVATE ARCHIVE PROFILE")&&!JSON.stringify(safe.data).includes("snapshot"),"Prepared source projection excludes unrestricted profile snapshots");
  assert(safe.data.bidIds.length===1&&safe.data.bidIds[0]===receipt.bidId,"Prepared export does not reveal other bids sharing the document");
  assert((await call(b,url("/documents/"+frozen.doc.id+"/archive-source")+"&bidId="+hidden.id)).status===403,"A link to the same PDF cannot grant another bid's job details");
  assert((await call(b,url("/documents/"+unsafe.doc.id+"/archive-source"))).status===403,"Bidder cannot receive unrendered unsupported JSON fields");
+ assert((await call(b,url("/documents/"+duplicated.doc.id+"/archive-source"))).status===403,"Duplicate JSON keys cannot conceal unrendered data in bidder package export");
+ assert((await call(b,url("/documents/"+duplicated.doc.id+"/pdf"))).status===200,"Authorized frozen PDF export remains available without exposing duplicate raw values");
  assert((await b.client.from("resume_versions").select("raw_json")).data?.length===0,"Prepared export grants no source-table read access");
  const bidderInput=await input();bidderInput.actorId=b.id;bidderInput.existingBidId=receipt.bidId;
  const bidderSaved=await save(b,bidderInput);assert(bidderSaved.status===200&&bidderSaved.data.bidId===receipt.bidId,"Export-only bidder archives an existing frozen version without editing bid content");

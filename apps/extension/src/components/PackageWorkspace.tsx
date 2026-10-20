@@ -1,5 +1,5 @@
-import {useEffect,useRef,useState} from "react";
-import type {FrozenDocument,FrozenPackageInput,FrozenTemplate,ReviewedJobContext} from "@candidate/contracts";
+import {memo,useEffect,useRef,useState} from "react";
+import type {FrozenDocument,FrozenPackageInput,PreparedPackageSource,ReviewedJobContext} from "@candidate/contracts";
 import {historyHash,validateHistoryContext} from "@candidate/domain";
 import type {ExtensionApi} from "../api";
 import {operationJournal,type ExtensionOperation} from "../journal";
@@ -9,9 +9,10 @@ import {packageProduction} from "../package-production";
 import {localStore} from "../local-store";
 import {chooseDirectory,renewDirectory,restoreDirectory,type DirectorySelection} from "../directory";
 import {PdfPreview} from "./PdfPreview";
-interface Bundle {candidateId:string;profileRevision:number;rawJson?:string;text?:string;pdfSha256:string;pageCount:number;template:FrozenTemplate;render:{rendererVersion:string;renderedAt:string};bidIds:string[];job?:ReviewedJobContext&{candidateId:string}}
+type Bundle=PreparedPackageSource;
 interface Draft {revision:number;resume:string;letter:string;context:ReviewedJobContext;existingBidId:string;intent:string;capturedAt?:string|null}
 const blank=():Draft=>({revision:0,resume:"",letter:"",context:{company:"",title:"",url:"",description:"",externalId:""},existingBidId:"",intent:"current"});
+const FrozenPdf=memo(function FrozenPdf({operation}:{operation:PackageOperation}){return <PdfPreview sample={{bytes:operation.pdf}}/>;},(a,b)=>a.operation.id===b.operation.id&&a.operation.input.resume.pdfSha256===b.operation.input.resume.pdfSha256);
 export function PackageWorkspace({api,actor,org,candidate,name,bidder}:{api:ExtensionApi;actor:string;org:string;candidate:string;name:string;bidder:boolean}){
  const [draft,setDraft]=useState<Draft>(blank),[ready,setReady]=useState(false),[draftError,setDraftError]=useState("");
  const [sources,setSources]=useState<ExtensionOperation[]>([]),[documents,setDocuments]=useState<FrozenDocument[]>([]),[operations,setOperations]=useState<PackageOperation[]>([]),[selected,setSelected]=useState("");
@@ -42,14 +43,14 @@ export function PackageWorkspace({api,actor,org,candidate,name,bidder}:{api:Exte
    if(op.kind!=="resume"||!op.pdf||!analyzeOperation(op).review.reviewed)throw Error("Choose a reviewed, already generated frozen resume. Unsupported claims remain blocked.");
    pdf=new Uint8Array(op.pdf.bytes);resume={reference:{kind:"operation",operationId:op.id},rawJson:op.input.rawJson,pdfSha256:op.pdf.sha256,pageCount:op.pdf.pageCount,schemaVersion:1,profileRevision:op.input.snapshot.rowVersion,template:op.input.template,rendererVersion:op.pdf.rendererVersion,renderedAt:op.pdf.renderedAt};
   }else if(draft.resume.startsWith("doc:")){
-   const id=draft.resume.slice(4),b=await api.request<Bundle>("documents/"+id+"/archive-source"+query,options);if(b.candidateId!==candidate||typeof b.rawJson!=="string")throw Error("Choose a frozen resume belonging to this candidate.");
+   const id=draft.resume.slice(4),b=await api.request<Bundle>("documents/"+id+"/archive-source"+query,options);if(b.candidateId!==candidate||b.kind!=="resume")throw Error("Choose a frozen resume belonging to this candidate.");
    const p=await api.request<{base64:string;sha256:string}>("documents/"+id+"/pdf"+query,options);pdf=Uint8Array.from(atob(p.base64),c=>c.charCodeAt(0));if(await historyHash(pdf)!==b.pdfSha256||p.sha256!==b.pdfSha256)throw Error("Prepared PDF integrity check failed. Ask the preparer for the original frozen bytes.");
    resume={reference:{kind:"document",documentId:id},rawJson:b.rawJson,pdfSha256:b.pdfSha256,pageCount:b.pageCount,schemaVersion:1,profileRevision:b.profileRevision,template:b.template,rendererVersion:b.render.rendererVersion,renderedAt:b.render.renderedAt};
    if(bidder&&!draft.existingBidId)throw Error("Select an authorized existing bid. Export permission does not grant opportunity creation.");
   }else throw Error("Choose an existing frozen resume; package saving does not generate content.");
   let coverLetter:FrozenPackageInput["coverLetter"]=null;
-  if(draft.letter.startsWith("op:")&&!bidder){const op=await operationJournal().get(draft.letter.slice(3),actor,org);if(op.kind!=="cover_letter"||!analyzeOperation(op).review.reviewed)throw Error("Choose a reviewed frozen letter.");coverLetter={reference:{kind:"operation",operationId:op.id},text:op.input.bodyText};}
-  else if(draft.letter.startsWith("doc:")){const id=draft.letter.slice(4),b=await api.request<Bundle>("documents/"+id+"/archive-source"+query,options);if(b.candidateId!==candidate||typeof b.text!=="string")throw Error("Choose a frozen letter belonging to this candidate.");coverLetter={reference:{kind:"document",documentId:id},text:b.text};}
+  if(draft.letter.startsWith("op:")&&!bidder){const op=await operationJournal().get(draft.letter.slice(3),actor,org);if(op.kind!=="cover_letter"||!analyzeOperation(op).review.reviewed)throw Error("Choose a reviewed frozen letter.");if(draft.existingBidId&&op.input.bidId&&op.input.bidId!==draft.existingBidId)throw Error("This letter belongs to another bid. Select the matching frozen letter.");coverLetter={reference:{kind:"operation",operationId:op.id},text:op.input.bodyText};}
+  else if(draft.letter.startsWith("doc:")){const id=draft.letter.slice(4),b=await api.request<Bundle>("documents/"+id+"/archive-source"+query,options);if(b.candidateId!==candidate||b.kind!=="cover_letter")throw Error("Choose a frozen letter belonging to this candidate.");if(draft.existingBidId&&b.boundBidId&&b.boundBidId!==draft.existingBidId)throw Error("This letter belongs to another bid. Select the matching frozen letter.");coverLetter={reference:{kind:"document",documentId:id},text:b.text};}
   const op=await journal.freeze({actorId:actor,organizationId:org,candidateId:candidate,candidateName:name||"Candidate",context,capturedAt:draft.capturedAt??null,resume,coverLetter,existingBidId:draft.existingBidId||null},pdf,draft.intent);
   setSelected(op.id);setOperations(old=>[op,...old.filter(o=>o.id!==op.id)]);await packageProduction(api).run(op);setMessage("Package attempts finished. Review each independent result below. Saving has not submitted an application.");
  }
@@ -65,13 +66,13 @@ export function PackageWorkspace({api,actor,org,candidate,name,bidder}:{api:Exte
   <div className="probe-actions"><button disabled={busy} onClick={()=>void action(async()=>setDirectory(await chooseDirectory()))}>Choose package archive root</button><button disabled={busy||!directory.handle} onClick={()=>void action(async()=>setDirectory(await renewDirectory(directory.handle!)))}>Renew package archive permission</button><button disabled={busy} onClick={()=>void action(async()=>setDirectory(await restoreDirectory()))}>Recheck package archive root</button></div><p>Archive root: {directory.handle?.name??"not selected"}; permission: {directory.permission}. Reopening does not prompt or replay writes.</p>
   <label>Recover frozen package<select aria-label="Recover frozen package" value={selected} onChange={e=>setSelected(e.target.value)}><option value="">Choose operation</option>{operations.map(o=><option key={o.id} value={o.id}>{o.input.createdAt} · {o.input.context.company} · {o.id}</option>)}</select></label>
   {current&&<section aria-label="Frozen package results"><p>Package operation: <code data-testid="package-operation-id">{current.id}</code></p><p>{current.input.context.company} · {current.input.context.title}</p><p>Validation: succeeded; PDF generation/retrieval: verified. SHA-256 <code>{current.input.resume.pdfSha256}</code></p>
-   <p data-testid="package-completion">{["local","database","reconciliation"].every(step=>current.outcomes[step as "local"|"database"|"reconciliation"].state==="succeeded")?"Package complete. No application has been submitted.":"Package incomplete. Retain this operation and reconcile its independent results."}</p>
+   <p data-testid="package-completion">{busy?"Checking package results. Each completed step is recorded independently.":["local","database","reconciliation"].every(step=>current.outcomes[step as "local"|"database"|"reconciliation"].state==="succeeded")?"Package complete. No application has been submitted.":"Package incomplete. Retain this operation and reconcile its independent results."}</p>
    {(["local","database","reconciliation","clipboard"] as const).map(step=><p key={step}>{step}: <strong data-testid={"package-"+step}>{current.outcomes[step].state}</strong> · {current.outcomes[step].attempts} attempts. {current.outcomes[step].error}</p>)}
    {current.nextRetryAt&&<p>Suggested retry after: {current.nextRetryAt}. Retries require your explicit action and reuse this operation. A pending step after reopening needs reconciliation; it is not proof of failure.</p>}
    <label>Relative archive path<input aria-label="Relative archive path" readOnly value={(current.root?.name?current.root.name+"/":"")+current.input.relativePath.join("/")} onFocus={e=>e.currentTarget.select()}/></label><p>This is a relative path beneath the authorized root. Select the field and copy manually if clipboard access fails.</p>
    <div className="probe-actions"><button disabled={busy} onClick={()=>void action(()=>packageProduction(api).run(current))}>Recover / retry original package</button><button disabled={busy} onClick={()=>void action(()=>packageProduction(api).run(current,{local:true,database:false}))}>Retry local package only</button><button disabled={busy} onClick={()=>void action(()=>packageProduction(api).run(current,{local:false,database:true}))}>Reconcile / retry original package synchronization</button><button disabled={busy||current.outcomes.local.state!=="succeeded"} onClick={()=>void action(()=>packageProduction(api).run(current,{local:false,database:false}))}>Reconcile package metadata and index</button><button disabled={busy||current.outcomes.local.state!=="succeeded"} onClick={()=>void action(()=>packageProduction(api).copy(current))}>Retry relative path copy</button></div>
    {current.result&&<p>Database bid: <code>{current.result.bidId}</code>. {current.result.reusedBid?"Existing opportunity retained.":"Draft opportunity created."} No submission was recorded.</p>}
-   <details><summary>Preview exact frozen package PDF</summary><PdfPreview sample={{bytes:current.pdf}}/></details>
+   <details><summary>Preview exact frozen package PDF</summary><FrozenPdf operation={current}/></details>
   </section>}
  </details>;
 }

@@ -16,4 +16,7 @@ select ok(exists(select 1 from pg_trigger where tgrelid='public.archive_operatio
 select ok(exists(select 1 from pg_trigger where tgrelid='public.bids'::regclass and tgname='archive_candidate_lock'),'legacy bid inserts serialize with archive duplicate checks');
 select ok(not has_table_privilege('authenticated','public.archive_device_observations','INSERT'),'local observations require the protected current-authorized command');
 select ok(not has_function_privilege('anon','public.record_archive_device(uuid,uuid,jsonb)','EXECUTE'),'anonymous device observations are denied');
+select ok(not ('{"summary":"private","summary":"rendered"}' is json object with unique keys),'raw duplicate properties cannot conceal unrendered text');
+select ok(not ('{"experience":[{"title":"private","title":"rendered"}]}' is json object with unique keys),'duplicate check includes nested objects');
+select ok(not ('{"summary":"private","\u0073ummary":"rendered"}' is json object with unique keys),'duplicate check decodes escaped property names');
 select * from finish();rollback;

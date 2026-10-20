@@ -2,13 +2,12 @@ import "server-only";
 import {createHash,createHmac} from "node:crypto";
 import {isDeepStrictEqual} from "node:util";
 import type {SupabaseClient} from "@supabase/supabase-js";
-import type {FrozenPackageInput,HistoryRecord,PackageReference,PackageSyncResult} from "@candidate/contracts";
+import type {FrozenPackageInput,HistoryRecord,PackageReference,PackageSyncResult,PreparedPackageSource} from "@candidate/contracts";
 import {validateResume,validTemplateLayout} from "@candidate/contracts";
 import {classifyHistory,identifyJob,normalizedText,validateHistoryContext} from "@candidate/domain";
 import {ApiFailure,databaseResult} from "@/lib/api/errors";
 import {uuid} from "@/lib/api/guards";
 import {strictObject} from "@/lib/candidates/input";
-export interface ArchiveSource {documentId:string;candidateId:string;profileRevision:number;kind:"resume"|"cover_letter";sourceId:string;rawJson?:string;text?:string;pdfSha256:string;pageCount:number;template:FrozenPackageInput["resume"]["template"];render:{rendererVersion:string;renderedAt:string};bidIds:string[]}
 async function phase<T>(name:string,work:Promise<T>){try{return await work;}catch(error){if(error instanceof ApiFailure&&error.status===403)throw new ApiFailure(403,"FORBIDDEN",name+": current resource permissions are required.");throw error;}}
 export function packageInput(value:unknown,actor:string,org:string):FrozenPackageInput {
  const b=strictObject(value,["version","operationId","actorId","organizationId","candidateId","deviceId","createdAt","candidateName","context","identifiers","relativePath","resume","coverLetter","existingBidId",...(value&&typeof value==="object"&&Object.hasOwn(value,"capturedAt")?["capturedAt"]:[])]);
@@ -31,7 +30,7 @@ export function packageInput(value:unknown,actor:string,org:string):FrozenPackag
  if(!(b.context as FrozenPackageInput["context"]).title.trim())throw new ApiFailure(422,"SCHEMA_INVALID","Review the job title before saving a package.");
  return b as unknown as FrozenPackageInput;
 }
-async function source(client:SupabaseClient,org:string,candidate:string,actor:string,ref:PackageReference,kind:"resume"|"cover_letter"){
+async function source<K extends PreparedPackageSource["kind"]>(client:SupabaseClient,org:string,candidate:string,actor:string,ref:PackageReference,kind:K):Promise<Extract<PreparedPackageSource,{kind:K}>>{
  let doc:string;
  if(ref.kind==="document")doc=ref.documentId;
  else {
@@ -40,8 +39,8 @@ async function source(client:SupabaseClient,org:string,candidate:string,actor:st
   const d=await databaseResult<{id:string}|null>(client.from("documents").select("id").eq("organization_id",org).eq(kind==="resume"?"resume_version_id":"cover_letter_version_id",version.id).maybeSingle());
   if(!d)throw new ApiFailure(409,"VERSION_CONFLICT","Store the frozen PDF before retrying this same package.");doc=d.id;
  }
- const result=await databaseResult<ArchiveSource>(client.rpc("export_archive_source",{p_org:org,p_document:doc}));
- if(result.candidateId!==candidate||result.kind!==kind)throw new ApiFailure(403,"FORBIDDEN","The frozen document does not belong to this candidate and document type.");return result;
+ const result=await databaseResult<PreparedPackageSource>(client.rpc("export_archive_source",{p_org:org,p_document:doc}));
+ if(result.candidateId!==candidate||result.kind!==kind)throw new ApiFailure(403,"FORBIDDEN","The frozen document does not belong to this candidate and document type.");return result as Extract<PreparedPackageSource,{kind:K}>;
 }
 export async function savePackage(client:SupabaseClient,input:FrozenPackageInput,requestId:string):Promise<PackageSyncResult>{
  const org=input.organizationId,actor=input.actorId;
