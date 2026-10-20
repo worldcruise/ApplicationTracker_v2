@@ -1,6 +1,7 @@
 import {randomUUID} from 'node:crypto';
 export async function testOperationsHTTP({call,command,identities,org,team,fixture,assert}) {
  const path=(resource,q='')=>`/${resource}?organizationId=${org}${q}`;
+ for(const resource of ['dashboard','processing','activity','operational-notifications'])assert((await call(null,path(resource))).status===401,'Anonymous operational endpoint denied');
  const load=async(who,q='')=>{const r=await call(who,path('dashboard',q));assert(r.status===200,`Operational report loads (${r.code??r.status})`);return r.data;};
  const roles=['adminA','leaderA','memberA','bidderA'];
  for(const name of roles){const who=identities[name];const d=await load(who);
@@ -69,7 +70,11 @@ export async function testOperationsHTTP({call,command,identities,org,team,fixtu
  assert((await call(l,path('operational-notifications/'+notice.id+'/read'),undefined,undefined,{},'POST')).status===403,'Supervisor cannot mark another recipient notice read');
  await command(a,org,{command:'revokeBidderAccess',grantId:grant});assert(!(await reports(b)).items.some(r=>r.operationId===own.operationId),'Revocation removes prior failure target from bidder reports');
  assert((await send(b,{...own,eventId:randomUUID()})).status===403,'Revoked bidder cannot report new work');
+ const ownCompany='&company='+encodeURIComponent('Synthetic Operational Reports');assert((await load(m,ownCompany)).counts.active_bids===1,'Assigned member sees their currently scoped workload');
  await command(l,org,{command:'changeAssignment',candidateId:candidate,userId:m.id,assign:false});assert(!(await reports(m)).items.some(r=>r.operationId===observation.operationId),'Assignment revocation also hides prior processing observations');
+ const afterRevocation=await load(m,ownCompany);assert(afterRevocation.counts.active_bids===0&&afterRevocation.detail.total===0,'Dashboard totals and detail scope both change after live assignment revocation');
+ const c=await call(l,path('candidates/'+candidate));const archived=await call(l,path('candidates/'+candidate+'/archive'),{archived:true},c.data.rowVersion);assert(archived.status===200,'Archive operational fixture with current row version');
+ const afterArchive=await load(l,ownCompany);assert(afterArchive.counts.active_candidates===0&&afterArchive.counts.active_bids===1,'Archived candidates leave active candidate totals while authorized bid history follows its own status definition');
  const activity=await call(m,path('activity'));assert(activity.status===200&&!activity.data.items.some(e=>Object.hasOwn(e,'redacted_change_summary')),'Activity projects identifiers/actions without arbitrary changed values');
  const visibleFailure={...observation,eventId:randomUUID(),operationId:randomUUID(),candidateId:fixture.candidate,bidId:fixture.bid,stage:'clipboard',state:'failed',code:'PROCESSING_FAILED'};assert((await send(m,visibleFailure)).status===200,'Visible synthetic browser failure recorded');
  return {company,candidate:fixture.candidate,reportOperationId:visibleFailure.operationId};

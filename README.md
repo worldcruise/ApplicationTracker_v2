@@ -1,5 +1,7 @@
 # Candidate Platform
 
+Role dashboards are available at `/workspace` and `/dashboard`. See the [operational workspace and metric definitions](docs/OPERATIONS.md) and the [full acceptance matrix](docs/ACCEPTANCE.md) for verified behavior and remaining release prerequisites. Hosted setup remains Docker-free; isolated CI handles database/RLS checks.
+
 An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. The web app uses hosted Supabase with SSR sessions, organization/team/assignment authorization, safe bidder projections, account administration and a versioned candidate profile editor. The extension provides authenticated Resume and Profile tabs with exact prompts, shared JSON validation/rendering, durable account-scoped drafts and independent export/synchronization results. Resume/template/letter production and bid/interview operations are implemented; hosted/manual acceptance remains explicit.
 
 ## Local setup

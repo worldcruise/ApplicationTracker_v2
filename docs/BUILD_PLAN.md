@@ -266,6 +266,8 @@ The operational-interface request is implemented in these scoped increments, reu
 | OP03 | Durable redacted failure observations and assignment notifications; depends on OP01–02. | §19–20 | Current target permissions on report/read, independent client outcomes, original operation IDs, owner/supervisor visibility and revocation checks. |
 | OP04 | Full §22 acceptance audit and isolated CI; depends on OP01–03 and AP. | §22 | Each of 20 base and 15 archive criteria plus every design gate has passed/failed/not yet verified evidence; fix blockers and identify remaining release prerequisites. |
 
+OP01–OP03 pass isolated acceptance. OP04 records the full matrix in [ACCEPTANCE.md](ACCEPTANCE.md); its final evidence pass is recorded in [PROGRESS.md](PROGRESS.md). Operational interface completion does not complete T058–T062 retention, recovery, deployment and manual release gates.
+
 | ID | Scoped task | Dependencies | Design sections | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | T054 | Build team, user, capability, and policy administration UI. | T014–T015, T018, T039 | D§3–5, 20 | Admins manage invite/deactivate/roles and scoped overrides; leaders manage only own team assignments/policy allowed by backend. No self-escalation; failure recovery and audit links are visible; settings reflect accepted policies. |

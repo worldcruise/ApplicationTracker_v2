@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { bidStatuses, dashboardMetrics, metricLabels, type DashboardItem, type DashboardMetric, type DashboardReport, type OrganizationScope } from "@candidate/contracts";
-import { readApi } from "../workspace/requests";
+import { readApi, ClientApiFailure } from "../workspace/requests";
 import { ProcessingPanel } from "./processing";
 const box = "grid gap-3 rounded border bg-white p-5";
 const input = "rounded border border-slate-300 bg-white p-2";
@@ -30,7 +30,7 @@ export function OperationalDashboard({ scope, actorId }: { scope: OrganizationSc
     let active = true;
     const q = new URLSearchParams(search); q.set("organizationId", org);
     setReportError("");
-    void readApi<DashboardReport>(`/api/v1/dashboard?${q}`).then(r => { if (active) setReport(r); }).catch(e => { if (active) setReportError(e.message); });
+    void readApi<DashboardReport>(`/api/v1/dashboard?${q}`).then(r => { if (active) setReport(r); }).catch(e => { if (active) { setReportError(e.message); if (e instanceof ClientApiFailure && [401, 403].includes(e.status)) setReport(null); } });
     return () => { active = false; };
   }, [org, search, refresh]);
   useEffect(() => {

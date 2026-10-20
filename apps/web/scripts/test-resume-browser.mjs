@@ -44,10 +44,12 @@ export async function testResumeBrowser({ org, candidate, identities, password }
     step = "uncertain synchronization retains exact PDF and original operation";
     await page.route("**/api/v1/resume-versions?*", route => route.request().method() === "POST" ? route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ requestId: "synthetic-failure", error: { code: "SERVICE_UNAVAILABLE", message: "Synthetic synchronization failure", fieldErrors: [], retryable: true } }) }) : route.continue());
     await page.getByRole("button", { name: "Save reviewed source", exact: true }).click(); await expect(page.getByTestId("outcome-databaseSync")).toHaveText("unknown"); await expect(page.getByTestId("outcome-localExport")).toHaveText("initiated"); await expect(page.getByTestId("pdf-hash")).toHaveText(hash); checks++;
+    await expect.poll(async()=>{const r=await page.request.get(`http://localhost:3000/api/v1/processing?organizationId=${org}&resolved=true`);const b=await r.json();return b.data?.items.some(x=>x.operationId===operation&&x.stage==='databaseSync'&&x.state==='unknown');}).toBeTruthy();
     await page.waitForTimeout(300); await page.reload(); await expect(page.getByTestId("outcome-databaseSync")).toHaveText("unknown"); await expect(page.getByTestId("operation-id")).toHaveText(operation); await expect(page.getByTestId("pdf-hash")).toHaveText(hash); checks++;
     await page.unroute("**/api/v1/resume-versions?*");
     step = "retry original frozen synchronization and historical view";
     await page.getByRole("button", { name: "Retry original synchronization", exact: true }).first().click(); await expect(page.getByTestId("outcome-databaseSync")).toHaveText("succeeded"); await expect(page.getByTestId("operation-id")).toHaveText(operation); await expect(page.getByTestId("pdf-hash")).toHaveText(hash); checks++;
+    await expect.poll(async()=>{const r=await page.request.get(`http://localhost:3000/api/v1/processing?organizationId=${org}&resolved=true`);const b=await r.json();return b.data?.items.some(x=>x.operationId===operation&&x.stage==='databaseSync'&&x.state==='succeeded');}).toBeTruthy();
     return checks;
   } catch {
     const ui = await page.locator('h1,h2,[role="alert"],[role="status"]').allTextContents().catch(() => []);

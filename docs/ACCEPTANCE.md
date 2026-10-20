@@ -1,0 +1,99 @@
+# Acceptance evidence
+
+Evaluated 20 October 2026 against [design §22](DESIGN.md#22-verification-and-acceptance), [PRD §22](../doc/PRD.md#22-acceptance-criteria) and [PRD §24.12](../doc/PRD.md#2412-acceptance-criteria). Original requirements remain unchanged. A feature passing synthetic isolated checks does not certify the hosted deployment or the Windows/Chrome manual matrix.
+
+Statuses: **passed** = the stated test has direct evidence; **failed** = an observed failure or known missing required implementation; **not yet verified** = the necessary service, platform, measurement or owner decision is unavailable. Mixed gates take the least complete status; detailed rows preserve evidence already obtained. No real candidate data or applications were used.
+
+## Evidence ledger
+
+| Evidence | Scope |
+| --- | --- |
+| E1 — [e04c087 isolated run](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39497468207) | 25 migrations from empty/reset; 262 pgTAP assertions; 53 unit tests; web/MV3 production builds; all nine templates and three-page resume/letter extraction/bounds/repeat hashes; 2,006 real Auth/API assertions; 84 actual Chromium checkpoints (including nine role-dashboard checkpoints). |
+| E2 — [archive milestone, fa0bdc5](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39478686624) | 24 migrations, 258 SQL assertions, 53 unit tests, 1,568 Auth/API assertions, 75 Chromium checkpoints. Seven package checkpoints use actual unpacked MV3, IndexedDB, OPFS, real shared API/RLS, browser restart, local-only/DB-only, lost committed responses and partial writes. Re-executed by E1. |
+| E3 — [3c36737 operational/security run](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39499506005) | 27 migrations, 276 SQL assertions, 55 unit tests, both production builds, pinned PDF regressions, 2,112 Auth/API assertions and 86 browser checkpoints. Processing scopes/replay/history/notifications and CSP/rate limits pass. Final added automatic-report/anonymous/live-revocation assertions are being rerun before closing OP04. |
+| E4 — inspectable checks | [foundation/API harness](../apps/web/scripts/test-foundation-http.mjs), [operational API checks](../apps/web/scripts/test-operations-http.mjs), [operational browser checks](../apps/web/scripts/test-operations-browser.mjs), [SQL checks](../supabase/tests), [package unit checks](../apps/extension/tests/package.test.ts), [package browser checks](../apps/web/scripts/test-package-browser.mjs), [Quick Check browser checks](../apps/web/scripts/test-history-browser.mjs). These describe assertions; execution evidence is E1–E3. |
+| E5 — manual prerequisites/runbooks | [hosted setup](HOSTED_SUPABASE.md), [extension setup](EXTENSION_WORKFLOW.md), [package recovery](ARCHIVE_PACKAGES.md), [Quick Check](QUICK_APPLICATION_CHECK.md), [operational definitions/setup](OPERATIONS.md), [decisions/register](BUILD_PLAN.md#requirements-comparison-and-decision-register). |
+
+## Twenty base criteria (PRD §22)
+
+| ID | Criterion | Status | Evidence and limits |
+| --- | --- | --- | --- |
+| B01 | Sign-in gives the correct permissions. | passed | E1 real Supabase Auth sessions, four roles, two organizations, unrelated teams; API/RLS allow/deny, live deactivation/reassignment/grant revocation. Hosted invite/recovery delivery and interactive session rotation remain separate manual gates. |
+| B02 | Admins manage users, roles and assignments. | passed | E1 provisioning/activation/deactivation/recovery states, admin role/team/grant commands, no self-escalation, last-admin protection, scoped leader assignments; operational browser opens the actual administration panel. Setup rosters are explicitly bounded at 100; larger roster pagination is a known interface limit. |
+| B03 | Authorized candidate creation/editing. | passed | E1 candidate API/browser persistence, four-field Ready decision, incomplete drafts, child ordering, concurrent conflict and archived-state tests. |
+| B04 | Canonical resume JSON structure. | passed | E1 original v1 schema, shared compiled validator, server/database enforcement; metadata remains outside content. |
+| B05 | Invalid JSON gives actionable messages. | passed | E1 malformed/empty/missing/unknown/deep/oversized/escaped inputs, field paths and raw original preservation. |
+| B06 | Preview reflects the chosen template. | passed | E1 all nine preset layouts, actual thumbnails/selection/preview; preview/export use the same pinned PDF bytes. |
+| B07 | Generate and save PDFs locally. | passed | E1 web download and unpacked-extension native download completion with byte hashes; OPFS close/read/hash verification. Native Windows directory picker/permission renewal is not certified by this row. |
+| B08 | Secure JSON and document metadata storage. | passed | E1 user-context API, forced RLS, immutable versions and exact attested PDF storage; export-only grants do not grant profile/source creation. Hosted signing-key registration/application migration remains required. |
+| B09 | Retry failed synchronization safely. | passed | E1 lost response after commit, original UUID/frozen payload, replay/different-payload rejection, reload/account isolation and independent outcomes. |
+| B10 | Schema and template version retained. | passed | E1 frozen profile/template/layout/assets/font/renderer metadata and stored PDF hashes; later changes leave earlier source/PDF snapshots unchanged. |
+| B11 | Extension Copy Prompt copies the assembled prompt. | passed | E1 actual clipboard bytes/hash equal exact preview/assembly, scoped prompts and original candidate facts. Denied clipboard remains independent. |
+| B12 | Cover letter save/version history. | passed | E1 immutable letter revisions, factual review, preview/export, exact stored-byte historical retrieval and current export permissions. |
+| B13 | Independent bid statuses/history. | passed | E1 fifteen statuses, transition guards, append-only revisions/history/submissions, two opportunities for one candidate, explicit resubmission/reapplication. |
+| B14 | Interview rounds belong to their bids. | passed | E1 composite constraints, bid-specific rounds, successor rules, schedule revisions, feedback history and bidder denial. Completion/outcome/overall bid state remain independent. |
+| B15 | Dashboard follow-ups/overdue tasks. | passed | E1 all four dashboard views; open due-before-asOf tasks, current RLS and identical total/detail definitions; operational browser paging/filter/reload tests. |
+| B16 | Backend role restrictions. | passed | E1 direct RPC/raw table/function privileges plus API tests for every role, team/org/assignment/grant scope. Token validation alone never grants membership. |
+| B17 | Important status/permission changes auditable. | passed | E1 append-only bid/submission/approval histories and redacted audits for role/grant/assignment changes; scoped activity API. A complete hosted audit/telemetry retention/export procedure is not established. |
+| B18 | Shared backend/validation for web and extension. | passed | E1 actual production `/api/v1`, same Auth identity, contracts/domain/renderer, ordinary authenticated RLS context; credentials stay out of capture/content scripts. |
+| B19 | Truthful partial failures. | passed | E1 independent validation/render/export/local/DB/reconciliation/clipboard outcomes, held sources, failed synchronization and unknown history. New central processing report acceptance is tracked under E3 and the operational gate below. |
+| B20 | Operate within available free-tier limits. | not yet verified | No deployment host/plan, current account quotas or commercial-use terms selected/reviewed. No 25-user/5,000-candidate/50,000-bid measurement on an agreed device. Free development operation does not establish production recovery, uptime or cost readiness. D07/D11 remain open. |
+
+## Fifteen archive criteria (PRD §24.12)
+
+| ID | Criterion | Status | Evidence and limits |
+| --- | --- | --- | --- |
+| A01 | Selected company triggers lookup from shortcut or menu. | not yet verified | E1 verifies both registered listeners route the same durable capture with real page selection; restricted-page fallback passes. Physical Ctrl+Shift+F/selection-menu gestures and shortcut conflicts on supported Windows Chrome remain manual. |
+| A02 | Capture URL and available job details. | passed | E1 actual page title/URL/selection/DOM/structured job extraction, bounded fallback and review/correction. Secrets/auth URL parameters are redacted. |
+| A03 | DB and archive checks execute concurrently. | passed | E1 held real API response/local OPFS branch and Promise.allSettled independent results; DB failure does not erase local success or vice versa. |
+| A04 | Company history and exact-job history separate. | passed | E1 company/exact/possible result sets and evidence; immutable historical submitted job details and authorized statuses. |
+| A05 | Detect packages without scanning the root. | passed | E1 direct linked company index and selected package lookup; no normal root enumeration. Missing/corrupt/unlinked indexes are unknown/repair-required, never successful absence. |
+| A06 | Save under the selected candidate/company directories. | not yet verified | E1 real cloned OPFS directory handles, collision-resistant candidate/company/operation paths and restart recovery pass. Native user-selected Windows root handle persistence/renewal remains manual. |
+| A07 | Required JobDetails/Resume PDF/original JSON files. | passed | E1 exact original whitespace JSON and same preview PDF bytes, closed/read-verified file hashes; metadata completeness only after every required file verifies. |
+| A08 | Optional cover letter saved. | passed | E1 frozen reviewed letter text; bid-bound letter mismatch denied; exact optional file bytes/hash and metadata. |
+| A09 | JSON/metadata synchronized to Supabase. | passed | E1 immutable source references and signed protected package sync with user-context RLS; dated device observation is labeled reported evidence rather than current-file proof. Hosted prerequisites remain E5. |
+| A10 | Prevent or flag duplicates. | passed | E1 concurrent original keys return one receipt; different keys serialize candidate/strong job checks; exact opportunity reuse, ambiguous duplicates require explicit selection; fingerprints never auto-merge. Reposting overrides/alias authority D08 remain unimplemented. |
+| A11 | Accurate partial failure and retry. | passed | E1 actual local-only/API-held, DB-only/interrupted local write, lost committed response, process restart and original-operation reconciliation. Physical disk-full/OS power-loss testing remains a separate gate. |
+| A12 | Copy correct directory path when supported. | passed | E1 actual clipboard value equals the labeled relative archive path (per PRD §24.10); denied clipboard preserves results and selectable manual-copy fallback. No absolute-path or OS-open claim. |
+| A13 | Never silently overwrite existing files. | passed | E1 closed-file hash comparison, immutable inputs/manifest ownership, nonmatching bytes conflict; matching interrupted prefixes recover from frozen bytes; same-day/title collision protection. Native Windows/platform file behavior remains below. |
+| A14 | All role access restrictions. | passed | E1 bidder prepared frozen `document.export` without source/profile/interview privilege; clean canonical raw JSON projection, hidden shared-document bid links, current revocation, actor/org/team isolation. |
+| A15 | Saving is not submission. | passed | E1 archive save/replay creates/reuses a Draft opportunity/receipt; no status transition/submission event. Actual submission requires an explicit separate authorized action and immutable document/job links. |
+
+## Design §22 release gates and concurrency
+
+| Gate | Status | Evidence / remaining action |
+| --- | --- | --- |
+| Access and identity | passed | E1 all roles and direct DB bypass attempts, two orgs/unrelated teams/reassignment/archive/revocation. New processing targets are under E3 pending final run. |
+| Content and rendering | passed | E1 malformed/empty/unknown/escaped/unsupported/long/Unicode/multipage inputs and all nine presets; factual mapping, target-company separation and unsupported facts blocked. |
+| Version history | passed | E1 immutable resume/letter/template/profile snapshots, approvals and submitted jobs; historical PDF hashes unchanged after later edits. |
+| Prompt correctness | passed | E1 exact preview/clipboard hash, scope assembly and untrusted JD treated as input, not authorization/control. |
+| Workflow integrity | passed | E1 transition matrix, self-review restrictions, stale writes, approval invalidation/profile-facts changes, exact document bindings, bid-specific rounds and explicit submissions. |
+| Capture and matching | not yet verified | E1 automated common capture, URL/company cases and failure states pass. Physical Windows gestures/support matrix pending (A01). D08 provider/alias/reposting policy remains open. |
+| Local package | not yet verified | E1 verified OPFS artifacts/indexes and collision/recovery tests pass. Native picker/root persistence and supported Windows Chrome matrix pending (A06). |
+| Failure and retry | not yet verified | E1 network-loss/replay/changed-key payload, process restart, denied directory, corrupt index and injected interrupted OPFS writes pass. Disk-full, hard OS power interruption and forced worker termination during each stage need physical testing. Business work is not entrusted to the worker. |
+| Clipboard and download truth | not yet verified | E1 real clipboard/native downloads, denied clipboard, interrupted-download state tests, relative labels/no false local success pass. Physical cancelled picker/download gestures on supported Windows Chrome remain manual. |
+| Operations and cost | failed | E1 dashboard scopes/counts/drill-downs pass. New processing/security tests are pending E3. An encrypted DB-plus-stored-PDF backup/restore rehearsal and measured recovery are missing; deployment quotas/terms/load targets and accepted D05/D07/D11 policies are unavailable. Production release is blocked. |
+| Concurrent same operation from two clients | passed | E1 one bid/version/receipt, original actor/key/payload binding. |
+| Same key, changed content | passed | E1 409 without result leakage or frozen-content replacement. |
+| Different keys, same strong job | passed | E1 serialized candidate lock, exact bid reuse or explicit ambiguous duplicate decision; no fingerprint-only merge. |
+| Changed approved documents/job/facts before submission | passed | E1 invalidation and fresh reviewed versions required; prior submitted snapshots retained. |
+| Timeout after real commit | passed | E1 receipt reconciliation returns original identifiers without a second create. |
+
+## Manual platform and production prerequisites
+
+| Check | Status | Required evidence/owner |
+| --- | --- | --- |
+| Hosted application migrations, signing key, synthetic account and Auth email configuration | not yet verified | Operator applies reviewed migrations, registers the server/database key, supplies a synthetic session and verifies tables/current RLS; no hosted mutation was performed by this milestone. Password recovery/invitation delivery requires the configured sender. |
+| Windows Chrome picker, restart, permission renewal, protected folders, multiple tabs/profiles/devices | not yet verified | Record exact Chrome/Windows versions and run E5 manual instructions. Use separate roots per device; Web Locks coordinate only one browser profile. |
+| Windows reserved names, long/Unicode paths and collision handling | not yet verified | Shared filename tests pass in E1; verify real native path writes through the extension on the agreed OS/root. OPFS is not this test. |
+| Disk full, permissions revoked mid-write, power loss and archive recovery | not yet verified | Physical failure injection and recovery preserve original UUID/bytes; no false completeness or automatic submission. |
+| PDF extraction and deterministic rendering | passed | E1 PDF.js extraction/every-page bounds, repeat hashes for three-page resume/letter and nine presets. Cross-device retrieval additionally requires successfully stored original bytes, same backend and current export authorization. |
+| Two-device historical retrieval/reproduction | not yet verified | Stored bytes/hash retrieval is tested in E1; second physical device/hosted service is untested. Without stored bytes retain exact renderer/dependencies/fonts/template/profile/review, or fail without substitution. |
+| Retention/purge and preservation authority | failed | Archiving preserves history; no production purge job is implemented because actual retention/preservation/local-export rules (D05) are not approved. Data owner must decide before onboarding; do not invent or run a destructive purge. |
+| Encrypted database/assets backup and isolated restore | failed | No provider/backup process or accepted RPO/RTO exists; migrations plus synthetic reset are not a backup restore. Include stored PDF bytes/keys under a secure recovery process and measure actual recovery (D06/D07). |
+| Load/latency/PDF targets | not yet verified | 25 concurrent users, 5,000 candidates, 50,000 bids; p95 scoped reads <1s and three-page rendering <5s on an agreed device remain proposed, unmeasured targets (D11). |
+| Host commercial terms/account quotas/monitoring | not yet verified | Select deployment/runtime plan, verify live account quotas/terms, cost/egress/storage/Auth budgets and alert ownership. No provider was selected or deployment authorized. |
+| Production security/operator controls | not yet verified | Existing CSRF, CORS, validation and RLS pass E1; nonce CSP/rate checks pending E3. Verify HTTPS, host headers/edge abuse controls, access review, audit/telemetry retention, branch protection and supported-client/version rollout policy. |
+| Large administrative rosters / mixed team roles | not yet verified | Current four-role management is verified within explicit 100-entry setup lists. Add larger-roster pagination if required; arbitrary overrides/mixed team roles require the recorded permission contract decision FN-OPEN01. |
+
+Release disposition: **not ready for production onboarding**. Operational interface completion is distinct from release certification. Remaining unverified platform/deployment gates and known missing retention/recovery work are not waived. Continue with the next scoped task recorded in [PROGRESS.md](PROGRESS.md); owner decisions and manual evidence must be recorded before changing these statuses.

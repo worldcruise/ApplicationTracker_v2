@@ -134,6 +134,8 @@ test("changed provisioning payload fails before any Auth action", async () => {
 });
 
 test("protected API responses and errors are uncached, origin-specific and redacted", async () => {
+  const limited = await api(request(), async () => { throw new ApiFailure(429, "RATE_LIMITED", "Wait before retrying.", true); });
+  assert.equal(limited.status, 429); assert.equal(limited.headers.get("retry-after"), "60"); assert.match(limited.headers.get("cache-control") ?? "", /no-store/);
   const response = await api(request({ Origin: "http://localhost:3000" }), async () => ({ rowVersion: 4 }));
   assert.match(response.headers.get("cache-control")!, /private.*no-store/);
   assert.equal(response.headers.get("etag"), '"4"');
