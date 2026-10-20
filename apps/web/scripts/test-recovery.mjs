@@ -31,7 +31,7 @@ export async function testRecovery({identities,assert}){
   sql('postgres',`create database ${target} template template0;`);
   const p=spawn('docker',['exec','-i',container,'pg_restore','-U','postgres','-d',target,'--single-transaction','--exit-on-error'],{stdio:['pipe','ignore','pipe']});
   p.stderr.resume();
-  const done=new Promise((ok,fail)=>{p.once('error',fail);p.once('exit',c=>c===0?ok():fail(Error('Isolated pg_restore failed; database contents and credentials suppressed.'))));});done.catch(()=>{});
+  const done=new Promise((ok,fail)=>{p.once('error',fail);p.once('exit',c=>c===0?ok():fail(Error('Isolated pg_restore failed; database contents and credentials suppressed.')));});done.catch(()=>{});
   try{await frozen.pipeTo(p.stdin);await done;}catch(e){p.kill();throw e;}
  }finally{await frozen.close();}
  const restoreMs=Date.now()-restoreStarted,after=fingerprints(target);

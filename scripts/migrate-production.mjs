@@ -1,0 +1,11 @@
+import {spawn} from 'node:child_process';
+import {readFile,readdir} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+const ref=process.env.PRODUCTION_SUPABASE_PROJECT_REF,action=process.argv[2];
+if(!/^[a-z]{20}$/.test(ref??'')||ref==='xsyxlxpsglhkmvzlmhih')throw Error('Set the separate production project reference. Development is forbidden.');
+if(!['plan','apply'].includes(action))throw Error('Use plan or apply.');
+const files=(await readdir('supabase/migrations')).filter(f=>/^\d{14}_.*\.sql$/.test(f)).sort();
+console.log(JSON.stringify({target:ref,action,migrations:await Promise.all(files.map(async name=>({name,sha256:createHash('sha256').update(await readFile('supabase/migrations/'+name)).digest('hex')})))}));
+const args=['exec','--no','--','supabase','db','push','--project-ref',ref,'--skip-vault',...(action==='plan'?['--dry-run']:[])];
+const child=spawn(process.platform==='win32'?'npm.cmd':'npm',args,{stdio:'inherit',shell:process.platform==='win32',env:process.env});
+child.on('error',()=>{console.error('Supabase CLI could not start.');process.exitCode=1;});child.on('exit',code=>{process.exitCode=code??1;});

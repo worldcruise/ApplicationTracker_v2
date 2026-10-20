@@ -22,6 +22,7 @@ import { testPackageBrowser } from "./test-package-browser.mjs";
 import { testOperationsHTTP } from "./test-operations-http.mjs";
 import { testOperationsBrowser } from "./test-operations-browser.mjs";
 import { testRecovery } from "./test-recovery.mjs";
+import { pilotSmoke } from "../../../scripts/lib/pilot-smoke.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -375,6 +376,9 @@ try {
   }
   inspect(`${web}/.next/static`);
   inspect(`${root}/apps/extension/dist`);
+  step = "reusable pilot smoke against isolated synthetic backend";
+  const smoke=await pilotSmoke({supabaseUrl:url,publishableKey:publicKey,appOrigin:'http://localhost:3000',email:identities.adminA.email,password:replacement,organizationId:orgA,teamId:teamA});
+  expect(smoke.checks===11,'All eleven reusable pilot smoke checkpoints pass');console.log(JSON.stringify({pilotSmoke:smoke}));
   step = "encrypted backup and isolated restore";
   await testRecovery({identities,assert:expect});
   console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "86 headless Chromium checkpoints including role dashboards, CSP, unpacked MV3 Quick Check and package recovery; hosted native shortcut/menu and Windows filesystem gates pending" }));
