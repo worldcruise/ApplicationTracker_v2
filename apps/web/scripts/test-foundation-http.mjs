@@ -101,7 +101,7 @@ try {
     expect(/no-store/.test(response.headers.get("cache-control") ?? ""), "API responses are no-store");
     const envelope = await response.json();
     expect(typeof envelope.requestId === "string", "API response has request ID");
-    return { status: response.status, data: envelope.data, code: envelope.error?.code, currentVersion: envelope.error?.currentVersion, fieldErrors: envelope.error?.fieldErrors };
+    return { status: response.status, data: envelope.data, code: envelope.error?.code, message:envelope.error?.message, currentVersion: envelope.error?.currentVersion, fieldErrors: envelope.error?.fieldErrors };
   }
   async function command(identity, organizationId, body, version, status = 200) {
     if (body.command === "changeAssignment" && version === undefined) {

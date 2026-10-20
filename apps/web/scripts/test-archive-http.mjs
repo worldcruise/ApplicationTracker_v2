@@ -28,7 +28,7 @@ export async function testArchiveHTTP({call,command,identities,org,team,assert,r
   // Only a controlled SQL error classification is reported; credentials/envelope/signature never print.
   assert(!diagnostic.error,`Archive SQL diagnostic (${diagnostic.error?.code}): ${diagnostic.error?.message}`);
  }
- for(const result of results)assert(result.status===200,`Concurrent archive save succeeds (${result.status}/${result.code??"OK"})`);
+ for(const result of results)assert(result.status===200,`Concurrent archive save succeeds (${result.status}/${result.code??"OK"}): ${result.message}`);
  const receipt=results[0].data;assert(receipt.bidId===results[1].data.bidId,"Concurrent distinct operations reuse one strong matching bid");
  assert(results.filter(x=>x.data.reusedBid).length===1,"Exactly one concurrent operation creates the draft");
  const repeated=await Promise.all([save(m,first),save(m,first)]);assert(repeated.every(r=>r.status===200&&JSON.stringify(r.data)===JSON.stringify(receipt)),"Repeated click or lost-response replay returns the same receipt");
