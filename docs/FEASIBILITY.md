@@ -2,6 +2,8 @@
 
 This document preserves the original F001 Phase 0 evidence and its then-pending gates. The later EX01–EX03 [production Resume/Profile workflow](EXTENSION_WORKFLOW.md) supersedes its shell UI instructions and several capability limitations; see the dated update below. Original measurements and unexecuted Windows/PKCE gates remain explicit.
 
+AP01–AP03 subsequently adds [package saving and recovery](ARCHIVE_PACKAGES.md). Its real isolated backend and unpacked Chromium/OPFS evidence is recorded in [PROGRESS.md](PROGRESS.md); native Windows picker/renewal, physical interruption and hosted-user acceptance remain separate manual gates.
+
 Updated 17 October 2026. Scope: the explicitly requested F001A–F001C probes, using only synthetic data. All three code increments and available automated checks are complete. **Live Chrome/hosted-user acceptance remains pending**, so T006–T008 are not marked complete. Business authorization and canonical validation prerequisites remain in the build plan.
 
 | Probe | Implementation/check status | Live Chrome status |

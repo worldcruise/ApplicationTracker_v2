@@ -246,6 +246,8 @@ The user explicitly authorized this milestone after QC01–QC03. Implement AP01,
 | AP02 | Protected database synchronization and duplicate serialization | User-context authorization; same actor/key/payload replay; exact frozen versions; stable candidate lock/strong duplicate checks; immutable archive record distinct from submission; export-only bidder prepared-source boundary. |
 | AP03 | Independent orchestration, reconciliation, clipboard and acceptance | Local-only/database-only/unknown outcomes, original retry/reopen, metadata/index reconciliation, labeled relative path/manual copy, current permissions and account isolation; local/isolated CI tests and runbook. |
 
+AP01–AP03 are complete for the requested milestone. See [verification evidence](PROGRESS.md#verification) and [package recovery/manual acceptance](ARCHIVE_PACKAGES.md). Native Windows/hosted acceptance and D08 override authority remain explicit gates; the broader tasks below are not collectively marked complete.
+
 | ID | Scoped task | Dependencies | Design sections | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | T050 | Implement safe package reservation and verified local writes. | T028, T034–T035, T048; D02 | D§16–17 | Stable candidate/company/operation paths handle Windows reserved names, traversal, length and same-day collisions. Write incomplete manifest, JobDetails.txt, exact Resume.json/PDF and optional letter; close/verify sizes and hashes before packageComplete. Different existing content is a conflict. |
