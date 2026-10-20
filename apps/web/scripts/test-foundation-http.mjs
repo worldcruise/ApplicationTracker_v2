@@ -377,10 +377,11 @@ try {
   inspect(`${web}/.next/static`);
   inspect(`${root}/apps/extension/dist`);
   step = "reusable pilot smoke against isolated synthetic backend";
-  const smoke=await pilotSmoke({supabaseUrl:url,publishableKey:publicKey,appOrigin:'http://localhost:3000',email:identities.adminA.email,password:replacement,organizationId:orgA,teamId:teamA});
+  let smoke;
+  try{smoke=await pilotSmoke({supabaseUrl:url,publishableKey:publicKey,appOrigin:'http://localhost:3000',email:identities.adminA.email,password:replacement,organizationId:orgA,teamId:teamA});}catch(e){throw new TestFailure(e.message);}
   expect(smoke.checks===11,'All eleven reusable pilot smoke checkpoints pass');console.log(JSON.stringify({pilotSmoke:smoke}));
   step = "encrypted backup and isolated restore";
-  await testRecovery({identities,assert:expect});
+  try{await testRecovery({identities,assert:expect});}catch(e){throw new TestFailure(e.message);}
   console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "86 headless Chromium checkpoints including role dashboards, CSP, unpacked MV3 Quick Check and package recovery; hosted native shortcut/menu and Windows filesystem gates pending" }));
 } catch (error) {
   console.error(JSON.stringify({ result: "FAIL", step, message: error instanceof TestFailure ? error.message : "Integration harness failed; inspect the isolated service health and current step." }));

@@ -18,7 +18,7 @@ export function productionConfig(env,extension=false) {
   if(env.FEASIBILITY_API_ENABLED==='true')throw Error('The feasibility probe must be disabled in production.');
   if(!/^chrome-extension:\/\/[a-p]{32}$/.test(need(env,'EXTENSION_ALLOWED_ORIGIN')))throw Error('Set the exact approved production extension origin.');
   if(!/^[a-f0-9]{64}$/.test(need(env,'DOCUMENT_RENDER_SIGNING_KEY')))throw Error('Configure the private document signing key.');
-  if(!/^[a-zA-Z0-9_-]{1,64}$/.test(need(env,'DOCUMENT_RENDER_KEY_ID')))throw Error('Configure the registered document key ID.');
+  if(!/^[a-zA-Z0-9_-]{1,60}$/.test(need(env,'DOCUMENT_RENDER_KEY_ID')))throw Error('Configure the registered document key ID.');
   const service=need(env,'SUPABASE_SERVICE_ROLE_KEY');
   if(publicKey(service))throw Error('Identity provisioning needs its server-only privileged key.');
   if(!['synthetic-only','approved-production'].includes(need(env,'PILOT_DATA_MODE')))throw Error('Set an explicit pilot data mode.');

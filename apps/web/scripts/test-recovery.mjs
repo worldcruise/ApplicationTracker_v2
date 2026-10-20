@@ -8,8 +8,10 @@ import {encryptBackup,openBackup} from '../../../scripts/lib/backup.mjs';
 export async function testRecovery({identities,assert}){
  if(process.env.CI!=='true')throw Error('Recovery rehearsal is isolated CI only.');
  const container='supabase_db_application-tracker-v2',target='atv2_restore_'+randomUUID().replaceAll('-',''),folder='output/recovery';
+ let phase='source fingerprint';
+ const diagnostic=message=>{const line=message.match(/ERROR:([^\n]*)/)?.[1]??'';return JSON.stringify({objects:[...line.matchAll(/"([a-zA-Z_][a-zA-Z0-9_.]*)"/g)].map(m=>m[1]),category:['permission denied','already exists','does not exist','must be owner','must be superuser'].find(s=>line.includes(s))??'other'});};
  await mkdir(folder,{recursive:true});
- const sql=(database,query)=>{const result=spawnSync('docker',['exec','-i',container,'psql','-X','-At','-U','postgres','-d',database,'--set=ON_ERROR_STOP=1'],{input:query,encoding:'utf8',maxBuffer:16*1024*1024});if(result.status!==0)throw Error('Recovery SQL failed (credentials and SQL contents suppressed).');return result.stdout.trim();};
+ const sql=(database,query)=>{const result=spawnSync('docker',['exec','-i',container,'psql','-X','-At','-U','postgres','-d',database,'--set=ON_ERROR_STOP=1'],{input:query,encoding:'utf8',maxBuffer:16*1024*1024});if(result.status!==0)throw Error('Recovery '+phase+' SQL failed '+diagnostic(result.stderr??'')+' (contents suppressed).');return result.stdout.trim();};
  const schemas=['public','private','auth','supabase_migrations','extensions'];
  // Compare every restored row, without exporting any row content into logs.
  function fingerprints(database){
@@ -20,20 +22,25 @@ export async function testRecovery({identities,assert}){
  }
  const started=Date.now(),key=randomBytes(32).toString('hex'),path=folder+'/synthetic-database.aes';
  const before=fingerprints('postgres');
+ phase='encrypted pg_dump';
  const child=spawn('docker',['exec',container,'pg_dump','-U','postgres','-d','postgres','--format=custom',...schemas.map(s=>'--schema='+s)],{stdio:['ignore','pipe','ignore']});
  const exit=new Promise((ok,fail)=>{child.once('error',fail);child.once('exit',c=>c===0?ok():fail(Error('Isolated pg_dump failed.')));});exit.catch(()=>{});
  const input=Readable.from((async function*(){for await(const b of child.stdout)yield b;await exit;})());
  const backup=await encryptBackup(input,path,key,{projectRef:'isolated-ci-only',createdAt:new Date().toISOString(),schemas,postgresMajor:17});
  const backupMs=Date.now()-started;
+ phase='source quiescence';
  assert(JSON.stringify(before)===JSON.stringify(fingerprints('postgres')),'Source was quiescent across the backup snapshot');
  const frozen=await openBackup(path,key),restoreStarted=Date.now();
  try{
+  phase='create isolated target';
   sql('postgres',`create database ${target} template template0;`);
+  phase='restore archive';
   const p=spawn('docker',['exec','-i',container,'pg_restore','-U','postgres','-d',target,'--single-transaction','--exit-on-error'],{stdio:['pipe','ignore','pipe']});
-  p.stderr.resume();
-  const done=new Promise((ok,fail)=>{p.once('error',fail);p.once('exit',c=>c===0?ok():fail(Error('Isolated pg_restore failed; database contents and credentials suppressed.')));});done.catch(()=>{});
+  let errorText='';p.stderr.on('data',b=>{if(errorText.length<8000)errorText+=b.toString();});
+  const done=new Promise((ok,fail)=>{p.once('error',fail);p.once('exit',c=>c===0?ok():fail(Error('Isolated pg_restore failed '+diagnostic(errorText)+'; contents suppressed.')));});done.catch(()=>{});
   try{await frozen.pipeTo(p.stdin);await done;}catch(e){p.kill();throw e;}
  }finally{await frozen.close();}
+ phase='restored fingerprints';
  const restoreMs=Date.now()-restoreStarted,after=fingerprints(target);
  assert(JSON.stringify(before)===JSON.stringify(after),'All Auth/app/private/migration rows, RLS policies, owners and grants match restored backup');
  const bytes=sql(target,"select count(*)||':'||coalesce(sum(octet_length(pdf_bytes)),0) from public.document_blobs;").split(':').map(Number);
