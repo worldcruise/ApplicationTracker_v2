@@ -1,0 +1,12 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+set local search_path=public,extensions;
+select no_plan();
+select ok(not has_function_privilege('anon','public.operational_dashboard(uuid,jsonb,text,integer)','EXECUTE'),'anonymous reporting denied');
+select ok(has_function_privilege('authenticated','public.operational_dashboard(uuid,jsonb,text,integer)','EXECUTE'),'current users can request scoped reports');
+select ok(not prosecdef,'dashboard uses invoker RLS, never elevated raw data') from pg_proc where oid='public.operational_dashboard(uuid,jsonb,text,integer)'::regprocedure;
+set local role authenticated;
+select throws_ok($$select public.operational_dashboard('00000000-0000-4000-8000-000000000100')$$,'42501','FORBIDDEN','identity without active membership cannot report');
+reset role;
+select * from finish();
+rollback;

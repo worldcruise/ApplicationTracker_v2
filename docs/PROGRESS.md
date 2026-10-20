@@ -46,7 +46,9 @@ Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 
 
 ## Current work
 
-**Requested package milestone complete — AP01–AP03.** No implementation task is active. Final code at fa0bdc5 passes the complete isolated suite and local check/build. Saving and recovery never submit an application. Hosted schema/key/account setup and native Windows acceptance remain explicit prerequisites; no hosted mutation or real application submission was performed.
+**OP01 — Scoped operational reporting.** Added the versioned contract, invoker-context single-query dashboard projection and paginated API. Local checks and isolated SQL/API scope tests are being run before OP02. The full §22 audit is OP04; existing archive evidence is retained.
+
+**Requested package milestone complete — AP01–AP03.** Final code at fa0bdc5 passes the complete isolated suite and local check/build. Saving and recovery never submit an application. Hosted schema/key/account setup and native Windows acceptance remain explicit prerequisites; no hosted mutation or real application submission was performed.
 
 **Requested extension milestone complete — EX01–EX03.** Resume/Profile reuse the existing shared API/contracts/renderer with durable scoped drafts, immutable operations and independent saving outcomes. Real isolated unpacked-browser/backend evidence and the runbook are recorded above. Final code at f6a9642 passes local check/extension build and the complete isolated CI suite. That earlier milestone is closed. Hosted migration/accounts/key configuration and interactive acceptance remain separate prerequisites; no hosted change or real application submission has been performed.
 
@@ -246,7 +248,7 @@ Application checks could not run during context preparation because there was no
 
 ## Next task
 
-**T003 — Complete shared identifiers, capabilities, error and pagination contracts.** Reuse the implemented foundation/candidate/resume/template/document types and preserve RP01's explicit G01 behavior. Keep defensive endpoint bounds separate from pending D11 product/load decisions. Do not begin this broader contract task without a new implementation request. Hosted setup and F001V/two-device acceptance remain separate prerequisites; this milestone did not apply hosted migrations or register keys.
+**OP02 — Role dashboards and operational navigation**, after OP01 checks. Reuse current protected workflow and administration controls. OP03 adds redacted failure observations; OP04 records all §22 acceptance criteria and remaining release gates.
 
 ## Update instructions
 

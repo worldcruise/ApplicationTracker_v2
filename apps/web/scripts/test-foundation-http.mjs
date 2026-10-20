@@ -19,6 +19,7 @@ import { testHistoryHTTP } from "./test-history-http.mjs";
 import { testHistoryBrowser } from "./test-history-browser.mjs";
 import { testArchiveHTTP } from "./test-archive-http.mjs";
 import { testPackageBrowser } from "./test-package-browser.mjs";
+import { testOperationsHTTP } from "./test-operations-http.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -300,6 +301,8 @@ try {
   try{const checks=await testHistoryBrowser({harness:extensionHarness,fixture:historyFixture,identities,org:orgA,password,assert:expect});expect(checks===9,"All nine Quick Check browser checkpoints complete");console.log(JSON.stringify({result:"PASS",historyBrowserCheckpoints:checks}));}catch(error){throw new TestFailure(error.message);}
   step="package save and recovery browser";
   try{const checks=await testPackageBrowser({harness:extensionHarness,fixture:archiveFixture,identities,org:orgA,password,call,assert:expect});expect(checks===7,"All seven package browser checkpoints complete");console.log(JSON.stringify({result:"PASS",packageBrowserCheckpoints:checks}));}catch(error){throw new TestFailure(error.message);}
+  step="operational reporting API/RLS";
+  await testOperationsHTTP({call,command,identities,org:orgA,team:teamA,fixture:workflowFixture,assert:expect});
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);
   expect((await call(identities.memberA, candidatePath(first))).status === 403, "Unexpired token loses application access after deactivation");
   const after = await identities.memberA.client.from("candidates").select("id");

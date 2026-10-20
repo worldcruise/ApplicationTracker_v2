@@ -257,6 +257,15 @@ AP01–AP03 are complete for the requested milestone. See [verification evidence
 
 ## Milestone 5 Administration analytics and release
 
+The operational-interface request is implemented in these scoped increments, reusing the completed foundation, workflow and archive milestones. These do not waive retention, recovery, hosting or native browser release gates.
+
+| ID | Task and dependencies | Design | Acceptance |
+| --- | --- | --- | --- |
+| OP01 | Scoped reporting contract and database/API projection; depends on FN, CM, BO. | §3–5, 19, 22 | One user-context query supplies metric counts and paginated detail sets; distinct submission cohorts; current RLS; bidder own authorized activity; cross-team/org, revoked and empty scopes tested. |
+| OP02 | Four role dashboards, workload, queues, notifications, activity and administration navigation; depends on OP01. | §3, 19–20 | URL filters, matching drill-down totals, due times, independent source failures, existing protected administrative controls and no bidder interview controls. |
+| OP03 | Durable redacted failure observations and assignment notifications; depends on OP01–02. | §19–20 | Current target permissions on report/read, independent client outcomes, original operation IDs, owner/supervisor visibility and revocation checks. |
+| OP04 | Full §22 acceptance audit and isolated CI; depends on OP01–03 and AP. | §22 | Each of 20 base and 15 archive criteria plus every design gate has passed/failed/not yet verified evidence; fix blockers and identify remaining release prerequisites. |
+
 | ID | Scoped task | Dependencies | Design sections | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | T054 | Build team, user, capability, and policy administration UI. | T014–T015, T018, T039 | D§3–5, 20 | Admins manage invite/deactivate/roles and scoped overrides; leaders manage only own team assignments/policy allowed by backend. No self-escalation; failure recovery and audit links are visible; settings reflect accepted policies. |
