@@ -48,6 +48,7 @@ export async function captureContext(source:CaptureContext["source"],tab:chrome.
   const safe=safeCapturedUrl(tab?.url??extracted?.url??"");if(safe.redacted)warnings.push("Authentication parameters were removed from the captured URL. Review the safe posting URL.");
   if(!extracted?.description)warnings.push("No job description could be extracted. Paste it manually.");
   if(extracted?.descriptionTruncated)warnings.push("Job description was truncated to 200 KiB. Review it before lookup.");
+  if(new TextEncoder().encode(selectionText??extracted?.company??"").length>200)warnings.push("Selected company text was truncated; review the full company name before lookup.");
   const bound=(value:string,max:number)=>new TextDecoder().decode(new TextEncoder().encode(value).slice(0,max),{stream:true});
   const stored=await chrome.storage.session.get(ACTIVE_CAPTURE_SCOPE);const scope=stored[ACTIVE_CAPTURE_SCOPE] as CaptureScope|undefined;
   const valid=scope&&[scope.actorId,scope.organizationId,scope.candidateId].every(v=>typeof v==="string"&&/^[0-9a-f-]{36}$/iu.test(v));

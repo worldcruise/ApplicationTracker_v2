@@ -13,6 +13,7 @@ test("company and URL normalization preserve identity-bearing differences", () =
   assert.throws(()=>canonicalJobUrl("https://user:secret@x.invalid/jobs/1"));
   assert.throws(()=>validateHistoryContext({...context,company:""}));
   assert.throws(()=>validateHistoryContext({...context,constructor:"not a job field"}));
+  assert.equal(validateHistoryContext({...context,company:"É".repeat(200)}).company.length,200);
 });
 test("only strong unchanged posting URLs are exact; fingerprints, aliases and reused URLs are evidence warnings",async()=>{
   const ids=await identifyJob(context);

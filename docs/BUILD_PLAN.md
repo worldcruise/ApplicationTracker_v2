@@ -238,6 +238,14 @@ Requested Quick Application Check increments: complete QC01, QC02, then QC03. Th
 
 ## Milestone 4B Archive writing and recovery
 
+The user explicitly authorized this milestone after QC01–QC03. Implement AP01, then AP02, then AP03; keep the existing normal-user/RLS and frozen-document boundaries.
+
+| ID | Scoped increment | Acceptance |
+| --- | --- | --- |
+| AP01 | Frozen package journal, safe paths and recoverable local files | Persist UUID/input/bytes before effects; required original JSON/PDF/job details/metadata and optional letter; no overwrite of conflicting bytes; verify closed writes/hashes and retain partial/restart state. |
+| AP02 | Protected database synchronization and duplicate serialization | User-context authorization; same actor/key/payload replay; exact frozen versions; stable candidate lock/strong duplicate checks; immutable archive record distinct from submission; export-only bidder prepared-source boundary. |
+| AP03 | Independent orchestration, reconciliation, clipboard and acceptance | Local-only/database-only/unknown outcomes, original retry/reopen, metadata/index reconciliation, labeled relative path/manual copy, current permissions and account isolation; local/isolated CI tests and runbook. |
+
 | ID | Scoped task | Dependencies | Design sections | Acceptance criteria |
 | --- | --- | --- | --- | --- |
 | T050 | Implement safe package reservation and verified local writes. | T028, T034–T035, T048; D02 | D§16–17 | Stable candidate/company/operation paths handle Windows reserved names, traversal, length and same-day collisions. Write incomplete manifest, JobDetails.txt, exact Resume.json/PDF and optional letter; close/verify sizes and hashes before packageComplete. Different existing content is a conflict. |

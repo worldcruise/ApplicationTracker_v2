@@ -14,7 +14,7 @@ begin
   or exists(select 1 from public.bids where organization_id=p_org and candidate_id=p_candidate)
   or exists(select 1 from public.bid_access_grants where organization_id=p_org and candidate_id=p_candidate and user_id=private.actor_id() and revoked_at is null and (expires_at is null or expires_at>now()))
  ) then raise exception 'FORBIDDEN' using errcode='42501';end if;
- if p_company is null or length(btrim(p_company))=0 or octet_length(p_company)>200 then raise exception 'SCHEMA_INVALID' using errcode='22023';end if;
+ if p_company is null or length(btrim(p_company))=0 or length(p_company)>200 then raise exception 'SCHEMA_INVALID' using errcode='22023';end if;
  with current_rows as (
   select b.id,'bid:'||b.id as observation_id,null::uuid as submission_id,b.company_name,b.job_title,b.job_url,b.job_description,b.external_id,b.status,
    null::timestamptz as submitted_at,b.updated_at

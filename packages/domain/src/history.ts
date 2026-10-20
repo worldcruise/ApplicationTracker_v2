@@ -33,7 +33,7 @@ export function validateHistoryContext(input: unknown): ReviewedJobContext {
   const limits: Record<keyof ReviewedJobContext,number> = { company: 200, title: 200, url: 2048, description: 204800, externalId: 300 };
   if (Object.keys(data).some(k => !Object.hasOwn(limits,k))) throw Error("Unknown job detail field.");
   for (const [key,max] of Object.entries(limits)) {
-    if (typeof data[key] !== "string" || new TextEncoder().encode(data[key] as string).length > max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(data[key] as string)) throw Error(`Invalid ${key}: use plain text up to ${max} UTF-8 bytes.`);
+    if (typeof data[key] !== "string" || (key==="description"?new TextEncoder().encode(data[key] as string).length:(data[key] as string).length) > max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/u.test(data[key] as string)) throw Error(`Invalid ${key}: use plain text up to ${max} ${key==="description"?"UTF-8 bytes":"characters"}.`);
   }
   if (!(data.company as string).trim()) throw Error("Review and supply a company name before lookup.");
   canonicalJobUrl(data.url as string);
