@@ -84,6 +84,7 @@ export interface ArchiveIndexV1 {
   entries: { directory: string; operationId: string; identifiers: HistoryIdentifiers }[];
   byUrl: Record<string, string[]>;
   byDescription: Record<string, string[]>;
+  byExternal: Record<string, string[]>;
 }
 export interface CaptureContext {
   version: 1;

@@ -6,10 +6,19 @@
   "permissions": [
     "storage",
     "clipboardWrite",
-    "downloads"
+    "downloads",
+    "activeTab",
+    "scripting",
+    "contextMenus"
   ],
   "action": {
     "default_title": "Open candidate workspace"
+  },
+  "commands": {
+    "check-application-history": {
+      "suggested_key": { "default": "Ctrl+Shift+F" },
+      "description": "Check Application History"
+    }
   },
   "background": {
     "service_worker": "service-worker.js",
