@@ -1,0 +1,61 @@
+name: Pilot extension release
+on:
+  push:
+    tags: ['v0.2.0-pilot.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing immutable pilot tag to package
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  verify:
+    uses: ./.github/workflows/foundation.yml
+    with:
+      ref: ${{ inputs.tag || github.ref }}
+  configuration:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Report release gate
+        env:
+          ENABLED: ${{ vars.PILOT_RELEASE_ENABLED }}
+        run: |
+          if [ "$ENABLED" != "true" ]; then
+            echo 'Production packaging NOT RUN: production project/API configuration and operator release prerequisites have not been enabled. Source tag only; not an installable production release.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+  package:
+    needs: verify
+    if: vars.PILOT_RELEASE_ENABLED == 'true'
+    environment: pilot-production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      EXTENSION_BUILD_PROFILE: production
+      PRODUCTION_SUPABASE_PROJECT_REF: ${{ vars.PRODUCTION_SUPABASE_PROJECT_REF }}
+      EXTENSION_PUBLIC_SUPABASE_URL: ${{ vars.EXTENSION_PUBLIC_SUPABASE_URL }}
+      EXTENSION_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.EXTENSION_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      EXTENSION_PUBLIC_API_URL: ${{ vars.EXTENSION_PUBLIC_API_URL }}
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.0'
+          cache: npm
+      - name: Verify immutable source tag
+        run: node -e "const p=JSON.parse(require('fs').readFileSync('releases/pilot.json'));if(process.env.RELEASE_TAG!=='v'+p.release)throw Error('Tag/release mismatch');"
+      - run: npm ci
+      - run: npm run extension:build
+      - run: npm run release:extension
+      - run: python3 scripts/verify-release.py output/releases/*
+      - name: Create reviewable draft prerelease without overwriting assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$RELEASE_TAG" output/releases/*/*.zip output/releases/*/release.json output/releases/*/SHA256SUMS --verify-tag --draft --prerelease --title "ApplicationTracker $RELEASE_TAG" --notes-file docs/RELEASE_NOTES.md

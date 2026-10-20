@@ -18,7 +18,7 @@ export async function pilotSmoke({supabaseUrl,publishableKey,appOrigin,email,pas
   const me=await api('/me');check(me.status===200&&me.data.userId===login.data.user.id&&me.data.organizations.some(o=>o.organizationId===organizationId),'Missing active organization membership or database migrations.');checks++;
   check((await api('/me',{anonymous:true})).status===401,'Anonymous API access was not denied.');checks++;
   check((await api('/me',{clientVersion:'extension/99.0.0'})).status===426,'Unsupported extension did not receive a non-destructive upgrade response.');checks++;
-  const created=await api(`/organizations/${organizationId}/commands`,{method:'POST',body:{command:'createCandidate',teamId,ownerId:login.data.user.id,fullName:'Synthetic Pilot '+randomUUID().slice(0,8)}});
+  const created=await api(`/organizations/${organizationId}/commands`,{method:'POST',body:{command:'createCandidate',teamId,ownerId:null,fullName:'Synthetic Pilot '+randomUUID().slice(0,8)}});
   check(created.status===200&&created.data.id,'Synthetic candidate creation failed: check team permissions, migration state and network.');candidateId=created.data.id;checks++;
   const path=`/candidates/${candidateId}?organizationId=${organizationId}`,read=await api(path);
   check(read.status===200&&read.data.fullName.startsWith('Synthetic Pilot '),'Saved synthetic profile did not persist on a fresh read.');checks++;
