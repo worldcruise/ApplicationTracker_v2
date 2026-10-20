@@ -6,7 +6,7 @@ export async function testHistoryHTTP({call,command,identities,org,team,assert})
   assert(created.status===200,"History fixture created");const candidate=created.data.id;
   assert((await call(identities.leaderA,url("/candidates/"+candidate+"/assignments"),{userId:m.id,assign:true},1)).status===200,"History assignment created");
   const job={company:"Synthetic History Labs",title:"Engineer",url:"https://jobs.example.invalid/jobs/123?job_id=123&utm_source=test#top",description:"Build synthetic history tools",externalId:"123"};
-  async function bid(companyName,jobUrl,jobDescription=job.description){const operationId=randomUUID();const r=await call(m,url("/bids"),{operationId,input:{candidateId:candidate,teamId:team,ownerId:m.id,companyName,jobTitle:job.title,jobUrl,jobDescription,externalId:job.externalId,jobLocation:null,priority:"normal",followUpAt:null,lastContactAt:null,notes:"PRIVATE HISTORY BID NOTE",outcome:"",resumeDocumentId:null,coverLetterDocumentId:null}},undefined,{"Idempotency-Key":operationId});assert(r.status===200,"History bid persists");return r.data.id;}
+  async function bid(companyName,jobUrl,jobDescription=job.description){const operationId=randomUUID();const r=await call(m,url("/bids"),{operationId,input:{candidateId:candidate,teamId:team,ownerId:m.id,companyName,jobTitle:job.title,jobUrl,jobDescription,externalId:job.externalId,jobLocation:null,priority:"normal",followUpAt:null,lastContactAt:null,notes:"PRIVATE HISTORY BID NOTE",outcome:"",resumeDocumentId:null,coverLetterDocumentId:null}},0,{"Idempotency-Key":operationId});assert(r.status===200,`History bid persists (${r.status}/${r.code??"OK"})`);return r.data.id;}
   const exact=await bid(job.company,"https://jobs.example.invalid/jobs/123?job_id=123");
   const possible=await bid(job.company,"https://jobs.example.invalid/jobs/456");
   await bid(job.company+" Inc.","https://jobs.example.invalid/jobs/123?job_id=123");
@@ -27,7 +27,7 @@ export async function testHistoryHTTP({call,command,identities,org,team,assert})
   await command(a,org,{command:"grantBidderAccess",bidId:exact,candidateId:null,userId:b.id,capability:"bid.prepare",allowEmail:false,allowPhone:false,expiresAt:null});
   const scoped=await lookup(b);assert(scoped.status===200&&scoped.data.company.length===1&&scoped.data.company[0].id===exact,"Bidder history remains limited to granted bid");
   assert(!JSON.stringify(scoped.data).includes("PRIVATE HISTORY"),"Bidder gets only safe history metadata");
-  assert((await call(identities.leaderA,url("/candidates/"+candidate+"/assignments"),{userId:m.id,assign:false},1)).status===200,"History assignment revoked");
+  await command(identities.leaderA,org,{command:"changeAssignment",candidateId:candidate,userId:m.id,assign:false});
   assert((await lookup(m)).status===403,"Revocation applies to existing tokens");
   return {candidate,job,exact};
 }

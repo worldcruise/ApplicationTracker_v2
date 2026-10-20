@@ -7,6 +7,7 @@ test("company and URL normalization preserve identity-bearing differences", () =
   assert.equal(canonicalJobUrl("HTTPS://Jobs.Example.invalid:443/jobs/123?job_id=123&utm_source=test&custom=one#top").url,"https://jobs.example.invalid/jobs/123?job_id=123&custom=one");
   assert.notEqual(canonicalJobUrl("https://x.invalid/jobs/123/").url,canonicalJobUrl("https://x.invalid/jobs/123").url);
   assert.notEqual(canonicalJobUrl("https://x.invalid/jobs/123?job_id=1").url,canonicalJobUrl("https://x.invalid/jobs/123?job_id=2").url);
+  assert.equal(canonicalJobUrl("https://x.invalid/jobs/123?unknown=a%20b&job_id=1&utm_source=x&unknown=a+b").url,"https://x.invalid/jobs/123?unknown=a%20b&job_id=1&unknown=a+b");
   assert.equal(canonicalJobUrl("https://x.invalid/careers").posting,false);
   assert.equal(canonicalJobUrl("https://x.invalid/#/jobs/123").posting,false);
   assert.throws(()=>canonicalJobUrl("https://user:secret@x.invalid/jobs/1"));

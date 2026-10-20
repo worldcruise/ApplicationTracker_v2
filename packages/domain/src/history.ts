@@ -17,7 +17,10 @@ export function canonicalJobUrl(raw: string) {
   const hashRoute = /^#[!/?]/u.test(url.hash);
   url.hash = "";
   const tracking = new Set(["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id", "gclid", "fbclid", "msclkid"]);
-  for (const key of [...url.searchParams.keys()]) if (tracking.has(key.toLowerCase())) url.searchParams.delete(key);
+  const parts=url.search.slice(1).split("&").filter(part=>{
+    try{return !tracking.has(decodeURIComponent(part.split("=")[0]!.replace(/\+/gu," ")).toLowerCase());}catch{return true;}
+  });
+  url.search=parts.join("&");
   // Keep schemes, trailing slashes, parameter order and every unknown/job-bearing parameter distinct.
   const generic = /\/(?:search|jobs?|careers|positions?|requisitions?)\/?$/iu.test(url.pathname);
   const pathPosting = /\/(?:jobs?|positions?|requisitions?)\/(?!search(?:\/|$)|all(?:\/|$)|categories(?:\/|$))[^/]+/iu.test(url.pathname);
