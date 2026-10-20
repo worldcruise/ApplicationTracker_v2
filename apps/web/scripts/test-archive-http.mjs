@@ -1,6 +1,6 @@
-import {randomUUID} from "node:crypto";
+import {randomUUID,createHmac,createHash} from "node:crypto";
 import {identifyJob,packagePaths} from "@candidate/domain";
-export async function testArchiveHTTP({call,command,identities,org,team,assert}){
+export async function testArchiveHTTP({call,command,identities,org,team,assert,renderKey}){
  const a=identities.adminA,m=identities.memberA,b=identities.bidderA,l=identities.leaderA,url=p=>p+"?organizationId="+org;
  const profile={fullName:"Synthetic Archive Avery",email:"archive@example.invalid",phone:"+1 202 555 0175",location:"Synthetic City",seniorityPreference:null,professionalSummary:"Built synthetic tools.",privateNotes:"PRIVATE ARCHIVE PROFILE",status:"ready",links:[],experiences:[],educations:[],certifications:[]};
  const created=await call(a,url("/candidates"),{teamId:team,ownerId:null,profile});assert(created.status===200,"Archive fixture persists");const candidate=created.data.id;
@@ -20,6 +20,14 @@ export async function testArchiveHTTP({call,command,identities,org,team,assert})
  async function input(context=job){const id=randomUUID(),createdAt=renderedAt;return {version:1,operationId:id,actorId:m.id,organizationId:org,candidateId:candidate,deviceId:randomUUID(),createdAt,candidateName:profile.fullName,context,identifiers:await identifyJob(context),relativePath:await packagePaths(profile.fullName,candidate,context,id,createdAt),resume:{reference:{kind:"document",documentId:frozen.doc.id},rawJson:frozen.rawJson,pdfSha256:bundle.pdfSha256,pageCount:bundle.pageCount,schemaVersion:1,profileRevision:2,template:bundle.template,rendererVersion:bundle.render.rendererVersion,renderedAt:bundle.render.renderedAt},coverLetter:null,existingBidId:null};}
  const save=(who,value)=>call(who,url("/archive-packages"),value,undefined,{"Idempotency-Key":value.operationId});
  const first=await input(),second=await input();const results=await Promise.all([save(m,first),save(m,second)]);
+ if(results.some(r=>r.status!==200)){
+  const history=await m.client.rpc("archive_history_snapshot",{p_org:org,p_candidate:candidate,p_company:job.company});
+  const envelope=JSON.stringify({input:first,requestHash:createHash("sha256").update(JSON.stringify(first)).digest("hex"),resumeDocumentId:frozen.doc.id,letterDocumentId:null,exactBidIds:[],historyToken:history.data?.token});
+  const signature=createHmac("sha256",Buffer.from(renderKey,"hex")).update("archive.v1|"+envelope).digest("hex");
+  const diagnostic=await m.client.rpc("save_archive_package",{p_envelope:envelope,p_key_id:"primary",p_signature:signature,p_request:randomUUID()});
+  // Only a controlled SQL error classification is reported; credentials/envelope/signature never print.
+  assert(!diagnostic.error,`Archive SQL diagnostic (${diagnostic.error?.code}): ${diagnostic.error?.message}`);
+ }
  for(const result of results)assert(result.status===200,`Concurrent archive save succeeds (${result.status}/${result.code??"OK"})`);
  const receipt=results[0].data;assert(receipt.bidId===results[1].data.bidId,"Concurrent distinct operations reuse one strong matching bid");
  assert(results.filter(x=>x.data.reusedBid).length===1,"Exactly one concurrent operation creates the draft");

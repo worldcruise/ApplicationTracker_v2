@@ -287,7 +287,7 @@ try {
   step = "bid and interview production API acceptance";
   const workflowFixture = await testWorkflowHTTP({call,command,identities,org:orgA,team:teamA,expect});
   step="archive package HTTP";
-  await testArchiveHTTP({call,command,identities,org:orgA,team:teamA,assert:expect});
+  await testArchiveHTTP({call,command,identities,org:orgA,team:teamA,assert:expect,renderKey});
   step = "bid and interview browser acceptance";
   try { const checks=await testWorkflowBrowser({org:orgA,team:teamA,identities,password,...workflowFixture});expect(checks===15,"All 15 workflow browser checkpoints complete");console.log(JSON.stringify({result:"PASS",workflowBrowserCheckpoints:checks})); } catch(e){throw new TestFailure(e.message); }
   step = "unpacked extension real-backend acceptance";
