@@ -32,12 +32,14 @@ export function packageProduction(api:ExtensionApi,journal:Journal=packageJourna
  }
  async function database(op:PackageOperation){return packageLock(op.id,"database",async()=>{
   op=await get(op);const i=op.input,query="?organizationId="+i.organizationId,options={actorId:i.actorId,organizationId:i.organizationId};
+  await api.withActor(i.actorId,async()=>{});
   await journal.stage(op.id,"database","pending");
   try{
-   const context=await api.request<import("@candidate/contracts").UserContext>("me",options);if(!context.organizations.some(o=>o.organizationId===i.organizationId))throw Error("Current active membership is required.");
+   const context=await api.request<import("@candidate/contracts").UserContext>("me",options);const scope=context.organizations.find(o=>o.organizationId===i.organizationId);if(!scope)throw new ExtensionApiError(403,"FORBIDDEN","Current active membership is required.");
    // Reconcile first after an interrupted response. Never allocate a replacement operation.
    let result=await api.request<PackageSyncResult|null>("archive-packages"+query+"&operationId="+op.id+"&requestHash="+op.inputHash,options);
    if(!result){
+    if(scope.role==="bidder"&&[i.resume.reference,i.coverLetter?.reference].some(r=>r?.kind==="operation"))throw new ExtensionApiError(403,"FORBIDDEN","Use authorized prepared frozen exports. Your current role cannot synchronize editor source content.");
     for(const ref of [i.resume.reference,i.coverLetter?.reference])if(ref?.kind==="operation")await syncSource(api,ref.operationId,i.actorId,i.organizationId);
     result=await api.request<PackageSyncResult>("archive-packages"+query,{...options,body:i,operationId:op.id});
    }
@@ -46,11 +48,13 @@ export function packageProduction(api:ExtensionApi,journal:Journal=packageJourna
  });}
  async function copy(op:PackageOperation){
   op=await get(op);if(op.outcomes.local.state!=="succeeded")throw Error("Verify local saving before copying its relative path.");
+  await api.withActor(op.input.actorId,async()=>{});
   await journal.stage(op.id,"clipboard","pending");
   try{const root=op.root??await localStore().get<FileSystemDirectoryHandle>(DIRECTORY_KEY);const path=(root?.name?root.name+"/":"")+op.input.relativePath.join("/");await api.withActor(op.input.actorId,()=>navigator.clipboard.writeText(path));await journal.stage(op.id,"clipboard","succeeded");}
   catch(error){await journal.stage(op.id,"clipboard","failed","Path copy was denied or unavailable. Select the Relative archive path field and copy it manually.");throw error;}
  }
  async function run(op:PackageOperation,branches={local:true,database:true}){
+  await api.withActor(op.input.actorId,async()=>{});
   op=await get(op);const local=async()=>{try{await authorize(op);await api.withActor(op.input.actorId,()=>files.writeLocal(op));}catch(error){const current=await get(op);if(current.outcomes.local.state==="idle"||current.outcomes.local.state==="pending")await journal.stage(op.id,"local","failed",error instanceof Error?error.message:"Local authorization failed.");throw error;}};
   // Start both branches before awaiting either. Each persists its own result immediately.
   await Promise.allSettled([...(branches.local?[local()]:[]),...(branches.database?[database(op)]:[])]);
