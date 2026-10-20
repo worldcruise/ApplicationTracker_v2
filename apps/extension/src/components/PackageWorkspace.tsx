@@ -1,4 +1,5 @@
 import {memo,useEffect,useRef,useState} from "react";
+import {reportPackageProcessing} from "../processing-reports";
 import type {FrozenDocument,FrozenPackageInput,PreparedPackageSource,ReviewedJobContext} from "@candidate/contracts";
 import {historyHash,validateHistoryContext} from "@candidate/domain";
 import type {ExtensionApi} from "../api";
@@ -19,6 +20,7 @@ export function PackageWorkspace({api,actor,org,candidate,name,bidder}:{api:Exte
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(""),[directory,setDirectory]=useState<DirectorySelection>({permission:"none"}),[bundle,setBundle]=useState<Bundle|null>(null);
  const pending=useRef(Promise.resolve()),revision=useRef(0),journal=packageJournal(),key="package-draft:"+actor+":"+org+":"+candidate;
  const query="?organizationId="+org,options={actorId:actor,organizationId:org};const current=operations.find(o=>o.id===selected);
+ useEffect(()=>{if(!busy&&current)void reportPackageProcessing(api,current).catch(()=>{/* Durable redacted reports retry on reopen; saving outcomes remain independent. */});},[api,busy,current]);
  async function refresh(){
   const local=(await operationJournal().list(actor,org)).filter(o=>o.candidateId===candidate&&o.pdf);setSources(local);
   const rows=(await journal.list(actor,org)).filter(o=>o.input.candidateId===candidate).sort((a,b)=>b.input.createdAt.localeCompare(a.input.createdAt));

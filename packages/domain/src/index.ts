@@ -4,6 +4,7 @@ export * from "./resume-review.js";
 export * from "./workflow.js";
 export * from "./history.js";
 export * from "./archive-package.js";
+export * from "./processing-reports.js";
 
 /** Fresh per-operation state; local success must never imply remote success. */
 export function createOperationProgress(): OperationProgress {

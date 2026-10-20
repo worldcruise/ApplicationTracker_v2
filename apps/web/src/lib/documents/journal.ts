@@ -1,4 +1,5 @@
 import type { CoverLetterRequest, ResumeOutcomes, ResumeReviewInput } from "@candidate/contracts";
+import { queueProcessingReports } from "@/lib/operations/reports";
 import type { StudioPdf } from "@/lib/resumes/journal";
 export interface LetterOperation {
   id: string; actorId: string; organizationId: string; candidateId: string; profileRevision: number; templateVersionId: string; bidId: string | null;
@@ -28,6 +29,6 @@ export async function saveLetterOperation(op: LetterOperation) {
       if (old && (frozen(old) !== frozen(op) || (old.payload && JSON.stringify(old.payload) !== JSON.stringify(op.payload)) || (old.pdf && old.pdf.sha256 !== op.pdf?.sha256))) { tx.abort(); return; }
       store.put(structuredClone(op), op.id);
     };
-    tx.oncomplete = () => resolve(); tx.onabort = tx.onerror = () => reject(new Error("Frozen letter operation changed or its journal is unavailable. Original operation retained."));
+    tx.oncomplete = () => { resolve(); void queueProcessingReports({ operationId: op.id, actorId: op.actorId, organizationId: op.organizationId, candidateId: op.candidateId, bidId: op.bidId }, op.outcomes).catch(() => {}); }; tx.onabort = tx.onerror = () => reject(new Error("Frozen letter operation changed or its journal is unavailable. Original operation retained."));
   });
 }

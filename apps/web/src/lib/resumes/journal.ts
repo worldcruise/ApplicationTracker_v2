@@ -1,4 +1,5 @@
 import type { PromptAssembly, ResumeOutcomes, ResumeReviewInput, ResumeSourceRequest } from "@candidate/contracts";
+import { queueProcessingReports } from "@/lib/operations/reports";
 export interface StudioPdf { bytes: Uint8Array; sha256: string; pageCount: number; rendererVersion: string; renderedAt: string; warnings: string[]; text: string }
 export interface StudioOperation {
   id: string; actorId: string; organizationId: string; candidateId: string; assemblyId: string; rawJson: string; review: ResumeReviewInput;
@@ -38,7 +39,7 @@ export async function saveStudioOperation(operation: StudioOperation) {
       if (old && (context(old) !== context(operation) || (old.payload && JSON.stringify(old.payload) !== JSON.stringify(operation.payload)) || (old.pdf && old.pdf.sha256 !== operation.pdf?.sha256))) { tx.abort(); return; }
       store.put(structuredClone(operation), operation.id);
     };
-    tx.oncomplete = () => resolve(); tx.onabort = tx.onerror = () => reject(new Error("Operation journal write failed or frozen input changed. Start a new operation; the previous result is retained."));
+    tx.oncomplete = () => { resolve(); void queueProcessingReports({ operationId: operation.id, actorId: operation.actorId, organizationId: operation.organizationId, candidateId: operation.candidateId, bidId: null }, operation.outcomes).catch(() => {}); }; tx.onabort = tx.onerror = () => reject(new Error("Operation journal write failed or frozen input changed. Start a new operation; the previous result is retained."));
   });
 }
 export async function pdfDigest(bytes: Uint8Array) {

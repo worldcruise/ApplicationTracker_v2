@@ -1,5 +1,5 @@
 import {randomUUID} from 'node:crypto';
-export async function testOperationsHTTP({call,identities,org,team,fixture,assert}) {
+export async function testOperationsHTTP({call,command,identities,org,team,fixture,assert}) {
  const path=(resource,q='')=>`/${resource}?organizationId=${org}${q}`;
  const load=async(who,q='')=>{const r=await call(who,path('dashboard',q));assert(r.status===200,`Operational report loads (${r.code??r.status})`);return r.data;};
  const roles=['adminA','leaderA','memberA','bidderA'];
@@ -38,5 +38,39 @@ export async function testOperationsHTTP({call,identities,org,team,fixture,asser
  assert(first.detail.total===27&&first.detail.items.length===25&&second.detail.items.length===2,'Totals include every page');
  assert(!second.detail.items.some(b=>first.detail.items.some(a=>a.id===b.id)),'Stable ordered pages have no duplicate rows');
  const teamFiltered=await load(identities.memberA,q+'&teamId='+team+'&ownerId='+identities.memberA.id+'&status=draft');assert(teamFiltered.counts.active_bids===27&&teamFiltered.workload.reduce((n,w)=>n+w.activeBids,0)===27,'All filters apply before workload aggregation');
- return {company,candidate:fixture.candidate};
+ const a=identities.adminA,m=identities.memberA,l=identities.leaderA,b=identities.bidderA;
+ const candidate=(await command(a,org,{command:'createCandidate',teamId:team,ownerId:m.id,fullName:'Synthetic Operational Recovery'})).id;
+ await command(l,org,{command:'changeAssignment',candidateId:candidate,userId:m.id,assign:true});
+ const assigned=await call(m,path('operational-notifications'));assert(assigned.status===200&&assigned.data.some(n=>n.candidateId===candidate&&n.title==='Candidate assignment changed'),'Assignments produce a current-scope in-app notification');
+ const bid=(await command(m,org,{command:'createDraftBid',candidateId:candidate,companyName:'Synthetic Operational Reports',jobTitle:'Synthetic Engineer'})).id;
+ const grant=(await command(a,org,{command:'grantBidderAccess',userId:b.id,candidateId:null,bidId:bid,capability:'bid.prepare',allowEmail:false,allowPhone:false,expiresAt:null})).id;
+ const observation={eventId:randomUUID(),operationId:randomUUID(),candidateId:candidate,bidId:bid,stage:'database',state:'unknown',code:'SYNC_UNKNOWN'};
+ const send=async(who,body)=>call(who,path('processing'),body);
+ const reports=async who=>{const r=await call(who,path('processing','&resolved=true'));assert(r.status===200,'Current operational report visible');return r.data;};
+ assert((await send(m,observation)).status===200,'Original actor reports unknown sync without content');
+ assert((await send(m,observation)).status===200,'Lost response can retry exact event');
+ assert((await send(m,{...observation,state:'failed',code:'PROCESSING_FAILED'})).status===409,'Changed same event key is rejected');
+ assert((await send(l,observation)).status===409,'Other actor cannot replay event owner');
+ for(const who of [m,l,a])assert((await reports(who)).items.some(r=>r.operationId===observation.operationId&&r.state==='unknown'),'Owner and scoped supervisor see current failure');
+ assert(!(await reports(identities.leaderBeta)).items.some(r=>r.operationId===observation.operationId),'Other team cannot see reported failure');
+ assert((await call(identities.adminB,path('processing'))).status===403,'Other organization processing denied');
+ assert((await send(identities.leaderBeta,{...observation,eventId:randomUUID()})).status===403,'Other team cannot report against hidden target');
+ assert((await send(m,{...observation,eventId:randomUUID(),rawJson:'PRIVATE'})).status===400,'Observation rejects source content and unknown fields');
+ const raw=await b.client.from('candidates').select('*').eq('id',candidate);assert(!raw.error&&raw.data.length===0,'Bidder observations never grant profile access');
+ const own={...observation,eventId:randomUUID(),operationId:randomUUID(),stage:'local',state:'failed',code:'PROCESSING_FAILED'};assert((await send(b,own)).status===200,'Bidder can report their permitted prepared-package failure');
+ assert(!(await reports(b)).items.some(r=>r.operationId===observation.operationId),'Bidder cannot inherit another actor failure');
+ assert((await m.client.from('processing_observations').insert({organization_id:org,...observation})).error?.code==='42501','Direct observation insert bypass denied');
+ assert((await m.client.from('processing_observations').update({state:'succeeded'}).eq('organization_id',org)).error?.code==='42501','Direct historical outcome editing denied');
+ const recovered={...observation,eventId:randomUUID(),state:'succeeded',code:'RECOVERED'};assert((await send(m,recovered)).status===200,'Recovery appends an independent event');
+ const unresolved=await call(l,path('processing'));assert(!unresolved.data.items.some(r=>r.operationId===observation.operationId),'Recovered latest stage leaves unresolved queue');
+ const all=await m.client.from('processing_observations').select('id').eq('organization_id',org).eq('operation_id',observation.operationId);assert(all.data.length===2,'Unknown and recovered observations both remain immutable');
+ const notices=await call(m,path('operational-notifications'));const notice=notices.data.find(n=>n.title==='Processing needs attention'&&n.candidateId===candidate);assert(!!notice,'Failed/unknown processing creates an in-app notice');
+ assert((await call(m,path('operational-notifications/'+notice.id+'/read'),undefined,undefined,{},'POST')).status===200,'Recipient can mark notice read');
+ assert((await call(l,path('operational-notifications/'+notice.id+'/read'),undefined,undefined,{},'POST')).status===403,'Supervisor cannot mark another recipient notice read');
+ await command(a,org,{command:'revokeBidderAccess',grantId:grant});assert(!(await reports(b)).items.some(r=>r.operationId===own.operationId),'Revocation removes prior failure target from bidder reports');
+ assert((await send(b,{...own,eventId:randomUUID()})).status===403,'Revoked bidder cannot report new work');
+ await command(l,org,{command:'changeAssignment',candidateId:candidate,userId:m.id,assign:false});assert(!(await reports(m)).items.some(r=>r.operationId===observation.operationId),'Assignment revocation also hides prior processing observations');
+ const activity=await call(m,path('activity'));assert(activity.status===200&&!activity.data.items.some(e=>Object.hasOwn(e,'redacted_change_summary')),'Activity projects identifiers/actions without arbitrary changed values');
+ const visibleFailure={...observation,eventId:randomUUID(),operationId:randomUUID(),candidateId:fixture.candidate,bidId:fixture.bid,stage:'clipboard',state:'failed',code:'PROCESSING_FAILED'};assert((await send(m,visibleFailure)).status===200,'Visible synthetic browser failure recorded');
+ return {company,candidate:fixture.candidate,reportOperationId:visibleFailure.operationId};
 }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { bidStatuses, dashboardMetrics, metricLabels, type DashboardItem, type DashboardMetric, type DashboardReport, type OrganizationScope } from "@candidate/contracts";
 import { readApi } from "../workspace/requests";
+import { ProcessingPanel } from "./processing";
 const box = "grid gap-3 rounded border bg-white p-5";
 const input = "rounded border border-slate-300 bg-white p-2";
 const titles = { admin: "Admin dashboard", team_leader: "Team Leader dashboard", team_member: "Team Member dashboard", bidder: "Bidder dashboard" };
@@ -96,5 +97,6 @@ export function OperationalDashboard({ scope, actorId }: { scope: OrganizationSc
       {notices?.map(n => <article key={n.id} className="flex flex-wrap gap-3 border-b py-3"><a className="underline" href={`/bids/${n.bidId}?organizationId=${org}`}>{n.title}</a><time>{date(n.createdAt)}</time>{!n.readAt ? <button disabled={marking} className="underline" onClick={async () => { setMarking(true); try { await readApi(`/api/v1/notifications/${n.id}/read?organizationId=${org}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); setRefresh(t => t + 1); } catch (e) { setNoticeError(e instanceof Error ? e.message : "Could not mark notification read."); } finally { setMarking(false); } }}>Mark read</button> : <span>Read</span>}</article>)}
     </section>
     <section className={box}><h3 className="text-lg font-semibold">Activity history</h3><p>Redacted events in your current audit scope; no historical profile values are included.</p>{activityError && <p role="alert">Activity unavailable: {activityError}</p>}{activity?.items.map(a => <article className="border-b py-2 text-sm" key={a.id}><p>{a.action} · {date(a.createdAt)}</p><p>Actor {a.actorId} · record {a.subjectId} · request {a.requestId}</p></article>)}{activity?.total === 0 && <p>No visible activity.</p>}<div className="flex gap-4"><button disabled={activityPage === 1} onClick={() => setActivityPage(p => p - 1)}>Previous activity page</button><span>Page {activityPage}</span><button disabled={!activity || activityPage * 25 >= activity.total} onClick={() => setActivityPage(p => p + 1)}>Next activity page</button></div></section>
+    <ProcessingPanel org={org} actor={actorId} refresh={refresh} />
   </div>;
 }
