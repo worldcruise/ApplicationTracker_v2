@@ -39,6 +39,11 @@ export function localStore(factory: IDBFactory = indexedDB) {
     async addWithPointer<T>(key: string, value: T, pointer: string, id: string) {
       await transaction("readwrite", store => { store.add(value, key); return store.put(id, pointer); });
     },
+    async reserve<T>(pointer:string,recordPrefix:string,id:string,value:T){
+      let selected=id;
+      await transaction("readwrite",store=>{const request=store.get(pointer);request.onsuccess=()=>{if(typeof request.result==="string")selected=request.result;else{store.add(value,recordPrefix+id);store.put(id,pointer);}};return request;});
+      return selected;
+    },
     async merge<T extends object>(key: string, defaults: T, patch: Partial<T>): Promise<T> {
       let merged = defaults;
       await transaction("readwrite", store => {

@@ -48,7 +48,7 @@ export function buildArchiveIndex(scope:CaptureScope,companyKey:string,entries:A
   for(const entry of entries){if(entry.identifiers.urlHash)(byUrl[entry.identifiers.urlHash]??=[]).push(entry.operationId);if(entry.identifiers.descriptionHash)(byDescription[entry.identifiers.descriptionHash]??=[]).push(entry.operationId);if(entry.identifiers.externalId)(byExternal[JSON.stringify([entry.identifiers.provider,entry.identifiers.externalId])]??=[]).push(entry.operationId);}
   return {archiveVersion:1,organizationId:scope.organizationId,candidateId:scope.candidateId,companyKey,normalizationVersion:HISTORY_VERSION,checkedAt:new Date().toISOString(),entries,byUrl,byDescription,byExternal};
 }
-function validateIndex(raw:unknown,scope:CaptureScope,key:string):ArchiveIndexV1 {
+export function validateArchiveIndex(raw:unknown,scope:CaptureScope,key:string):ArchiveIndexV1 {
   if(!object(raw)||raw.archiveVersion!==1||raw.organizationId!==scope.organizationId||raw.candidateId!==scope.candidateId||raw.companyKey!==key||raw.normalizationVersion!==HISTORY_VERSION||typeof raw.checkedAt!=="string"||!Number.isFinite(Date.parse(raw.checkedAt))||!Array.isArray(raw.entries)||raw.entries.length>MAX_PACKAGES)throw new ArchiveError("unknown","Archive index is missing, damaged, unsupported or in another scope.",true);
   const ids=new Set<string>(),paths=new Set<string>();
   for(const entry of raw.entries){
@@ -84,7 +84,7 @@ export function archiveHistory(store:Store=localStore()) {
     const empty={company:[],exact:[],possible:[],checkedAt:new Date().toISOString()};
     try{
       const query=await identifyJob(validateHistoryContext(context));const {company,path}=await linked(scope,query.companyKey);
-      const index=validateIndex(await jsonFile(company,"archive-index.json",2097152),scope,query.companyKey);
+      const index=validateArchiveIndex(await jsonFile(company,"archive-index.json",2097152),scope,query.companyKey);
       const result:ArchiveHistory={...empty,state:index.entries.length?"found":"not_found",message:"Verified indexed packages only. Files added outside the index require scoped repair.",relativePath:path.join("/"),company:[],exact:[],possible:[]};
       const budget={bytes:0};
       // Direct index paths only: normal lookup never enumerates the root/candidate/company tree.
@@ -113,7 +113,7 @@ export function archiveHistory(store:Store=localStore()) {
     if(failures.length)return {written:false,failures,message:"Unreadable/incomplete packages retained. Existing index was not replaced."};
     if(new Set(entries.map(e=>e.operationId)).size!==entries.length)throw new ArchiveError("unknown","Duplicate operation IDs require manual inspection. No index was replaced.",true);
     const index=buildArchiveIndex(scope,query.companyKey,entries.sort((a,b)=>a.directory.localeCompare(b.directory)));
-    validateIndex(index,scope,query.companyKey);
+    validateArchiveIndex(index,scope,query.companyKey);
     const bytes=new TextEncoder().encode(JSON.stringify(index,null,2)+"\n");
     const lock="archive-index:"+await linkKey(scope,query.companyKey);
     if(!navigator.locks)throw new ArchiveError("unknown","Web Locks are required to replace an archive index safely.");

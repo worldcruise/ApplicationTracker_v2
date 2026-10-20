@@ -10,3 +10,4 @@ export * from "./templates.js";
 export * from "./documents.js";
 export * from "./workflow.js";
 export * from "./history.js";
+export * from "./archive-package.js";
