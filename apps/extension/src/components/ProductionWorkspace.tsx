@@ -9,6 +9,7 @@ import {exportOperation,refreshDownload,settleDownload} from "../exports";
 import {PdfPreview} from "./PdfPreview";
 import {DirectoryProbe} from "./DirectoryProbe";
 import {FactReview} from "./FactReview";
+import {reportExtensionProcessing} from "../processing-reports";
 const emptyReview=():ResumeReviewInput=>({experienceIds:[],educationIds:[],claims:{}});
 interface DraftRecord {revision:number;value:ExtensionDraft}
 export function ProductionWorkspace({api,actor,org,profile,view,web}:{api:ExtensionApi;actor:string;org:string;profile:CandidateProfile;view:"resume"|"profile";web:(path:string)=>string}){
@@ -23,6 +24,7 @@ export function ProductionWorkspace({api,actor,org,profile,view,web}:{api:Extens
  const letterReview=reviewResume(letterContent(draft.letterText),profile,draft.letterReview);
  const uncertain=ops.some(o=>o.outcomes.databaseSync.state==="unknown"||o.outcomes.databaseSync.state==="pending");
  const disabled=busy||!ready||!!localError||profile.status==="archived";
+ useEffect(()=>{if(!busy)for(const op of ops)void reportExtensionProcessing(api,{operationId:op.id,actorId:op.actorId,organizationId:op.organizationId,candidateId:op.candidateId,bidId:op.input.bidId},op.outcomes).catch(()=>{/* Actor-scoped report IDs remain durable; business work is never replayed. */});},[api,busy,ops]);
  async function reloadOperations(){const rows=(await journal.list(actor,org)).filter(o=>o.candidateId===profile.id);setOps(rows);if(active){const value=rows.find(o=>o.id===active.id);if(value)setActive(value);}}
  useEffect(()=>{let live=true;void(async()=>{try{const stored=await localStore().get<DraftRecord>(key);if(stored){revision.current=stored.revision;if(live)setDraft(stored.value);}
    const rows=(await operationJournal().list(actor,org)).filter(o=>o.candidateId===profile.id);for(const op of rows){if(op.outcomes.databaseSync.state==="pending")await operationJournal().stage(op.id,"databaseSync","unknown","Workspace closed before confirmation.");await refreshDownload(op);}

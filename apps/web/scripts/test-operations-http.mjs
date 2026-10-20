@@ -59,7 +59,7 @@ export async function testOperationsHTTP({call,command,identities,org,team,fixtu
  const raw=await b.client.from('candidates').select('*').eq('id',candidate);assert(!raw.error&&raw.data.length===0,'Bidder observations never grant profile access');
  const own={...observation,eventId:randomUUID(),operationId:randomUUID(),stage:'local',state:'failed',code:'PROCESSING_FAILED'};assert((await send(b,own)).status===200,'Bidder can report their permitted prepared-package failure');
  assert(!(await reports(b)).items.some(r=>r.operationId===observation.operationId),'Bidder cannot inherit another actor failure');
- assert((await m.client.from('processing_observations').insert({organization_id:org,...observation})).error?.code==='42501','Direct observation insert bypass denied');
+ assert((await m.client.from('processing_observations').insert({organization_id:org,id:randomUUID(),operation_id:observation.operationId,actor_id:m.id,candidate_id:candidate,bid_id:bid,team_id:team,stage:'database',state:'unknown',code:'SYNC_UNKNOWN',request_payload:observation})).error?.code==='42501','Direct valid observation insert bypass denied');
  assert((await m.client.from('processing_observations').update({state:'succeeded'}).eq('organization_id',org)).error?.code==='42501','Direct historical outcome editing denied');
  const recovered={...observation,eventId:randomUUID(),state:'succeeded',code:'RECOVERED'};assert((await send(m,recovered)).status===200,'Recovery appends an independent event');
  const unresolved=await call(l,path('processing'));assert(!unresolved.data.items.some(r=>r.operationId===observation.operationId),'Recovered latest stage leaves unresolved queue');
