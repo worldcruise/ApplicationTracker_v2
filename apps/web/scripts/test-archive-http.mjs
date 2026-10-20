@@ -1,6 +1,6 @@
-import {randomUUID,createHash} from "node:crypto";
+import {randomUUID,createHash,createHmac} from "node:crypto";
 import {identifyJob,packagePaths,packageJobDetails} from "@candidate/domain";
-export async function testArchiveHTTP({call,command,identities,org,team,assert}){
+export async function testArchiveHTTP({call,command,identities,org,team,assert,renderKey}){
  const a=identities.adminA,m=identities.memberA,b=identities.bidderA,l=identities.leaderA,url=p=>p+"?organizationId="+org;
  const profile={fullName:"Synthetic Archive Avery",email:"archive@example.invalid",phone:"+1 202 555 0175",location:"Synthetic City",seniorityPreference:null,professionalSummary:"Built synthetic tools.",privateNotes:"PRIVATE ARCHIVE PROFILE",status:"ready",links:[],experiences:[],educations:[],certifications:[]};
  const created=await call(a,url("/candidates"),{teamId:team,ownerId:null,profile});assert(created.status===200,"Archive fixture persists");const candidate=created.data.id;
@@ -66,5 +66,16 @@ export async function testArchiveHTTP({call,command,identities,org,team,assert})
  assert((await report(m,{...observation,metadataSha256:"0".repeat(64)})).code==="KEY_PAYLOAD_MISMATCH","Device-report replay cannot change its frozen hashes");
  assert((await report(m,{...observation,deviceId:randomUUID()})).status===403,"Another device cannot replace the original operation's report");
  assert((await report(identities.memberB,observation)).status===403,"Another account cannot record this operation's local state");
+ const explicit=await input();explicit.existingBidId=receipt.bidId;
+ const jobSnapshot=await m.client.rpc("archive_bid_job",{p_org:org,p_bid:receipt.bidId,p_document:frozen.doc.id});assert(!jobSnapshot.error&&jobSnapshot.data,"Explicit existing job snapshot is authorized");
+ const latest=(await call(m,url("/bids/"+receipt.bidId))).data.bid;
+ const fields=["candidateId","teamId","ownerId","companyName","jobTitle","jobDescription","jobUrl","externalId","jobLocation","priority","followUpAt","lastContactAt","notes","outcome","resumeDocumentId","coverLetterDocumentId"];
+ const bidInput=Object.fromEntries(fields.map(k=>[k,latest[k]]));
+ async function editJob(description){const version=(await call(m,url("/bids/"+receipt.bidId))).data.bid.rowVersion,operationId=randomUUID();return call(m,url("/bids/"+receipt.bidId),{operationId,input:{...bidInput,jobDescription:description}},version,{"Idempotency-Key":operationId},"PATCH");}
+ assert((await editJob(job.description+" changed after validation")).status===200,"Concurrent explicit job details may change after API validation");
+ const envelope=JSON.stringify({input:explicit,requestHash:sha(JSON.stringify(explicit)),resumeDocumentId:frozen.doc.id,letterDocumentId:null,exactBidIds:[],historyToken:null,existingJob:jobSnapshot.data});
+ const signature=createHmac("sha256",Buffer.from(renderKey,"hex")).update("archive.v1|"+envelope).digest("hex");
+ const stale=await m.client.rpc("save_archive_package",{p_envelope:envelope,p_key_id:"primary",p_signature:signature,p_request:randomUUID()});assert(stale.error?.code==="40001","Protected command rejects a valid but stale explicit-job attestation");
+ assert((await editJob(job.description)).status===200,"Explicit job fixture restores via a new protected revision");
  return {candidate,job,first,receipt,source:frozen,bundle,letter:letterDoc.data,letterText:profile.professionalSummary};
 }

@@ -57,6 +57,8 @@ Database synchronization resolves original source operation IDs or prepared docu
 
 `archive_operations` preserves immutable actor/key/request-hash/results. Receipt lookup optionally checks the frozen request hash and always rechecks current access. A separate immutable device observation records the first locally verified file/metadata hashes and its claimed `checkedAt`. It is explicitly a device report, not proof of present file existence or submission. Its payload is also persisted before delivery and reused after a lost response.
 
+D08's verified-alias/provider-ID/reposting override authority remains a separate decision gate. This increment supplies conservative matching and explicit existing-bid selection; it does not introduce an unaudited force-new-duplicate capability or claim broader T046/T051 completion.
+
 ## Recovery
 
 | Result | Action |

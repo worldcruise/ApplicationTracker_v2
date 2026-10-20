@@ -153,6 +153,7 @@ begin
  end if;
  if target is not null then
   job:=public.archive_bid_job(org,target,doc);if job is null or job->>'candidateId'<>cand::text then raise exception 'FORBIDDEN' using errcode='42501';end if;
+  if (f->>'existingBidId') is not null and job is distinct from e->'existingJob' then raise exception 'ARCHIVE_HISTORY_CHANGED' using errcode='40001';end if;
  else
   team:=private.candidate_team(org,cand);
   result:=public.save_bid(org,null,0,jsonb_build_object('candidateId',cand,'teamId',team,'ownerId',private.actor_id(),'companyName',f->'context'->>'company','jobTitle',f->'context'->>'title','jobDescription',f->'context'->>'description','jobUrl',nullif(f->'context'->>'url',''),'externalId',nullif(f->'context'->>'externalId',''),'jobLocation',null,'priority','normal','followUpAt',null,'lastContactAt',null,'notes','','outcome','','resumeDocumentId',doc,'coverLetterDocumentId',letter),op,p_request);

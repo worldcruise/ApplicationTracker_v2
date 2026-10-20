@@ -20,7 +20,10 @@ export function packageInput(value:unknown,actor:string,org:string):FrozenPackag
  if(!Array.isArray(b.relativePath)||b.relativePath.length!==3||b.relativePath.some(x=>typeof x!=="string"||x.length>120||!x||/^[. ]|[. ]$|[\u0000-\u001f<>:"/\\|?*]/u.test(x)||/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/iu.test(x))||b.relativePath.join("/").length>240)throw new ApiFailure(422,"SCHEMA_INVALID","Invalid relative archive path.");
  const r=strictObject(b.resume,["reference","rawJson","pdfSha256","pageCount","schemaVersion","profileRevision","template","rendererVersion","renderedAt"]);
  const t=strictObject(r.template,["id","name","version","layout","layoutHash","assetHashes","rendererVersion"]);uuid(t.id);
- if(!validTemplateLayout(t.layout)||typeof t.name!=="string"||t.name.length>200||!Number.isInteger(t.version)||Number(t.version)<1||typeof t.layoutHash!=="string"||!/^[0-9a-f]{64}$/.test(t.layoutHash)||!t.assetHashes||typeof t.assetHashes!=="object"||Array.isArray(t.assetHashes)||Object.values(t.assetHashes).some(v=>typeof v!=="string"||!/^[0-9a-f]{64}$/.test(v))||!Number.isInteger(r.profileRevision)||Number(r.profileRevision)<1||typeof r.rendererVersion!=="string"||typeof r.renderedAt!=="string")throw new ApiFailure(422,"SCHEMA_INVALID","Use the recorded frozen template, assets, renderer and profile revision.");
+ // The original ATS Classic snapshot predates the modern layout contract. Its exact
+ // immutable value is checked against the authorized source below, never rewritten.
+ const legacy=t.id==="a7000000-0000-4000-9000-000000000001"&&t.rendererVersion==="ats-classic/1.0.0";
+ if((!legacy&&!validTemplateLayout(t.layout))||typeof t.name!=="string"||t.name.length>200||!Number.isInteger(t.version)||Number(t.version)<1||typeof t.layoutHash!=="string"||!/^[0-9a-f]{64}$/.test(t.layoutHash)||!t.assetHashes||typeof t.assetHashes!=="object"||Array.isArray(t.assetHashes)||Object.values(t.assetHashes).some(v=>typeof v!=="string"||!/^[0-9a-f]{64}$/.test(v))||!Number.isInteger(r.profileRevision)||Number(r.profileRevision)<1||typeof r.rendererVersion!=="string"||typeof r.renderedAt!=="string")throw new ApiFailure(422,"SCHEMA_INVALID","Use the recorded frozen template, assets, renderer and profile revision.");
  const ref=(v:unknown)=>{const kind=(v&&typeof v==="object"&&!Array.isArray(v))?(v as Record<string,unknown>).kind:undefined;const p=strictObject(v,kind==="operation"?["kind","operationId"]:["kind","documentId"]);if(p.kind==="operation"&&Object.keys(p).length===2)uuid(p.operationId);else if(p.kind==="document"&&Object.keys(p).length===2)uuid(p.documentId);else throw new ApiFailure(422,"SCHEMA_INVALID","Choose a frozen source operation or authorized document.");};ref(r.reference);
  if(typeof r.rawJson!=="string"||Buffer.byteLength(r.rawJson)>1048576||!validateResume(r.rawJson).content||r.schemaVersion!==1||typeof r.pdfSha256!=="string"||!/^[0-9a-f]{64}$/.test(r.pdfSha256)||!Number.isInteger(r.pageCount)||Number(r.pageCount)<1)throw new ApiFailure(422,"SCHEMA_INVALID","Supply valid original schema-v1 JSON and a recorded PDF hash.");
  if(b.coverLetter!==null){const l=strictObject(b.coverLetter,["reference","text"]);ref(l.reference);if(typeof l.text!=="string"||Buffer.byteLength(l.text)>204800)throw new ApiFailure(422,"SCHEMA_INVALID","Use frozen cover letter text up to 200 KiB.");}
@@ -55,8 +58,10 @@ export async function savePackage(client:SupabaseClient,input:FrozenPackageInput
  const previous=await phase("Package receipt",databaseResult<PackageSyncResult|null>(client.rpc("archive_operation_result",{p_org:org,p_operation:input.operationId})));
  // A replay still passes through the command's immutable request-hash comparison below.
  let exactBidIds:string[]=[],historyToken:string|null=null;
+ let existingJob:({candidateId:string}&FrozenPackageInput["context"])|null=null;
  if(input.existingBidId){
   const job=await databaseResult<({candidateId:string}&FrozenPackageInput["context"])|null>(client.rpc("archive_bid_job",{p_org:org,p_bid:input.existingBidId,p_document:r.documentId}));
+  existingJob=job;
   if(!job||job.candidateId!==input.candidateId)throw new ApiFailure(403,"FORBIDDEN","This existing bid is unavailable for archive saving.");
   const ids=await identifyJob({company:job.company,title:job.title,url:job.url,description:job.description,externalId:job.externalId});
   // An explicit selection may identify a URL-less job; it still must match the reviewed job facts.
@@ -69,10 +74,10 @@ export async function savePackage(client:SupabaseClient,input:FrozenPackageInput
    exactBidIds=[...new Set((await classifyHistory(input.context,history.rows)).exact.map(x=>x.id))];historyToken=history.token;
    if(exactBidIds.length>1)throw new ApiFailure(409,"DUPLICATE_JOB","Multiple exact opportunities exist. Explicitly select the intended bid before freezing a new package.");
   }
-  const envelope=JSON.stringify({input,requestHash,resumeDocumentId:r.documentId,letterDocumentId:l?.documentId??null,exactBidIds,historyToken});
+  const envelope=JSON.stringify({input,requestHash,resumeDocumentId:r.documentId,letterDocumentId:l?.documentId??null,exactBidIds,historyToken,existingJob});
   const signature=createHmac("sha256",Buffer.from(key,"hex")).update("archive.v1|"+envelope).digest("hex");
   const response=await client.rpc("save_archive_package",{p_envelope:envelope,p_key_id:keyId,p_signature:signature,p_request:requestId});
-  if(response.error?.message==="ARCHIVE_HISTORY_CHANGED"&&attempt<2)continue;
+  if(response.error?.message==="ARCHIVE_HISTORY_CHANGED"&&attempt<2&&!input.existingBidId)continue;
   return phase("Package transaction",databaseResult<PackageSyncResult>(Promise.resolve(response)));
  }
  throw new ApiFailure(409,"VERSION_CONFLICT","History changed repeatedly. Retry the original frozen operation.");

@@ -25,7 +25,8 @@ function metadata(op:PackageOperation,files:ArchiveManifestV1["files"],complete:
   const i=op.input;
   return {archiveVersion:1,organizationId:i.organizationId,candidateId:i.candidateId,operationId:op.id,bidId:op.result?.bidId??null,context:i.context,identifiers:i.identifiers,packageComplete:complete,
     schemaVersion:1,templateVersionId:i.resume.template.id,rendererVersion:i.resume.rendererVersion,files,inputHash:op.inputHash,createdAt:i.createdAt,deviceId:i.deviceId,
-    profileRevision:i.resume.profileRevision,templateVersion:i.resume.template.version,templateLayoutHash:i.resume.template.layoutHash,fontAndAssetHashes:i.resume.template.assetHashes,pdfSha256:i.resume.pdfSha256,
+    actorId:i.actorId,candidateName:i.candidateName,profileRevision:i.resume.profileRevision,template:i.resume.template,templateVersion:i.resume.template.version,templateLayoutHash:i.resume.template.layoutHash,fontAndAssetHashes:i.resume.template.assetHashes,pdfSha256:i.resume.pdfSha256,renderedAt:i.resume.renderedAt,
+    resumeReference:i.resume.reference,coverLetterReference:i.coverLetter?.reference??null,
     synchronization:{state:op.outcomes.database.state,checkedAt:op.outcomes.database.updatedAt,resumeVersionId:op.result?.resumeVersionId??null,resumeDocumentId:op.result?.resumeDocumentId??null,coverLetterVersionId:op.result?.coverLetterVersionId??null},
     capturedAt:i.capturedAt??null,relativePath:i.relativePath.join("/"),submissionRecorded:false};
 }
