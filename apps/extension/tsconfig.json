@@ -7,5 +7,5 @@
     "isolatedModules": true,
     "types": ["chrome", "react", "react-dom", "node", "wicg-file-system-access"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "scripts/**/*.ts"]
 }

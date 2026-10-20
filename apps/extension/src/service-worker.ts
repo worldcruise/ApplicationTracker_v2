@@ -1,6 +1,5 @@
 // MV3 entry point: event-driven, with no durable state held in globals.
 import { captureContext, CAPTURE_COMMAND } from "./capture";
-export { captureContext } from "./capture";
 const captureFailure=()=>chrome.tabs.create({url:chrome.runtime.getURL("workspace.html")+"?captureUnavailable=1"});
 chrome.runtime.onInstalled.addListener(()=>{
  void chrome.contextMenus.removeAll().then(()=>chrome.contextMenus.create({id:CAPTURE_COMMAND,title:"Check Application History",contexts:["selection"]})).catch(()=>{/* Reload/install can be retried without losing captures. */});

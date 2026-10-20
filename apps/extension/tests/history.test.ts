@@ -59,4 +59,10 @@ test("shortcut and menu use the same bounded credential-free capture workflow; r
   const a=await captureContext("shortcut",{id:1} as chrome.tabs.Tab);const b=await captureContext("context_menu",{id:1} as chrome.tabs.Tab,"Menu synthetic company");
   assert.equal(invoked,extractPageContext);assert.equal(a.company,"Synthetic selected");assert.equal(b.company,"Menu synthetic company");assert.equal(a.actorId,scope.actorId);assert.ok(!a.url.includes("token"));assert.ok(!JSON.stringify(await localStore().get("quick-capture:"+a.id)).includes("do-not-persist"));assert.equal(opened.length,2);
   fail=true;const restricted=await captureContext("shortcut",{id:2,url:"chrome://settings"} as chrome.tabs.Tab);assert.equal(restricted.captureState,"unavailable");assert.equal(restricted.url,"");assert.ok(restricted.warnings.length);
+  let shortcutHook:(command:string,tab:chrome.tabs.Tab)=>void=()=>{},menuHook:(info:chrome.contextMenus.OnClickData,tab:chrome.tabs.Tab)=>void=()=>{};
+  Object.assign(chromeMock,{commands:{onCommand:{addListener:(fn:typeof shortcutHook)=>{shortcutHook=fn;}}},contextMenus:{onClicked:{addListener:(fn:typeof menuHook)=>{menuHook=fn;}}},action:{onClicked:{addListener:()=>{}}},downloads:{onChanged:{addListener:()=>{}}}});
+  Object.assign(chromeMock.runtime,{onInstalled:{addListener:()=>{}}});await import("../src/service-worker");fail=false;
+  shortcutHook("check-application-history",{id:1} as chrome.tabs.Tab);menuHook({menuItemId:"check-application-history",selectionText:"Router menu company",frameId:0} as chrome.contextMenus.OnClickData,{id:1} as chrome.tabs.Tab);
+  for(let i=0;i<40&&opened.length<5;i++)await new Promise(resolve=>setImmediate(resolve));
+  assert.equal(opened.length,5);const captures=await localStore().entries<{company:string}>("quick-capture:");assert.ok(captures.some(row=>row.company==="Router menu company"));
 });

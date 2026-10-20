@@ -22,6 +22,9 @@ export async function POST(request: Request) {
       client.rpc("application_history_candidates",{p_org:scope.organizationId,p_candidate:candidateId,p_company:reviewed.company}));
     // Never claim absence if server/client normalization versions disagree on a Unicode edge case.
     if (identifiers.companyKey !== result.companyKey || identifiers.companyLooseKey !== result.companyLooseKey) throw new ApiFailure(503,"SERVICE_UNAVAILABLE","Company normalization differs between server and client. History is unknown; repair the normalization deployment.");
-    return {...await classifyHistory(reviewed,result.rows),identifiers,checkedAt:result.checkedAt,truncated:result.truncated,scope:"authorized_candidate"};
+    const matches=await classifyHistory(reviewed,result.rows);
+    const included=new Set([...matches.company,...matches.possible].map(row=>row.id));
+    if(result.rows.some(row=>!included.has(row.id)))throw new ApiFailure(503,"SERVICE_UNAVAILABLE","Stored company normalization differs from this matching version. History remains unknown.");
+    return {...matches,identifiers,checkedAt:result.checkedAt,truncated:result.truncated,scope:"authorized_candidate"};
   });
 }

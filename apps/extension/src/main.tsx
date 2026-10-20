@@ -5,3 +5,4 @@ import './workspace.css';
 import {App} from './workspace';
 const root=document.getElementById('root');if(!root)throw Error('Workspace root missing.');
 createRoot(root).render(<StrictMode><App/></StrictMode>);
+export { captureContext } from "./capture";
