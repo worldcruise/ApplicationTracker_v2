@@ -40,6 +40,7 @@ export interface HistoryMatch {
   submittedAt: string | null;
   evidence: MatchEvidence[];
   path?: string;
+  files?: { name: string; bytes: number; sha256: string }[];
 }
 export interface HistoryMatches {
   company: HistoryMatch[];

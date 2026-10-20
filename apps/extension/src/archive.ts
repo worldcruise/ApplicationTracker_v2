@@ -90,7 +90,7 @@ export function archiveHistory(store:Store=localStore()) {
       // Direct index paths only: normal lookup never enumerates the root/candidate/company tree.
       for(const entry of index.entries){const dir=await company.getDirectoryHandle(entry.directory);const manifest=await readManifest(dir,scope,query.companyKey,budget);
         if(manifest.operationId!==entry.operationId||!identifiersEqual(entry.identifiers,manifest.identifiers))throw new ArchiveError("unknown","Indexed operation/identifiers differ from package metadata.",true);
-        const match=matchIdentifiers(query,manifest.identifiers);const row={id:manifest.bidId??manifest.operationId,company:manifest.context.company,title:manifest.context.title,status:null,submittedAt:null,evidence:match.evidence,path:[...path,entry.directory].join("/")};
+        const match=matchIdentifiers(query,manifest.identifiers);const row={id:manifest.bidId??manifest.operationId,company:manifest.context.company,title:manifest.context.title,status:null,submittedAt:null,evidence:match.evidence,path:[...path,entry.directory].join("/"),files:Object.entries(manifest.files).map(([name,value])=>({name,...value}))};
         if(match.company)result.company.push(row);if(match.exact)result.exact.push(row);if(match.possible)result.possible.push(row);
       }
       result.checkedAt=new Date().toISOString();return result;

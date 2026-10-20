@@ -16,6 +16,7 @@ import { testWorkflowHTTP } from "./test-workflow-http.mjs";
 import { testWorkflowBrowser } from "./test-workflow-browser.mjs";
 import { launchExtension,testExtensionBrowser } from "./test-extension-browser.mjs";
 import { testHistoryHTTP } from "./test-history-http.mjs";
+import { testHistoryBrowser } from "./test-history-browser.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -290,7 +291,9 @@ try {
   try { const checks=await testExtensionBrowser({harness:extensionHarness,call,command,identities,org:orgA,team:teamA,password,assert:expect});expect(checks===12,"All 12 extension browser checkpoints complete");console.log(JSON.stringify({result:"PASS",extensionBrowserCheckpoints:checks}));} catch(e){throw new TestFailure(e.message);}
   step = "current membership and grant revocation with existing tokens";
   step="application history HTTP";
-  await testHistoryHTTP({call,command,identities,org:orgA,team:teamA,assert:expect});
+  const historyFixture=await testHistoryHTTP({call,command,identities,org:orgA,team:teamA,assert:expect});
+  step="quick application check browser";
+  try{const checks=await testHistoryBrowser({harness:extensionHarness,fixture:historyFixture,identities,org:orgA,password,assert:expect});expect(checks===9,"All nine Quick Check browser checkpoints complete");console.log(JSON.stringify({result:"PASS",historyBrowserCheckpoints:checks}));}catch(error){throw new TestFailure(error.message);}
   await command(identities.adminA, orgA, { command: "setOrganizationMembership", userId: identities.memberA.id, role: "team_member", state: "deactivated" }, identities.memberA.version);
   expect((await call(identities.memberA, candidatePath(first))).status === 403, "Unexpired token loses application access after deactivation");
   const after = await identities.memberA.client.from("candidates").select("id");
@@ -359,7 +362,7 @@ try {
   }
   inspect(`${web}/.next/static`);
   inspect(`${root}/apps/extension/dist`);
-  console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "59 headless Chromium checkpoints including unpacked MV3; hosted interactive Chrome/OS gates pending" }));
+  console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "68 headless Chromium checkpoints including unpacked MV3 Quick Check; hosted native shortcut/menu and Windows filesystem gates pending" }));
 } catch (error) {
   console.error(JSON.stringify({ result: "FAIL", step, message: error instanceof TestFailure ? error.message : "Integration harness failed; inspect the isolated service health and current step." }));
   process.exitCode = 1;
