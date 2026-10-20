@@ -1,6 +1,6 @@
 # Candidate Platform
 
-An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. The web app uses hosted Supabase with SSR sessions, organization/team/assignment authorization, safe bidder projections, account administration and a versioned candidate profile editor. The extension includes Phase 0 probes for existing-account sign-in, directory handles and synthetic PDF preview/export. Resume/template/letter production and bid/interview operations are implemented; hosted/manual acceptance remains explicit.
+An npm workspace for the candidate management web application, Chrome extension, shared contracts, and document engine. The web app uses hosted Supabase with SSR sessions, organization/team/assignment authorization, safe bidder projections, account administration and a versioned candidate profile editor. The extension provides authenticated Resume and Profile tabs with exact prompts, shared JSON validation/rendering, durable account-scoped drafts and independent export/synchronization results. Resume/template/letter production and bid/interview operations are implemented; hosted/manual acceptance remains explicit.
 
 ## Local setup
 
@@ -34,7 +34,7 @@ If using the task-local portable runtime instead of an installed Node, add its d
 | `npm run extension:build` | Compile shared packages and rebuild `apps/extension/dist/`. No web build required. |
 | `npm run feasibility:pdf` | Generate the two-page synthetic sample, parse/render it with PDF.js, verify text/bounds/repeated hash, and write `output/pdf/phase0-synthetic-resume.pdf` plus ignored page PNGs. Uses the native canvas development dependency. |
 | `npm run admin:bootstrap -- --organization-id <new UUID> --admin-user-id <confirmed Auth UUID> --name "Synthetic Development"` | Audited new-organization bootstrap; operator-only key in the ignored server environment. See FOUNDATION.md before running. |
-| `npm run test:foundation:http` | Isolated CI-only production build/Auth/API and candidate Chromium harness; refuses hosted settings and a configured `.env.local`. Requires the CI local Supabase stack and installed Playwright Chromium. |
+| `npm run test:foundation:http` | Isolated CI-only production build/Auth/API and web/unpacked-MV3 Chromium harness; refuses hosted settings and a configured `.env.local`. Requires the CI local Supabase stack and installed Playwright Chromium. |
 | `npm run db:stop` | Stop this project's local Supabase services, preserving local data. |
 | `npm run db:reset` | Reset the **local** database, reapply migrations and seeds. Destructive to local development data; use intentionally. |
 | `npm run lint` / `npm run typecheck` / `npm test` | Run a single check. Type checking builds package declarations; tests use Node's built-in TypeScript test runner. |
@@ -51,18 +51,17 @@ No deployment is configured by this scaffold.
 
 ```sh
 npm run extension:build
+npm run dev
 ```
 
-1. Open `chrome://extensions` in desktop Chrome and enable Developer mode.
-2. Choose **Load unpacked** and select `apps/extension/dist`.
-3. Click the extension action to open its full workspace page. The Resume view contains the directory and synthetic PDF probes; Profile remains a placeholder with no candidate data.
-4. After source changes, rebuild and reload the extension on `chrome://extensions`, then reload its workspace tab.
+1. Open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select `apps/extension/dist`.
+2. Set `EXTENSION_ALLOWED_ORIGIN=chrome-extension://<actual-id>` in the web app's ignored `.env.local` and restart the web server. The development identity probe can remain disabled.
+3. Click the extension action, sign in to an existing synthetic account, and select the organization/candidate. Profile shows the authorized summary/configuration; Resume provides job input, exact Copy Prompt, JSON validation/factual review, PDF preview/export and letter saving.
+4. After rebuilding, reload the extension on `chrome://extensions`, then reload its workspace. Expect sign-in again; local drafts and frozen operations remain partitioned by account/organization/candidate.
 
-For source watching, run `npm run dev --workspace @candidate/extension` after `npm run build:packages`. Shared-package edits also need the root dev watcher or a new `build:packages` run. Restart the watcher for HTML/manifest/config/font/worker-asset edits. Builds bundle scripts, PDF.js worker and licensed fonts locally. The extension requests `storage` plus only configured Supabase/API hosts; it requests no history/capture/identity/downloads permission. Directory picking uses the user-authorized browser API. The `chrome120` syntax target is not a completed browser-support gate.
+Read [the extension build/configuration, recovery and Chrome testing runbook](docs/EXTENSION_WORKFLOW.md). It documents public-only build overrides, hosted migrations/accounts/signing prerequisites, directory permission renewal, export-only bidder scope and original-operation reconciliation. The manifest has storage, clipboardWrite, downloads and configured API/Supabase host access; scripts/worker/fonts are local and there are no content scripts or credential messages.
 
-The build reads the two public hosted settings from `apps/web/.env.local`. Optional `EXTENSION_PUBLIC_*` overrides can be set in ignored `apps/extension/.env.local` or the shell; `.env.example` remains placeholders. Only an explicit public configuration allowlist enters the bundle. Never add tokens or privileged keys. For the identity-only API check, set the web app's server-only `FEASIBILITY_API_ENABLED=true` and `EXTENSION_ALLOWED_ORIGIN` to the actual origin shown in the extension, then restart the web dev server. Production always disables this endpoint.
-
-Read [FEASIBILITY.md](docs/FEASIBILITY.md) for results, the synthetic sample, exact Chrome/manual test instructions and unsupported behavior. Automated checks do not establish live sign-in, actual directory-handle persistence, or MV3 PDF.js/CSP support. The user selected existing email/password Auth; the proposed PKCE gate remains unverified.
+Isolated CI now verifies the actual unpacked extension against real Supabase Auth/RLS and the shared production API, including native download SHA equality, closure/restart, account isolation and revocation. Hosted-account testing, interactive Windows directory/worker lifecycle and two-device acceptance remain manual. The existing email/password flow is retained; PKCE, automatic capture/history/archive packages and store publication remain separate gates. [FEASIBILITY.md](docs/FEASIBILITY.md) preserves the earlier Phase 0 evidence.
 
 ## Optional local database
 

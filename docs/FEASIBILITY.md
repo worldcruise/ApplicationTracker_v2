@@ -1,5 +1,7 @@
 # Phase 0 feasibility evidence
 
+This document preserves the original F001 Phase 0 evidence and its then-pending gates. The later EX01–EX03 [production Resume/Profile workflow](EXTENSION_WORKFLOW.md) supersedes its shell UI instructions and several capability limitations; see the dated update below. Original measurements and unexecuted Windows/PKCE gates remain explicit.
+
 Updated 17 October 2026. Scope: the explicitly requested F001A–F001C probes, using only synthetic data. All three code increments and available automated checks are complete. **Live Chrome/hosted-user acceptance remains pending**, so T006–T008 are not marked complete. Business authorization and canonical validation prerequisites remain in the build plan.
 
 | Probe | Implementation/check status | Live Chrome status |
@@ -119,3 +121,13 @@ Use `npm.cmd` on PowerShell if script execution is blocked. This working copy's 
 - Partial files are not silently overwritten; full package recovery, historical snapshot browsing/retention cleanup and automatic background Auth refresh are future work. Clearing extension data removes handles and local snapshots; exported files remain user-controlled.
 
 References: [Supabase password sign-in](https://supabase.com/docs/reference/javascript/auth-signinwithpassword), [Chrome session storage](https://developer.chrome.com/docs/extensions/reference/api/storage), [File System Access](https://developer.chrome.com/docs/capabilities/web-apis/file-system-access), [pdf-lib](https://pdf-lib.js.org/), [PDF.js](https://mozilla.github.io/pdf.js/examples/).
+
+## EX03 update: unpacked production workflow, 19 October 2026
+
+The extension now uses the normal shared API, not the identity-only probe. [Isolated CI at f6a9642](https://github.com/worldcruise/ApplicationTracker_v2/actions/runs/39346365443) passes all 20 migrations, 225 SQL assertions, 40 unit tests, production builds, nine-template/multipage PDF checks, 1,275 real Auth/API/artifact assertions and 59 headless Chromium checkpoints. Twelve checkpoints load the actual unpacked MV3 extension with real isolated Supabase Auth/PostgreSQL/RLS.
+
+Measured extension results include the user-selected existing email/password sign-in and same UUID, authorized candidate/Profile/configuration, exact real clipboard text, malformed JSON retention after closure, PDF.js worker/CSP rendering, downloaded bytes matching the preview hash, a lost response after an actual source commit, original-ID recovery, account switching without replay, assignment revocation, browser-process restart requiring sign-in with drafts retained, immutable letter saving and prepared export-only download/revocation. Positive requests are not mocked; only the post-commit lost-response case is injected. No hosted project or RLS policy was changed. A bidder fixture uses the existing manager-authorized reviewed bid/document link and export grant.
+
+These results supersede the earlier statements that arbitrary JSON, production templates, application authorization, database synchronization, unpacked loading and MV3 rendering had not yet been exercised. The production worker is event-driven and records Chrome terminal download events through persisted IDs; no authenticated replay depends on worker globals.
+
+Not executed: hosted authenticated extension use (no test session/operator migration or signing credentials supplied), interactive desktop Chrome/Windows visual and keyboard QA, real directory-handle cloning/gesture/permission lifecycle, forced worker-stop/OS interruption and two-device retrieval. PKCE/state/redirect remains unimplemented/unverified by the retained email/password flow. Absolute paths, OS folder opening, native helpers, automatic capture/archive packages and store publication remain outside this milestone. Use the current [installation, reload, operations and manual checklist](EXTENSION_WORKFLOW.md) instead of the historical probe buttons above.
