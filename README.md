@@ -6,6 +6,8 @@ An npm workspace for the candidate management web application, Chrome extension,
 
 ## Local setup
 
+**Active pilot: localhost web/API + existing hosted Supabase development project `xsyxlxpsglhkmvzlmhih`.** Public hosting, custom domains and production provisioning are deferred. Follow [Stage 1 setup, exact dashboard Auth URLs and five-flow manual verification](docs/LOCAL_PILOT.md). Existing features are retained; start with sign-in, candidate management, ATS Classic JSON/PDF and basic bids. Extension authentication is a separate later workflow.
+
 Install **Node.js 24 LTS** and **npm 11**. The verified runtime is recorded in `.nvmrc` and `package.json`. On Windows use the official Node installer, or a version manager that honors `.nvmrc`. Restart your terminal after installation. Run commands from the repository root.
 
 ```sh
@@ -15,7 +17,7 @@ npm ci
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The shared packages compile first and rebuild in watch mode alongside Next.js. Stop both processes with Ctrl+C. Hosted development needs no Docker or local database startup. If PowerShell blocks `npm.ps1`, use `npm.cmd` for the same commands; no execution-policy change is needed.
+Open the printed **Local pilot** URL, normally [http://localhost:3000](http://localhost:3000). The launcher binds loopback only, prefers 3000 and selects a free 3001–3010 fallback when needed; it keeps the actual app origin aligned with Auth callbacks/CSRF checks. A fallback needs its exact Supabase Auth URLs before email-flow tests. Set `PORT` to choose explicitly. Shared packages compile first and rebuild in watch mode alongside Next.js. Stop both processes with Ctrl+C. Hosted development needs no Docker or local database startup. If PowerShell blocks `npm.ps1`, use `npm.cmd`; no execution-policy change is needed.
 
 Before serving the web app, configure `apps/web/.env.local`. It has already been created for the supplied hosted development project in this working copy. On a fresh clone, copy `apps/web/.env.example` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from the development project's Connect dialog. Preserve an existing local file rather than overwriting it. The examples contain placeholders; real values remain ignored. Restart Next after changing environment settings. Builds and offline tests do not require hosted credentials, but the session-refresh proxy requires the two public settings at request time.
 
@@ -87,7 +89,7 @@ Resume Studio now includes canonical-v1 validation, scoped exact prompts, factua
 
 ## Pilot deployment
 
-Pilot preparation uses a separate production Supabase project and a proposed Render Node service. It is **not ready for real candidate onboarding** until the remaining acceptance gates and owner decisions pass. Read the [deployment commands and Auth/environment setup](docs/PILOT_DEPLOYMENT.md), [tagged extension installation/reload](docs/RELEASING.md), [encrypted backup/restore and rollback](docs/RECOVERY.md), [provider limits](docs/PROVIDER_LIMITS.md) and [actual deployment results](docs/DEPLOYMENT_RESULTS.md). Production scripts reject development fallback; no paid resource or hosted migration has been provisioned by this preparation.
+Public/production deployment is **deferred during Stage 1**. The earlier separate-production-project/Render preparation and source tag remain available for later use, with real-data acceptance still blocked. The [production runbook](docs/PILOT_DEPLOYMENT.md), [extension release procedure](docs/RELEASING.md), [recovery](docs/RECOVERY.md), [provider limits](docs/PROVIDER_LIMITS.md) and [prior deployment results](docs/DEPLOYMENT_RESULTS.md) are retained. Do not use production-only commands to start the localhost pilot.
 
 ## Workspace layout
 

@@ -16,7 +16,7 @@ export default function HomePage() {
           <p>Open your workspace to view candidates within your current organization and assignment scope.</p>
         </EmptyState>
         <EmptyState title="Resume and application work">
-          <p>Prepare documents and track applications from one workspace. These features will become available after account setup.</p>
+          <p>Open a candidate’s Resume Studio to validate JSON, preview and export a PDF with ATS Classic, then track each opportunity as a separate bid.</p>
         </EmptyState>
       </div>
     </WorkspaceShell>

@@ -1,5 +1,7 @@
 # Acceptance evidence
 
+**Stage update — 21 October 2026:** [localhost-first Stage 1](LOCAL_PILOT.md) is active. The production/archive release gates below remain historical acceptance requirements for their stated scope; public hosting, production domains/budgets and extension platform checks are deferred from the synthetic web-only pilot. Stage 1 still requires current hosted development membership, persistence and permission evidence; isolated CI is not a substitute for that target-specific verification.
+
 Evaluated 20 October 2026 against [design §22](DESIGN.md#22-verification-and-acceptance), [PRD §22](../doc/PRD.md#22-acceptance-criteria) and [PRD §24.12](../doc/PRD.md#2412-acceptance-criteria). Original requirements remain unchanged. A feature passing synthetic isolated checks does not certify the hosted deployment or the Windows/Chrome manual matrix.
 
 Statuses: **passed** = the stated test has direct evidence; **failed** = an observed failure or known missing required implementation; **not yet verified** = the necessary service, platform, measurement or owner decision is unavailable. Mixed gates take the least complete status; detailed rows preserve evidence already obtained. No real candidate data or applications were used.

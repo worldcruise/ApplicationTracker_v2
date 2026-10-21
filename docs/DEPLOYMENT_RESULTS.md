@@ -1,5 +1,7 @@
 # Deployment evidence register
 
+**Current priority (21 October 2026):** public deployment is deferred. Use [LOCAL_PILOT.md](LOCAL_PILOT.md) for Stage 1 local web/API with existing hosted development Supabase. The records below preserve the earlier production-preparation evidence and do not require production provisioning to develop locally.
+
 Date: 20 October 2026. Source branch: `codex/pilot-release`.
 
 **No hosted production deployment has occurred. No real data is authorized.** The operator has not supplied a production project reference, Render workspace/service/domain, budget approval, management authentication or retention authority. A public development key is not management authorization. `supabase projects list` returned missing CLI authentication; Docker/PostgreSQL client tools are unavailable on this computer.

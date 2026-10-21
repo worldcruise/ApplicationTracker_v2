@@ -1,5 +1,7 @@
 # Hosted Supabase development
 
+**Active Stage 1:** [LOCAL_PILOT.md](LOCAL_PILOT.md) is the current localhost-first setup/dashboard/verification guide. Web and `/api/v1` run locally; this existing hosted development project is retained. Public hosting, new production provisioning and extension authentication are later stages. Earlier historical verification below remains evidence of its stated scope.
+
 The development project reference is `xsyxlxpsglhkmvzlmhih`. Its public URL/key are configured only in ignored `apps/web/.env.local`; examples remain placeholders. The web app uses Next.js 16.4.2, `src/app`, the `@/*` alias, and `src/proxy.ts`. No Docker, CLI login, database password, or service-role key is needed to serve the web shell against hosted Supabase.
 
 ## Run the application

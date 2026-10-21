@@ -14,6 +14,19 @@ Sources are [PRD version 1.0](../doc/PRD.md) and the [original proposed design v
 
 The target structure is `apps/web`, `apps/extension`, `packages/contracts`, `packages/domain`, `packages/resume-engine`, `packages/ui`, `supabase/migrations`, database tests, `docs`, and releases, as specified in D§21. Normal API requests retain user context; protected commands commit business changes, history, and audit events in one database transaction. A filesystem write and database transaction are independently recoverable operations.
 
+## Active stage — localhost-first pilot (21 October 2026)
+
+The user's latest direction prioritizes **local Next.js web + `/api/v1`**, normally `http://localhost:3000`, with the existing hosted development Supabase project **`xsyxlxpsglhkmvzlmhih`** and existing GitHub repository. Docker is optional. Public hosting, custom domains and production provisioning are deferred; the earlier PD01–PD04 work and source tag remain available for a later stage. Production budget/domain/recovery acceptance is not a prerequisite for this synthetic localhost stage. Authorization, RLS, versioned migrations and immutable document history still apply; real-data onboarding remains outside this stage.
+
+| Task | Scope / dependencies | Design | Acceptance |
+| --- | --- | --- | --- |
+| LC01 (complete — 21 October) | Local development startup/configuration and Auth runbook; reuses H001, FN and completed web workflows. | §2–4, 20–21 | Local root check passes 60 tests; dev/anonymous API/Auth-redirect/no-store smoke passes on 3000 and automatic 3001 fallback. Existing project/public env preserved; IPv4 loopback supports this machine. Exact dashboard/manual five-flow checklist is in LOCAL_PILOT.md. No authenticated hosted persistence claim. |
+| LC02 (next) | Reconcile hosted development migration history and activate designated synthetic pilot identities/team assignments. | §4–8, 21 | Authorized operator reviews the existing target/history before applying pending migrations; no reset/RLS weakening/test fixtures. Existing email/password synthetic account obtains current app membership; four roles have observed allowed/denied access. No account password/token goes into Git or chat. |
+| LC03 | Execute the five-flow localhost acceptance checklist; depends on LC01–LC02. | §3, 6, 10–13, 18, 22 | Real local-browser sign-in/out/refresh; candidate create/edit/assignment/reload/conflict; canonical-v1 invalid input retained; ATS Classic same-byte preview/download/source history; independent basic Draft bid creation/tracking with no save-to-submit behavior. Distinguish local, hosted and prior CI evidence. |
+| LC04 (later) | Local extension authentication/capture/archive acceptance as a separate workflow. | §14–17, 22 | Choose actual development extension identity/origin separately and repeat account/project/restart/directory checks; no web setup dependency on extension credentials/CORS/production identity. Completed extension code is retained. |
+
+All five priority flows already have implementations and isolated CI coverage. Reuse them: nine templates, cover letters, interviews, dashboards and history are retained; ATS Classic is the initial pilot template. Do not restart the scaffold or remove later features. Hosted invite/recovery delivery, active memberships and persistence need current target-specific evidence before marking LC02–LC03 complete.
+
 ## Requirements comparison and decision register
 
 ### Contradiction requiring resolution

@@ -13,7 +13,8 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run build:packages && concurrently --kill-others-on-fail --names packages,web \"tsc -b packages/contracts packages/domain packages/resume-engine packages/ui --watch --preserveWatchOutput\" \"npm run dev --workspace @candidate/web\"",
+    "dev": "node scripts/dev.mjs",
+    "dev:workspaces": "npm run build:packages && concurrently --kill-others-on-fail --names packages,web \"tsc -b packages/contracts packages/domain packages/resume-engine packages/ui --watch --preserveWatchOutput\" \"npm run dev --workspace @candidate/web\"",
     "check": "npm run lint && npm run typecheck && npm test && npm run test:release",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "npm run build:packages && tsc -p tsconfig.tests.json && npm run typecheck --workspace @candidate/web && npm run typecheck --workspace @candidate/extension",
