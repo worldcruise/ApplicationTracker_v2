@@ -202,7 +202,8 @@ begin
    case when v_sort='created_desc' then created_at end desc,
    case when v_sort='company_asc' then private.workflow_search_text(company_name) end asc,
    case when v_sort='candidate_asc' then private.workflow_search_text(candidate_name) end asc,
-   case when v_sort='followup_asc' then follow_up_at end asc nulls last,
+   case when v_sort='followup_asc' then (select min(task.due_at) from public.workflow_tasks task where task.organization_id=p_org and task.state='open'
+    and ((p_kind='bids' and task.bid_id=filtered.id and task.interview_id is null) or (p_kind='interviews' and task.interview_id=filtered.id and task.bid_id=filtered.bid_id))) end asc nulls last,
    case when v_sort='submitted_desc' then submitted_at end desc nulls last,
    case when v_sort='scheduled_asc' then scheduled_at end asc nulls last,
    case when v_sort='scheduled_desc' then scheduled_at end desc nulls last,id
