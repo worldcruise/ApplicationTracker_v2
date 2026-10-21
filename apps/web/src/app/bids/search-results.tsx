@@ -18,10 +18,11 @@ export function WorkflowSearchResults({kind,org,tick,locked,onOpen,extraAction}:
  const [options,setOptions]=useState<WorkflowSearchResult["options"]|null>(null);const [loading,setLoading]=useState(true);
  const [failure,setFailure]=useState<{permission:boolean;message:string}|null>(null);const [retry,setRetry]=useState(0);
  const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
+ const submittedQuery=useRef<string|null>(null);
  const fields:Record<string,string>=kind==="bids"?bidFilters:interviewFilters;
  const values=new URLSearchParams(serialized);
  const query=values.get("q")??"";
- useEffect(()=>{setDraft(query);if(timer.current)clearTimeout(timer.current);},[query,kind]);
+ useEffect(()=>{if(submittedQuery.current===query){submittedQuery.current=null;return;}submittedQuery.current=null;setDraft(query);if(timer.current)clearTimeout(timer.current);},[query,kind]);
  useEffect(()=>()=>{if(timer.current)clearTimeout(timer.current);},[]);
  function navigate(changes:Record<string,string>,reset=true) {
   const next=new URLSearchParams(window.location.search);next.set("organizationId",org);
@@ -29,7 +30,7 @@ export function WorkflowSearchResults({kind,org,tick,locked,onOpen,extraAction}:
   if(reset)next.delete("page");
   window.history.pushState(null,"",pathname+"?"+next.toString());
  }
- function submitSearch(value:string) {if(timer.current)clearTimeout(timer.current);const normalized=value.trim().replace(/\s+/gu," ");const current=new URLSearchParams(window.location.search);if(normalized===(current.get("q")??"")&&(!current.has("page")||current.get("page")==="1")){setRetry(n=>n+1);return;}navigate({q:normalized});}
+ function submitSearch(value:string) {if(timer.current)clearTimeout(timer.current);const normalized=value.trim().replace(/\s+/gu," ");const current=new URLSearchParams(window.location.search);if(normalized===(current.get("q")??"")&&(!current.has("page")||current.get("page")==="1")){setRetry(n=>n+1);return;}if(normalized!==(current.get("q")??""))submittedQuery.current=normalized;navigate({q:normalized});}
  useEffect(()=>{
   const controller=new AbortController();let current=true;
   const q=new URLSearchParams(serialized);q.set("organizationId",org);q.set("search","true");

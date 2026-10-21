@@ -60,7 +60,7 @@ language plpgsql stable security invoker set search_path='' set pg_trgm.word_sim
 declare
  v_role text:=private.org_role(p_org); v_q text:=private.workflow_search_text(p_filters->>'q');
  v_page integer:=coalesce((p_filters->>'page')::integer,1); v_size integer:=coalesce((p_filters->>'pageSize')::integer,25);
- v_sort text:=coalesce(p_filters->>'sort','relevance'); v_now timestamptz:=statement_timestamp(); v_result jsonb; k text; d text;
+ v_sort text:=coalesce(p_filters->>'sort','relevance'); v_now timestamptz:=statement_timestamp(); v_result jsonb; k text; d text; v_plain tsquery;
 begin
  if v_role is null or (p_kind='interviews' and v_role='bidder') then raise exception 'FORBIDDEN' using errcode='42501';end if;
  if p_kind is null or p_kind not in ('bids','interviews') or jsonb_typeof(p_filters) is distinct from 'object'
@@ -90,6 +90,7 @@ begin
  or (p_filters ? 'upcoming' and p_filters->>'upcoming' not in ('true','false'))
  or (p_filters ? 'feedbackPending' and p_filters->>'feedbackPending' not in ('true','false')) then raise exception 'INVALID_SEARCH' using errcode='22023';end if;
 
+ if v_q ~ '[[:alnum:]]' then v_plain:=plainto_tsquery('simple',v_q);end if;
  with sources as not materialized (
   select b.id,b.candidate_id,b.owner_id,b.team_id,b.company_name,b.job_title,b.status,b.priority,b.created_at,b.updated_at,b.submitted_at,b.follow_up_at,
    null::timestamptz scheduled_at,null::text interview_type,null::integer round_number,null::uuid bid_id,
@@ -115,7 +116,7 @@ begin
  ), tokens as (
   select distinct x token,to_tsquery('simple',quote_literal(x)||':*') prefix,
    '%'||replace(replace(replace(x,'\','\\'),'%','\%'),'_','\_')||'%' pattern
-  from regexp_split_to_table(v_q,'[^[:alnum:]_]+') x where x<>''
+  from regexp_split_to_table(v_q,'[^[:alnum:]_]+') x where x ~ '[[:alnum:]]'
  ),
  scoped as materialized (
   select s.*,array[private.workflow_search_text(candidate_name),private.workflow_search_text(company_name),private.workflow_search_text(job_title)] important,
@@ -162,7 +163,7 @@ begin
     when exists(select 1 from unnest(important) a where starts_with(a,v_q)) then 8000
     when exists(select 1 from unnest(important) a where position(v_q in a)>0) then 6000 else 0 end
     + 100*greatest(extensions.word_similarity(v_q,coalesce(candidate_name,'')),extensions.word_similarity(v_q,company_name),extensions.word_similarity(v_q,job_title))
-    + ts_rank_cd(setweight(private.workflow_search_vector(concat_ws(' ',candidate_name,company_name,job_title)),'A')||setweight(interview_vector,'B')||setweight(bid_vector,'D')||setweight(feedback_vector,'D'),plainto_tsquery('simple',v_q),32)) score
+    + coalesce(ts_rank_cd(setweight(private.workflow_search_vector(concat_ws(' ',candidate_name,company_name,job_title)),'A')||setweight(interview_vector,'B')||setweight(bid_vector,'D')||setweight(feedback_vector,'D'),v_plain,32),0)) score
   from scoped s where
    (not p_filters ? 'candidateId' or candidate_id=(p_filters->>'candidateId')::uuid)
    and (not p_filters ? 'company' or private.workflow_search_text(company_name)=private.workflow_search_text(p_filters->>'company'))

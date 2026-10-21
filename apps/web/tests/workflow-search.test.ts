@@ -20,4 +20,5 @@ test("invalid and ambiguous query parameters fail with actionable errors before 
  for(const [kind,query] of [["bids","q=a&q=b"],["bids","candidateId=not-an-id"],["bids","status=completed"],["interviews","status=offer"],["bids","priority=critical"],["bids","page=0"],["bids","pageSize=101"],["bids","page=1.1"],["interviews","round=0"],["interviews","upcoming=yes"],["bids","createdFrom=2026-02-30"],["bids","createdFrom=2026-11-01&createdTo=2026-10-01"],["bids","sort=scheduled_asc"],["interviews","sort=submitted_desc"],["bids","q="+"x".repeat(201)]]) {
   assert.throws(()=>parseWorkflowSearch(new URLSearchParams(query),kind as "bids"|"interviews"),SearchInputError,query);
  }
+ for(const query of ["createdFrom=2026-13-01","createdFrom=2026-00-00","upcoming=true","unknownField=anything"])assert.throws(()=>parseWorkflowSearch(new URLSearchParams(query),"bids"),SearchInputError);
 });
