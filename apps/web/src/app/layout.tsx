@@ -4,7 +4,7 @@ import "./globals.css";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Candidate Platform",
+  title: { default: "Application Tracker v2", template: "%s | Application Tracker v2" },
   description: "Candidate profiles, resume preparation, and application operations.",
   robots: { index: false, follow: false },
 };

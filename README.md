@@ -1,4 +1,6 @@
-# Candidate Platform
+# Application Tracker v2
+
+Display branding is **Application Tracker v2**; repository/folder remains `ApplicationTracker_v2`. See [Bids and Interviews search](docs/WORKFLOW_SEARCH.md) for filters, authorization, the additive migration and manual verification.
 
 Role dashboards are available at `/workspace` and `/dashboard`. See the [operational workspace and metric definitions](docs/OPERATIONS.md) and the [full acceptance matrix](docs/ACCEPTANCE.md) for verified behavior and remaining release prerequisites. Hosted setup remains Docker-free; isolated CI handles database/RLS checks.
 

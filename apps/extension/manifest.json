@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Candidate Platform",
+  "name": "Application Tracker v2",
   "version": "0.1.0",
   "description": "Candidate resume and profile workspace.",
   "permissions": [

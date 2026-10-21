@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import { bidStatuses, interviewLifecycles, interviewOutcomes, type Bid, type BidInput, type BidWorkspace, type Interview, type InterviewInput, type OrganizationScope, type WorkflowTask } from "@candidate/contracts";
+import { useSearchParams } from "next/navigation";
+import { interviewLifecycles, interviewOutcomes, type Bid, type BidInput, type BidWorkspace, type Interview, type InterviewInput, type OrganizationScope, type WorkflowTask } from "@candidate/contracts";
 import { availableBidTransitions,schedulingChoices } from "@candidate/domain";
 import { readApi } from "../workspace/requests";
 import { useWorkflowMutation } from "@/lib/workflow/journal";
+import { WorkflowSearchResults, clearWorkflowSearchParameters } from "./search-results";
 const inputClass="rounded border border-slate-300 bg-white p-2 text-slate-950";
 const buttonClass="w-fit rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40";
 const sectionClass="grid gap-3 rounded border bg-white p-5";
@@ -20,29 +22,28 @@ interface DocumentOption{id:string;kind:string;filename:string;reviewed:boolean}
 interface Notice{id:string;bidId:string;interviewId:string|null;title:string;readAt:string|null}
 export function WorkflowWorkspace({scope,actorId,initialId="",candidateId="",initialView="bids"}:{scope:OrganizationScope;actorId:string;initialId?:string;candidateId?:string;initialView?:string}){
  const org=scope.organizationId;const query=`?organizationId=${org}`;const path=(p:string)=>`/api/v1/${p}${query}`;
+ const urlView=useSearchParams().get("view")??initialView;
  const [view,setView]=useState(initialView);const [id,setId]=useState(initialId);const [detail,setDetail]=useState<BidWorkspace|null>(null);const [form,setForm]=useState<BidInput>(emptyBid(actorId,scope.teams[0]?.teamId??"",candidateId));
- const [items,setItems]=useState<Bid[]>([]);const [documents,setDocuments]=useState<DocumentOption[]>([]);const [filters,setFilters]=useState({q:"",status:"",teamId:"",ownerId:"",priority:"",page:1});const [total,setTotal]=useState(0);const [tasks,setTasks]=useState<WorkflowTask[]>([]);const [notices,setNotices]=useState<Notice[]>([]);const [error,setError]=useState("");const [tick,setTick]=useState(0);const [onlyOverdue,setOnlyOverdue]=useState(false);
+ useEffect(()=>setView(urlView),[urlView]);
+ const [documents,setDocuments]=useState<DocumentOption[]>([]);const [tasks,setTasks]=useState<WorkflowTask[]>([]);const [notices,setNotices]=useState<Notice[]>([]);const [error,setError]=useState("");const [tick,setTick]=useState(0);const [onlyOverdue,setOnlyOverdue]=useState(false);
  const mutation=useWorkflowMutation(actorId,org,async(result,op)=>{if(op.method==="POST"&&op.url===path("bids"))setId(result.id);setTick(n=>n+1);});
- useEffect(()=>{let active=true;setError("");void(async()=>{try{const parameters=new URLSearchParams(Object.entries(filters).filter(([,v])=>v!=="").map(([k,v])=>[k,String(v)]));if(candidateId)parameters.set("candidateId",candidateId);const board=await readApi<{items:Bid[];total:number}>(path("bids")+"&"+parameters);
+ useEffect(()=>{let active=true;setError("");void(async()=>{try{
  const queue=await readApi<WorkflowTask[]>(path("tasks")+ (onlyOverdue?"&overdue=true":"&state=open"));const notifications=await readApi<Notice[]>(path("notifications"));
- if(active){setItems(board.items);setTotal(board.total);setTasks(queue);setNotices(notifications);}
+ if(active){setTasks(queue);setNotices(notifications);}
  }catch(e){if(active)setError(e instanceof Error?e.message:"The workflow could not be loaded.");}})();return()=>{active=false;};
- },[org,id,tick,filters,candidateId,onlyOverdue]);
+ },[org,id,tick,onlyOverdue]);
  useEffect(()=>{let active=true;if(!id)return;setDetail(null);void readApi<BidWorkspace>(path("bids/"+id)).then(work=>{if(active){setDetail(work);setForm(bidInput(work.bid));}}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[org,id,tick]);
  useEffect(()=>{let active=true;setDocuments([]);if(form.candidateId)void readApi<DocumentOption[]>(path("documents")+"&candidateId="+encodeURIComponent(form.candidateId)).then(rows=>{if(active)setDocuments(rows.filter(d=>d.reviewed));}).catch(()=>{});return()=>{active=false;};
  },[form.candidateId,org,tick]);
  function change<K extends keyof BidInput>(key:K,value:BidInput[K]){setForm(f=>({...f,[key]:value}));}
  const transitions=detail?availableBidTransitions(detail.bid):[];
  return <div className="mt-5 grid gap-5">
-  <nav className="flex flex-wrap gap-3">{["bids",...(scope.role==="bidder"?[]:["interviews"]),"followups"].map(v=><button className="underline" key={v} onClick={()=>setView(v)} aria-pressed={view===v}>{label(v)}</button>)}</nav>
+  <nav className="flex flex-wrap gap-3">{["bids",...(scope.role==="bidder"?[]:["interviews"]),"followups"].map(v=><button className="underline" key={v} onClick={()=>{const next=new URLSearchParams(window.location.search);const candidate=next.get("candidateId");clearWorkflowSearchParameters(next);if(candidate)next.set("candidateId",candidate);if(v==="interviews"&&id)next.set("bidId",id);next.set("view",v);window.history.pushState(null,"",window.location.pathname+"?"+next);setView(v);}} aria-pressed={view===v}>{label(v)}</button>)}</nav>
   {error&&<p role="alert">{error}</p>}{mutation.message&&<p role="status" className="rounded border p-3">{mutation.message}</p>}
   {mutation.pending&&<section className={sectionClass}><p>Pending operation: {mutation.pending.operationId}. Editing is paused until this request is reconciled.</p><button className={buttonClass} disabled={mutation.busy} onClick={()=>void mutation.reconcile()}>Reconcile / retry original request</button><details><summary>Frozen request</summary><pre className="overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(mutation.pending.body,null,2)}</pre></details></section>}
   {view==="bids"&&<>
-   <section className={sectionClass}><h2 className="text-xl font-semibold">Bid board</h2><div className="grid gap-3 sm:grid-cols-3">
-    <TextField name="Search company" value={filters.q} onChange={q=>setFilters(f=>({...f,q,page:1}))}/><Select name="Status filter" value={filters.status} values={["",...bidStatuses]} onChange={status=>setFilters(f=>({...f,status,page:1}))}/><Select name="Priority filter" value={filters.priority} values={["","low","normal","high","urgent"]} onChange={priority=>setFilters(f=>({...f,priority,page:1}))}/>
-    <TextField name="Team filter reference" value={filters.teamId} onChange={teamId=>setFilters(f=>({...f,teamId,page:1}))}/><TextField name="Owner filter reference" value={filters.ownerId} onChange={ownerId=>setFilters(f=>({...f,ownerId,page:1}))}/></div>
-    <p>{total} opportunities in your current scope</p><ul className="grid gap-2">{items.map(b=><li key={b.id} className="flex flex-wrap justify-between gap-3 border-b py-2"><a className="underline" href={`/bids/${b.id}${query}`}>{b.companyName} · {b.jobTitle}</a><span>{label(b.status)} · {b.priority}{b.followUpAt?` · follow up ${new Date(b.followUpAt).toLocaleString()}`:""}</span><button className="underline" disabled={mutation.locked} onClick={()=>setId(b.id)}>Open bid</button></li>)}</ul>
-    <div className="flex gap-4"><button disabled={filters.page===1} onClick={()=>setFilters(f=>({...f,page:f.page-1}))}>Previous page</button><span>Page {filters.page}</span><button disabled={filters.page*25>=total} onClick={()=>setFilters(f=>({...f,page:f.page+1}))}>Next page</button></div>
+   <section className={sectionClass}><h2 className="text-xl font-semibold">Bid board</h2>
+    <WorkflowSearchResults kind="bids" org={org} tick={tick} locked={mutation.locked} onOpen={row=>setId(row.record.id)}/>
     <button className={buttonClass} disabled={mutation.locked} onClick={()=>{setId("");setDetail(null);setForm(emptyBid(actorId,scope.teams[0]?.teamId??"",candidateId));}}>New opportunity</button>
    </section>
    <section className={sectionClass}><h2 className="text-xl font-semibold">{id?"Bid details":"Create opportunity"}</h2>{detail&&<p>Status: {label(detail.bid.status)} · version {detail.bid.rowVersion} · content revision {detail.bid.contentRevision}</p>}
@@ -80,14 +81,12 @@ type Mutation=ReturnType<typeof useWorkflowMutation>;
 function InterviewPanel({org,actor,bidId,tick,mutation}:{org:string;actor:string;bidId:string;tick:number;mutation:Mutation}){
  const path=(p:string)=>`/api/v1/${p}?organizationId=${org}`;
  const empty=():InterviewInput=>({bidId,ownerId:actor,type:"",interviewer:"",localDateTime:null,timezone:null,offset:null,durationMinutes:60,location:"",meetingUrl:null,lifecycle:"not_scheduled",outcome:"pending",nextAction:"",followUpAt:null});
- const [rows,setRows]=useState<(Interview&{previousRoundId:string|null})[]>([]);const [selected,setSelected]=useState<(Interview&{previousRoundId:string|null})|null>(null);const [form,setForm]=useState<InterviewInput>(empty);const [previous,setPrevious]=useState<string|null>(null);const [feedback,setFeedback]=useState("");const [history,setHistory]=useState<{feedback:Record<string,unknown>[];revisions:Record<string,unknown>[]} | null>(null);const [error,setError]=useState("");
- useEffect(()=>{let active=true;void readApi<(Interview&{previousRoundId:string|null})[]>(path("interviews")+(bidId?"&bidId="+bidId:"")).then(r=>{if(active)setRows(r);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};
- },[org,bidId,tick]);
+ const [selected,setSelected]=useState<(Interview&{previousRoundId:string|null})|null>(null);const [form,setForm]=useState<InterviewInput>(empty);const [previous,setPrevious]=useState<string|null>(null);const [feedback,setFeedback]=useState("");const [history,setHistory]=useState<{feedback:Record<string,unknown>[];revisions:Record<string,unknown>[]} | null>(null);const [error,setError]=useState("");
  async function open(i:Interview&{previousRoundId:string|null}){setSelected(i);setPrevious(i.previousRoundId);const {id:_,roundNumber:__,scheduledAt:___,rowVersion:____,createdAt:_____,updatedAt:______,previousRoundId:_______,...input}=i;void [_ ,__,___,____,_____,______,_______];setForm(input);setHistory(null);try{setHistory(await readApi(path("interviews/"+i.id)));}catch(e){setError(e instanceof Error?e.message:"History unavailable.");}}
  function change<K extends keyof InterviewInput>(k:K,v:InterviewInput[K]){setForm(f=>({...f,[k]:v,...(["localDateTime","timezone"].includes(k)?{offset:null}:{})}));}
  let choices:{instant:string;offset:string}[]=[];let scheduleError="";if(form.localDateTime&&form.timezone)try{choices=schedulingChoices(form.localDateTime,form.timezone);}catch(e){scheduleError=e instanceof Error?e.message:"Invalid schedule.";}
  return <section className={sectionClass}><h2 className="text-xl font-semibold">Interview rounds</h2>{error&&<p role="alert">{error}</p>}<p>Completion and outcome are separate. Update the overall bid through its explicit status action.</p>
- {rows.map(i=><article className="border-b py-2" key={i.id}><button className="underline" disabled={mutation.locked} onClick={()=>void open(i)}>Round {i.roundNumber} · {label(i.lifecycle)} · {label(i.outcome)}</button><p>Bid {i.bidId} · {i.scheduledAt?new Date(i.scheduledAt).toLocaleString():"Not scheduled"} · {i.timezone} {i.offset}</p>{["completed","feedback_pending"].includes(i.lifecycle)&&i.outcome==="next_round"&&<button className="underline" disabled={mutation.locked} onClick={()=>{setSelected(null);setPrevious(i.id);setForm({...empty(),bidId:i.bidId});setHistory(null);}}>Create next round</button>}</article>)}
+ <WorkflowSearchResults kind="interviews" org={org} tick={tick} locked={mutation.locked} onOpen={row=>{if("lifecycle" in row.record)void open(row.record);}} extraAction={row=>{const i=row.record;return "lifecycle" in i&&["completed","feedback_pending"].includes(i.lifecycle)&&i.outcome==="next_round"?<button className="underline" disabled={mutation.locked} onClick={()=>{setSelected(null);setPrevious(i.id);setForm({...empty(),bidId:i.bidId});setHistory(null);}}>Create next round</button>:null;}}/>
  <button className={buttonClass} disabled={mutation.locked} onClick={()=>{setSelected(null);setPrevious(null);setHistory(null);setForm(empty());}}>New interview round</button>
  <form className="grid gap-3" onSubmit={e=>{e.preventDefault();void mutation.execute(path(selected?"interviews/"+selected.id:"interviews"),{input:form,previousRoundId:previous},selected?"PATCH":"POST",selected?.rowVersion??0);}}><fieldset className="grid gap-3" disabled={mutation.locked}>
  <p>{selected?`Editing round ${selected.roundNumber}, version ${selected.rowVersion}. Reopen the round after saving to load its current version.`:previous?"New successor round":"New independent round"}</p>

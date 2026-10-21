@@ -24,6 +24,7 @@ import { testOperationsBrowser } from "./test-operations-browser.mjs";
 import { testRecovery } from "./test-recovery.mjs";
 import { pilotSmoke } from "../../../scripts/lib/pilot-smoke.mjs";
 import { testRegistration } from "./test-registration.mjs";
+import { testWorkflowSearch } from "./test-workflow-search.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -292,6 +293,8 @@ try {
   } catch (error) { throw new TestFailure(error.message); }
   step = "bid and interview production API acceptance";
   const workflowFixture = await testWorkflowHTTP({call,command,identities,org:orgA,team:teamA,expect});
+  step = "bid/interview indexed search and browser acceptance";
+  await testWorkflowSearch({call,command,identities,org:orgA,team:teamA,password,assert:expect});
   step="archive package HTTP";
   const archiveFixture=await testArchiveHTTP({call,command,identities,org:orgA,team:teamA,assert:expect,renderKey});
   step = "bid and interview browser acceptance";

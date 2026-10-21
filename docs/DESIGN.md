@@ -5,6 +5,8 @@
 
 > Source: [original design document](../doc/Candidate_Platform_Design_Document.docx). This transcription preserves the proposed design; it does not approve its defaults or resolve requirement conflicts. See the [comparison and decision register](BUILD_PLAN.md#requirements-comparison-and-decision-register).
 
+Implementation branding: **Application Tracker v2**. The repository/folder remains `ApplicationTracker_v2`; the original source title below is retained as historical design context.
+
 **Technical Design Document**
 
 Version 1.0  |  17 October 2026  |  Proposed design

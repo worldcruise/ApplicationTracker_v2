@@ -9,7 +9,7 @@ export function WorkspaceShell({ title, description, children }: {
     <div className="workspace-shell">
       <a className="skip-link" href="#main-content">Skip to content</a>
       <header className="workspace-header">
-        <span className="workspace-brand">Candidate Platform</span>
+        <span className="workspace-brand">Application Tracker v2</span>
         <span className="workspace-badge">Development workspace</span>
       </header>
       <main id="main-content" className="workspace-main">

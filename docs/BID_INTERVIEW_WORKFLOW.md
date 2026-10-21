@@ -89,3 +89,6 @@ On a configured hosted development deployment, manually repeat:
 6. Complete an overdue typed task, mark an own notification read, revoke a grant and deactivate a user. Refresh and follow old links to verify current permission enforcement.
 
 Interactive hosted/two-device, keyboard/visual and real Chrome MV3 acceptance remain separate. Hosted migration, accounts/email settings, signing-key registration, private PDF storage/backup, retention/recovery and service availability remain operator prerequisites. No real application was submitted and no automated submission, paid AI, native helper or store publication was added.
+## Application Tracker v2 search update
+
+The existing Bids and Interviews screens now use the [scoped database search workflow](WORKFLOW_SEARCH.md), including URL filters, authorized totals, pagination, ranking and live related names. The earlier company-only filter and bounded agenda descriptions above record the original milestone.

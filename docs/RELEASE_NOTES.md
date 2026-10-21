@@ -1,4 +1,4 @@
-ApplicationTracker 0.2.0-pilot.1 is a synthetic pilot release candidate: scoped four-role operations, shared resume/letter/history workflow, Quick Check, durable archive package recovery and hosted deployment preparation.
+Application Tracker v2 0.2.0-pilot.1 is a synthetic pilot release candidate: scoped four-role operations, shared resume/letter/history workflow, Quick Check, durable archive package recovery and hosted deployment preparation.
 
 API v1, resume schema 1 and legacy extension 0.1.x remain supported alongside 0.2.x. Saving a package never submits an application. Production unpacked extension ID: `egidlmfmpaelbkicmhoheoonleejbfkg`.
 

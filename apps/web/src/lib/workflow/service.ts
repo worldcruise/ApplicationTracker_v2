@@ -8,6 +8,7 @@ import { currentOrganization, uuid, checkMutationOrigin, expectedVersion, requir
 import { ApiFailure, databaseResult } from "@/lib/api/errors";
 import { strictObject } from "@/lib/candidates/input";
 import { readJson } from "@/lib/api/body";
+import { parseWorkflowSearch, SearchInputError } from "./search-input";
 export { preflight };
 export const bidColumns="id,candidateId:candidate_id,ownerId:owner_id,teamId:team_id,companyName:company_name,jobTitle:job_title,jobDescription:job_description,jobUrl:job_url,externalId:external_id,jobLocation:job_location,priority,followUpAt:follow_up_at,lastContactAt:last_contact_at,notes,outcome,resumeDocumentId:resume_document_id,coverLetterDocumentId:cover_letter_document_id,status,rowVersion:row_version,contentRevision:content_revision,contentHash:content_hash,preparedBy:prepared_by,currentApprovalId:current_approval_id,heldFromStatus:held_from_status,submittedAt:submitted_at,createdBy:created_by,createdAt:created_at,updatedAt:updated_at,resumeVersionId:resume_version_id,coverLetterVersionId:cover_letter_version_id";
 export const interviewColumns="id,bidId:bid_id,ownerId:owner_id,roundNumber:round_number,type,interviewer,localDateTime:local_datetime,timezone,offset:chosen_offset,scheduledAt:scheduled_at,durationMinutes:duration_minutes,location,meetingUrl:meeting_url,lifecycle:lifecycle_status,outcome,nextAction:next_action,followUpAt:follow_up_at,rowVersion:row_version,createdAt:created_at,updatedAt:updated_at,previousRoundId:previous_round_id";
@@ -40,6 +41,13 @@ export function workflow(request:Request,resource:string,parts:string[]) {
   const read=request.method==="GET";if(!read)checkMutationOrigin(request,token);
   const id=parts[0] ? uuid(parts[0]):null;const action=parts[1];if(parts.length>2)throw new ApiFailure(404,"FORBIDDEN","Unknown workflow resource.");
   try {
+   if(read && !id && q.get("search")==="true" && (resource==="bids" || resource==="interviews")) {
+    if(resource==="interviews")requireRole(scope,["admin","team_leader","team_member"]);
+    const filters=parseWorkflowSearch(q,resource);
+    const result=await databaseResult<{items:{record:Record<string,unknown>}[]}>(client.rpc("search_workflow",{p_org:org,p_kind:resource,p_filters:filters}));
+    const columns=(resource==="bids"?bidColumns:interviewColumns).split(",").map(value=>{const [alias,column]=value.split(":");return [alias!,column??alias!] as const;});
+    return {...result,items:result.items.map(item=>({...item,record:Object.fromEntries(columns.map(([alias,column])=>[alias,item.record[column]]))}))};
+   }
    if(resource==="bids") {
     if(read && !id) {
      const page=Number(q.get("page")??1);if(!Number.isInteger(page)||page<1||page>100000)throw new ApiFailure(400,"SCHEMA_INVALID","Invalid page.");
@@ -87,6 +95,7 @@ export function workflow(request:Request,resource:string,parts:string[]) {
    if(resource==="workflow-policy"&&id&&!action&&request.method==="PATCH"){requireRole(scope,["admin"]);const b=strictObject(await readJson(request),["required","coverLetterRequired"]);if(typeof b.required!=="boolean"||typeof b.coverLetterRequired!=="boolean")throw new ApiFailure(422,"SCHEMA_INVALID","Supply boolean policy flags.");return await databaseResult(client.rpc("set_team_workflow_policy",{p_org:org,p_team:id,p_expected:expectedVersion(request),p_required:b.required,p_letter:b.coverLetterRequired,p_request:requestId}));}
    throw new ApiFailure(404,"FORBIDDEN","Unknown workflow action.");
   }catch(e){
+   if(e instanceof SearchInputError)throw new ApiFailure(400,"SCHEMA_INVALID",e.message);
    if(e instanceof WorkflowValidationFailure)throw new ApiFailure(422,"SCHEMA_INVALID",e.message,false,e.issues);
    if(e instanceof ApiFailure&&e.code==="VERSION_CONFLICT"&&id){if(resource==="bids")e.currentVersion=(await getBid(client,scope,id)).rowVersion;else if(resource==="interviews")e.currentVersion=(await getInterview(client,scope,id)).rowVersion;}
    if(!read&&id&&e instanceof ApiFailure&&["VERSION_CONFLICT","SCHEMA_INVALID","KEY_PAYLOAD_MISMATCH","SERVICE_UNAVAILABLE"].includes(e.code)){

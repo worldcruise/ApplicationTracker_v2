@@ -1,5 +1,7 @@
 # Database migrations
 
+`20261021000200_workflow_search.sql` adds Application Tracker v2's invoker/RLS Bids and Interviews search and source indexes. Apply in timestamp order after the registration migration; see [search setup and verification](../../docs/WORKFLOW_SEARCH.md). Never reset or blindly repair hosted history.
+
 The migrations establish foundation permissions/accounts, full candidate profiles and immutable revisions, scoped prompts/templates, immutable resume/letter sources and private frozen PDF storage/export. Bid and interview tables remain minimum permission anchors; their full workflow/submission tasks remain in BUILD_PLAN.md. See [document storage/key prerequisites](../../docs/RESUME_WORKFLOW.md). Add further timestamped SQL migrations here with `npx supabase migration new <name>`.
 
 Every database change, including constraints, RLS policies, grants, helper functions, and command functions, belongs in a migration. Never enable client access to a business table without its scoped backend and database rules.

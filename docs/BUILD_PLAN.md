@@ -29,6 +29,16 @@ All five priority flows already have implementations and isolated CI coverage. R
 
 ## Requirements comparison and decision register
 
+### Current requested increment — bid and interview search (21 October 2026)
+
+Application display name: **Application Tracker v2**. Repository/folder: `ApplicationTracker_v2`.
+
+| Task | Dependencies / design | Acceptance |
+| --- | --- | --- |
+| SR01 | Existing BO/FN authorization; §§5–8, 18–20 | User-context PostgreSQL full-text/trigram search with live related names, combined validated filters, scoped options/counts, stable pagination/sorting and direct-RPC denials. Preserve legacy API responses. |
+| SR02 | SR01; §§3, 18–19 | Existing screens gain accessible debounced/Enter search, URL state, removable chips, independent errors/retry, counts and paging without altering mutations/history. |
+| SR03 | SR01–SR02; §§20–22 | Focused unit, isolated SQL/API/browser evidence including permissions, typo/related matches, boundaries and stale requests; documented migration/setup and accurate remaining checks. |
+
 ### Current requested increment — registration approval (21 October 2026)
 
 The explicit registration request supersedes D10's invite-only restriction for configured public intake; controlled initial Admin bootstrap and trusted invitations remain. See [decision 0003](decisions/0003-registration-approval.md) and [REGISTRATION.md](REGISTRATION.md). No public hosting/production provisioning is introduced.

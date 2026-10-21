@@ -1,5 +1,7 @@
 # Project instructions
 
+Application display name: **Application Tracker v2** in UI, page titles and documentation. Keep the repository/folder name `ApplicationTracker_v2` and existing internal package identifiers.
+
 Read [docs/PROGRESS.md](docs/PROGRESS.md), [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md), [docs/DESIGN.md](docs/DESIGN.md), and the relevant requirements in [doc/PRD.md](doc/PRD.md) before working. Original sources remain in `doc/`; implementation context lives in `docs/`.
 
 - Use the documented architecture: TypeScript monorepo, Next.js web and `/api/v1`, Chrome Manifest V3 extension, Supabase Auth/PostgreSQL, and shared contracts and resume engine.
