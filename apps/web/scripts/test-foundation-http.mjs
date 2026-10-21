@@ -388,7 +388,7 @@ try {
   expect(smoke.checks===11,'All eleven reusable pilot smoke checkpoints pass');console.log(JSON.stringify({pilotSmoke:smoke}));
   step = "encrypted backup and isolated restore";
   try{await testRecovery({identities,assert:expect});}catch(e){throw new TestFailure(e.message);}
-  console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "86 headless Chromium checkpoints including role dashboards, CSP, unpacked MV3 Quick Check and package recovery; hosted native shortcut/menu and Windows filesystem gates pending" }));
+  console.log(JSON.stringify({ result: "PASS", assertions, scope: "isolated Supabase Auth + production Next HTTP; synthetic data only", browserAcceptance: "Individual Chromium checkpoint totals are reported by the candidate, resume, document, search, workflow, extension, archive, operations and registration suites; hosted native shortcut/menu and Windows filesystem gates pending" }));
 } catch (error) {
   console.error(JSON.stringify({ result: "FAIL", step, message: error instanceof TestFailure ? error.message : "Integration harness failed; inspect the isolated service health and current step." }));
   process.exitCode = 1;

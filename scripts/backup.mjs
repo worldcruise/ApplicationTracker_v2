@@ -4,7 +4,7 @@ import {mkdir,readFile,readdir} from 'node:fs/promises';
 import {resolve,join} from 'node:path';
 import {randomUUID,createHash} from 'node:crypto';
 import {Readable} from 'node:stream';
-import {encryptBackup,inspectBackup,openBackup} from './lib/backup.mjs';
+import {encryptBackup,inspectBackup,openBackup,requiredBackupExtensions} from './lib/backup.mjs';
 const action=process.argv[2],file=process.argv[3],key=process.env.BACKUP_ENCRYPTION_KEY;
 const schemas=['auth','public','private','supabase_migrations','extensions'];
 function client(command,args){const p=spawn(command,args,{env:process.env,stdio:['pipe','pipe','ignore']});const done=new Promise((ok,fail)=>{p.once('error',()=>fail(Error('Install PostgreSQL 17 client tools and check private PG* connection settings.')));p.once('exit',c=>c===0?ok():fail(Error('PostgreSQL command failed; review connection, permissions and target prerequisites without logging credentials.')));});return {p,done};}
@@ -16,17 +16,19 @@ try{
   if(process.env.PGSSLMODE!=='verify-full')throw Error('Hosted backups require PGSSLMODE=verify-full and a trusted PGSSLROOTCERT.');
   if(!process.env.PGHOST||!process.env.PGUSER?.includes(ref)||process.env.PGDATABASE!=='postgres')throw Error('PG* settings must explicitly identify the production session pooler and database.');
   if(!(await query('show server_version;')).startsWith('17.'))throw Error('Revalidate this backup recipe for the server major version.');
+  const extensions=JSON.parse(await query("select coalesce(json_agg(json_build_object('name',e.extname,'version',e.extversion,'schema',n.nspname) order by e.extname),'[]') from pg_extension e join pg_namespace n on n.oid=e.extnamespace where e.extname in ('pgcrypto','pg_trgm');"));
+  if(requiredBackupExtensions.some(name=>!extensions.some(e=>e.name===name&&e.schema==='extensions')))throw Error('Apply the required application extension migrations before creating this recovery archive.');
   const version=spawnSync('pg_dump',['--version'],{encoding:'utf8'});if(version.status!==0||!version.stdout.match(/\b17\./))throw Error('Install PostgreSQL 17 pg_dump for this versioned recovery recipe.');
   const folder=resolve('backups');await mkdir(folder,{recursive:true,mode:0o700});const path=join(folder,`${new Date().toISOString().replaceAll(':','-')}-${randomUUID()}.aes`);
   const release=JSON.parse(await readFile('releases/pilot.json','utf8'));
   const commit=spawnSync('git',['rev-parse','HEAD'],{encoding:'utf8'});if(commit.status!==0)throw Error('Run from the retained release checkout.');
   const migrations={};for(const f of (await readdir('supabase/migrations')).filter(n=>n.endsWith('.sql')).sort())migrations[f]=createHash('sha256').update(await readFile('supabase/migrations/'+f)).digest('hex');
-  const {p,done}=client('pg_dump',['--format=custom','--no-password',...schemas.map(s=>'--schema='+s)]);
+  const {p,done}=client('pg_dump',['--format=custom','--no-password',...schemas.map(s=>'--schema='+s),...requiredBackupExtensions.map(name=>'--extension='+name)]);
   // Observe process failure immediately, then ensure an unsuccessful dump cannot
   // be mistaken for a completed backup (the encryption input is destroyed).
   const observed=done.catch(e=>{p.stdout.destroy(e);throw e;});observed.catch(()=>{});
   const source=Readable.from((async function*(){for await(const chunk of p.stdout)yield chunk;await observed;})());
-  try{const result=await encryptBackup(source,path,key,{projectRef:ref,createdAt:new Date().toISOString(),schemas,postgresMajor:17,release:release.release,commit:commit.stdout.trim(),renderer:release.renderer,migrations,scope:'logical database; provider settings and global roles require separate recovery'});console.log(JSON.stringify({result:'backup-created',path,...result}));}catch(e){p.kill();throw e;}
+  try{const result=await encryptBackup(source,path,key,{projectRef:ref,createdAt:new Date().toISOString(),schemas,extensions,postgresMajor:17,release:release.release,commit:commit.stdout.trim(),renderer:release.renderer,migrations,scope:'logical database; provider settings and global roles require separate recovery'});console.log(JSON.stringify({result:'backup-created',path,...result}));}catch(e){p.kill();throw e;}
  }else if(action==='restore-empty'){
   if(!file||!/^atv2_restore_[a-z0-9_]+$/.test(process.env.PGDATABASE??''))throw Error('Restore only accepts an explicitly created, isolated atv2_restore_* database. It never clears a database.');
   const backup=await openBackup(file,key);

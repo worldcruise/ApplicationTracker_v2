@@ -5,6 +5,10 @@ import {pipeline} from 'node:stream/promises';
 import {Writable} from 'node:stream';
 
 const magic=Buffer.from('ATV2BK01');
+// Schema-filtered pg_dump does not automatically include extension declarations.
+// Keep the required application dependencies explicit; do not dump unrelated
+// provider extensions/configuration tables into the application recovery scope.
+export const requiredBackupExtensions=Object.freeze(['pgcrypto','pg_trgm']);
 function keyBytes(key){if(!/^[a-f0-9]{64}$/i.test(key??''))throw Error('BACKUP_ENCRYPTION_KEY must be a private 32-byte hexadecimal key.');return Buffer.from(key,'hex');}
 // pg_dump streams directly into authenticated encryption; no plaintext backup file.
 export async function encryptBackup(input,path,key,metadata){
