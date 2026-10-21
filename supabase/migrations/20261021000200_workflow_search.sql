@@ -120,6 +120,7 @@ begin
  ),
  scoped as materialized (
   select s.*,array[private.workflow_search_text(candidate_name),private.workflow_search_text(company_name),private.workflow_search_text(job_title)] important,
+   array[private.workflow_search_text(owner_name),private.workflow_search_text(external_id),private.workflow_search_text(interview_type),private.workflow_search_text(interviewer)] secondary,
    private.workflow_search_text(concat_ws(' ',candidate_name,company_name,job_title,owner_name,owner_id::text,external_id,id::text,bid_id::text,interview_type,interviewer,body)) all_text
   from sources s
  ), term_matches as (
@@ -159,11 +160,15 @@ begin
   select s.*,
    -- Exact identity field, then field prefix, then identity partial, then fuzzy/
    -- weighted lexemes. Long descriptions cannot outrank an identity match.
-   (case when v_q=any(important) or v_q=id::text or v_q=owner_id::text or v_q=coalesce(external_id,'') or v_q=coalesce(bid_id::text,'') then 10000
+   case when v_q='' then 0 else
+   (case when v_q=any(important) or v_q=id::text or v_q=owner_id::text or v_q=private.workflow_search_text(external_id) or v_q=coalesce(bid_id::text,'') then 10000
+    when v_q=any(secondary) then 9000
     when exists(select 1 from unnest(important) a where starts_with(a,v_q)) then 8000
+    when exists(select 1 from unnest(secondary) a where starts_with(a,v_q)) then 7000
     when exists(select 1 from unnest(important) a where position(v_q in a)>0) then 6000 else 0 end
     + 100*greatest(extensions.word_similarity(v_q,coalesce(candidate_name,'')),extensions.word_similarity(v_q,company_name),extensions.word_similarity(v_q,job_title))
-    + coalesce(ts_rank_cd(setweight(private.workflow_search_vector(concat_ws(' ',candidate_name,company_name,job_title)),'A')||setweight(interview_vector,'B')||setweight(bid_vector,'D')||setweight(feedback_vector,'D'),v_plain,32),0)) score
+    + 50*greatest(extensions.word_similarity(v_q,coalesce(owner_name,'')),extensions.word_similarity(v_q,coalesce(interviewer,'')),extensions.word_similarity(v_q,coalesce(interview_type,'')))
+    + coalesce(ts_rank_cd(setweight(private.workflow_search_vector(concat_ws(' ',candidate_name,company_name,job_title)),'A')||setweight(interview_vector,'B')||setweight(bid_vector,'D')||setweight(feedback_vector,'D'),v_plain,32),0)) end score
   from scoped s where
    (not p_filters ? 'candidateId' or candidate_id=(p_filters->>'candidateId')::uuid)
    and (not p_filters ? 'company' or private.workflow_search_text(company_name)=private.workflow_search_text(p_filters->>'company'))
