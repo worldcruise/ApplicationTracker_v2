@@ -38,6 +38,12 @@ export async function testRegistration({ operator, url, publicKey, call, org, ot
     person.token=login.data.session.access_token;
   };
   try {
+    // The preceding recovery test changes the Admin password and revokes older
+    // sessions. Obtain current Auth credentials rather than replaying that token.
+    const adminClient=createClient(url,publicKey,{auth:{persistSession:false,autoRefreshToken:false}});
+    const adminLogin=await adminClient.auth.signInWithPassword({email:identities.adminA.email,password});
+    assert(!adminLogin.error && adminLogin.data.session,"Existing approved Admin signs in after account recovery");
+    identities.adminA.token=adminLogin.data.session.access_token;identities.adminA.client=adminClient;
     await rpc("configure_registration",{p_org:org,p_enabled:true});
     stage="browser signup and actual confirmation email";
     browser=await chromium.launch();
@@ -51,7 +57,9 @@ export async function testRegistration({ operator, url, publicKey, call, org, ot
     await page.getByRole("button",{name:"Create account",exact:true}).click();await browserExpect(page.getByText("Passwords do not match. Re-enter the confirmation.",{exact:true})).toBeVisible();
     await page.getByLabel("Confirm password",{exact:true}).fill(password);await page.getByRole("button",{name:"Create account",exact:true}).click();
     await browserExpect(page.getByRole("status")).toContainText("Check your email");checkpoints++;
-    const rows=await call(identities.adminA,endpoint);const applicant=rows.data.find(r=>r.email===email);
+    const rows=await call(identities.adminA,endpoint);
+    assert(rows.status===200 && Array.isArray(rows.data),`Current Admin reads request list (${rows.status}/${rows.code ?? "OK"})`);
+    const applicant=rows.data.find(r=>r.email===email);
     assert(applicant?.status==="pending" && !applicant.email_verified,"Auth insert atomically records an unverified pending applicant");
     const before=await createClient(url,publicKey,{auth:{persistSession:false}}).auth.signInWithPassword({email,password});assert(!!before.error,"Unverified email cannot sign in");
     await page.goto(await confirmURL(email));await page.waitForURL("**/account/status");
