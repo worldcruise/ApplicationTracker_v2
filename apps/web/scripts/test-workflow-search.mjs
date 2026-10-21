@@ -9,7 +9,7 @@ export async function testWorkflowSearch({call,command,identities,org,team,passw
  const profile={fullName:"Synthetic Search Avery O'Neil",email:"search-avery@example.invalid",phone:"+1 202 555 0108",location:"Synthetic Search City",seniorityPreference:null,professionalSummary:"Synthetic systems work",privateNotes:"hiddenprofilesearchtoken",status:"ready",links:[],experiences:[],educations:[],certifications:[]};
  const made=await call(a,`/candidates?organizationId=${org}`,{teamId:team,ownerId:null,profile});assert(made.status===200,"Search fixture candidate persists");const candidate=made.data.id;
  assert((await call(a,`/candidates/${candidate}/assignments?organizationId=${org}`,{userId:m.id,assign:true},1)).status===200,"Search candidate assignment persists");
- const write=async(kind,input)=>{const operationId=randomUUID();const r=await call(m,`/${kind}?organizationId=${org}`,{operationId,input,...(kind==="interviews"?{previousRoundId:null}:{})},0,{"Idempotency-Key":operationId});assert(r.status===200,`Synthetic search ${kind} persists (${r.code??"OK"})`);return r.data.id;};
+ const write=async(kind,input)=>{const operationId=randomUUID();const r=await call(m,`/${kind}?organizationId=${org}`,{operationId,input,...(kind==="interviews"?{previousRoundId:null}:{})},0,{"Idempotency-Key":operationId});assert(r.status===200,`Synthetic search ${kind} persists (${r.code??"OK"}; ${r.message??""})`);return r.data.id;};
  const input={candidateId:candidate,teamId:team,ownerId:m.id,companyName:"Search Northstar",jobTitle:"Platform Engineer",jobDescription:"PostgreSQL systems infrastructure",jobUrl:null,externalId:"SEARCH-EX-01",jobLocation:null,priority:"urgent",followUpAt:new Date(Date.now()-3600000).toISOString(),lastContactAt:null,notes:"Literal 100%_ SQL notes",outcome:"",resumeDocumentId:null,coverLetterDocumentId:null};
  const bids=[];
  for(let n=0;n<27;n++)bids.push(await write("bids",{...input,...(n?{companyName:`Search Northstar Labs ${String(n).padStart(2,"0")}`,externalId:null,priority:"normal",followUpAt:null}:{})}));
@@ -21,10 +21,27 @@ export async function testWorkflowSearch({call,command,identities,org,team,passw
  const page1=await search("bids",{...base,sort:"company_asc",pageSize:"25"});const page2=await search("bids",{...base,sort:"company_asc",pageSize:"25",page:"2"});
  assert(page1.total===27&&page2.total===27&&page1.items.length===25&&page2.items.length===2,"Server pagination reconciles total");
  assert(new Set([...page1.items,...page2.items].map(i=>i.record.id)).size===27,"Stable pages have no repeated records");
+ assert(JSON.stringify([...page1.items,...page2.items].map(i=>i.record.id))===JSON.stringify(bids),"Company sorting is applied before server pagination");
  assert((await search("bids",{...base,q:"unmatchedzzzz"})).total===0,"No matches retains zero count");
  const ownDate=page1.items[0].record.createdAt.slice(0,10);
  assert((await search("bids",{...base,createdFrom:ownDate,createdTo:ownDate})).total===27,"Inclusive creation date includes all same-day writes");
  assert((await search("bids",{...base,createdTo:"2000-01-01"})).total===0,"Date range excludes future records");
+ // Follow the existing workflow: a round requires an explicitly invited bid.
+ // Create reviewed sources and independently approve/record synthetic submissions;
+ // never relax the production guard merely to construct a search fixture.
+ for(const bidId of bids.slice(0,2)) {
+  const before=await call(m,`/bids/${bidId}?organizationId=${org}`);const bid=before.data.bid;
+  const assembly=await call(m,`/prompt-assemblies?organizationId=${org}`,{candidateId:candidate,profileRevision:2,job:{company:bid.companyName,title:bid.jobTitle,description:bid.jobDescription}});assert(assembly.status===200,"Search fixture freezes verified profile facts");
+  const rawJson=JSON.stringify({company:bid.companyName,title:bid.jobTitle,summary:profile.professionalSummary,skills:[],experience:[],education:[]});const review={experienceIds:[],educationIds:[],claims:{}};const renderedAt="2026-10-21T12:00:00.000Z";
+  const rendered=await call(m,`/resume-renders?organizationId=${org}`,{assemblyId:assembly.data.id,rawJson,review,renderedAt});assert(rendered.status===200,"Search fixture renders a reviewed synthetic resume");
+  const sourceId=randomUUID();const source=await call(m,`/resume-versions?organizationId=${org}`,{operationId:sourceId,assemblyId:assembly.data.id,schemaVersion:1,rawJson,review,render:{sha256:rendered.data.sha256,pageCount:rendered.data.pageCount,rendererVersion:rendered.data.rendererVersion,renderedAt}},undefined,{"Idempotency-Key":sourceId});assert(source.status===200,"Search fixture retains immutable source");
+  const document=await call(m,`/documents?organizationId=${org}`,{kind:"resume",sourceVersionId:source.data.id});assert(document.status===200,"Search fixture stores attested PDF");
+  const editId=randomUUID();const saved=await call(m,`/bids/${bidId}?organizationId=${org}`,{operationId:editId,input:{...Object.fromEntries(Object.keys(input).map(key=>[key,bid[key]])),resumeDocumentId:document.data.id}},bid.rowVersion,{"Idempotency-Key":editId},"PATCH");assert(saved.status===200,"Attach prepared frozen document to search fixture");
+  for(const status of ["resume_preparation","ready_for_review","approved","submitted","interview_invited"]) {
+   const current=await call(m,`/bids/${bidId}?organizationId=${org}`);const operationId=randomUUID();
+   const transitioned=await call(status==="approved"?identities.leaderA:m,`/bids/${bidId}/transitions?organizationId=${org}`,{operationId,status,reason:"Explicit synthetic search test evidence",submittedAt:status==="submitted"?new Date(Date.now()-1000).toISOString():null,confirmation:status==="submitted"?"Synthetic test submission attestation":"",attested:status==="submitted",adminOverrideReason:"",reopen:false},current.data.bid.rowVersion,{"Idempotency-Key":operationId});assert(transitioned.status===200,`Search fixture uses authorized ${status} transition (${transitioned.code??"OK"})`);
+  }
+ }
  const round={bidId:bids[0],ownerId:m.id,type:"Technical",interviewer:"Synthetic Élodie Reviewer",localDateTime:"2026-10-21T23:59",timezone:"UTC",offset:"+00:00",durationMinutes:45,location:"Synthetic office",meetingUrl:null,lifecycle:"completed",outcome:"pending",nextAction:"Synthetic debrief notes",followUpAt:input.followUpAt};
  const interview=await write("interviews",round);
  const upcomingDate=new Date(Date.now()+86400000).toISOString().slice(0,16);
@@ -65,9 +82,10 @@ export async function testWorkflowSearch({call,command,identities,org,team,passw
  const current=await call(a,`/candidates/${candidate}?organizationId=${org}`);assert(current.status===200,"Reload profile before live rename");
  assert((await call(a,`/candidates/${candidate}?organizationId=${org}`,{...profile,fullName:"Synthetic Renamed Harper"},current.data.rowVersion,{},"PATCH")).status===200,"Authorized profile rename persists");
  assert((await search("bids",{...base,q:"Harper"})).total===27&&(await search("interviews",{...base,q:"Harper"})).total===2,"Live profile rename updates both search joins");
- const beforeBid=await call(m,`/bids/${bids[0]}?organizationId=${org}`);const editId=randomUUID();
- assert((await call(m,`/bids/${bids[0]}?organizationId=${org}`,{operationId:editId,input:{...input,jobTitle:"UpdatedSearchRole"}},beforeBid.data.bid.rowVersion,{"Idempotency-Key":editId},"PATCH")).status===200,"Authorized job title edit persists");
- assert((await search("interviews",{...base,q:"UpdatedSearchRole"})).total===1,"Live job title edit updates associated interview search");
+ const beforeBid=await call(m,`/bids/${bids[2]}?organizationId=${org}`);const editId=randomUUID();
+ assert((await call(m,`/bids/${bids[2]}?organizationId=${org}`,{operationId:editId,input:{...Object.fromEntries(Object.keys(input).map(key=>[key,beforeBid.data.bid[key]])),jobTitle:"UpdatedSearchRole"}},beforeBid.data.bid.rowVersion,{"Idempotency-Key":editId},"PATCH")).status===200,"Authorized draft job title edit persists");
+ assert((await search("bids",{...base,q:"UpdatedSearchRole"})).total===1,"Live draft job title edit updates bid search");
+ assert((await search("interviews",{...base,q:"UpdatedSearchRole"})).total===0,"Draft edits do not rewrite submitted interview opportunity details");
  console.log(JSON.stringify({result:"PASS",workflowSearchBrowserCheckpoints:checkpoints}));assert(checkpoints===11,"All eleven search browser checkpoints pass");
  return {candidate,bids,interview};
 }

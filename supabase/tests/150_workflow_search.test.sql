@@ -24,6 +24,12 @@ insert into public.interview_feedback(organization_id,interview_id,revision_numb
  ('15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000501',1,'supersededfeedbacktoken','15000000-0000-4000-8000-000000000003'),
  ('15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000501',2,'currentfeedbacktoken strong systems reasoning','15000000-0000-4000-8000-000000000003');
 insert into public.bid_access_grants(organization_id,bid_id,user_id,capability,created_by) values('15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000401','15000000-0000-4000-8000-000000000004','bid.prepare','15000000-0000-4000-8000-000000000001');
+-- More than the legacy agenda's 200 rows. This candidate is not assigned to the
+-- Member, so it also exercises different authorized counts without changing the
+-- Member's original 27 opportunities.
+insert into public.candidates(id,organization_id,owning_team_id,full_name,created_by) values('15000000-0000-4000-8000-000000000303','15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000201','Synthetic Pagination Sol','15000000-0000-4000-8000-000000000001');
+insert into public.bids(id,organization_id,candidate_id,team_id,owner_id,company_name,job_title,created_by,prepared_by) values('15000000-0000-4000-8000-000000000498','15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000303','15000000-0000-4000-8000-000000000201','15000000-0000-4000-8000-000000000001','Pagination Company','Researcher','15000000-0000-4000-8000-000000000001','15000000-0000-4000-8000-000000000001');
+insert into public.interviews(id,organization_id,bid_id,round_number,type,owner_id,lifecycle_status,created_by) select ('15000000-0000-4000-8000-'||lpad((600+n)::text,12,'0'))::uuid,'15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000498',n,'Pagination','15000000-0000-4000-8000-000000000001','not_scheduled','15000000-0000-4000-8000-000000000001' from generate_series(1,201) n;
 create function pg_temp.search(p_kind text,p_filters jsonb default '{}') returns jsonb language sql as $$select public.search_workflow('15000000-0000-4000-8000-000000000100',p_kind,p_filters)$$;
 select ok(not prosecdef,'search uses invoker RLS') from pg_proc where oid='public.search_workflow(uuid,text,jsonb)'::regprocedure;
 select ok(not has_function_privilege('anon','public.search_workflow(uuid,text,jsonb)','EXECUTE'),'anonymous RPC denied');
@@ -53,6 +59,8 @@ select is((pg_temp.search('interviews','{"q":"currentfeedbacktoken"}')->>'total'
 select is((pg_temp.search('interviews','{"q":"supersededfeedbacktoken"}')->>'total')::int,0,'superseded feedback stays history, not current search');
 select is((pg_temp.search('interviews','{"upcoming":true}')->>'total')::int,1,'upcoming excludes completed');
 select is((pg_temp.search('interviews','{"followup":"overdue"}')->>'total')::int,1,'interview followup independent of outcome');
+select is((pg_temp.search('interviews','{"company":"Pagination Company","page":3,"pageSize":100}')->>'total')::int,201,'interview count searches beyond the old 200-row agenda');
+select is(jsonb_array_length(pg_temp.search('interviews','{"company":"Pagination Company","page":3,"pageSize":100}')->'items'),1,'interview pagination retrieves the 201st authorized round');
 select throws_ok($$select pg_temp.search('bids','{"createdFrom":"2026-02-30"}')$$,'22008',null,'direct invalid date rejected');
 select throws_ok($$select pg_temp.search('bids','{"pageSize":101}')$$,'22023','INVALID_SEARCH','direct oversized page rejected');
 select throws_ok($$select pg_temp.search('interviews','{"status":"offer"}')$$,'22023','INVALID_SEARCH','outcome cannot masquerade as lifecycle');
