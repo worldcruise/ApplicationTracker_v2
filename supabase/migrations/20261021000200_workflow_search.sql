@@ -17,6 +17,7 @@ grant execute on function private.workflow_search_text(text),private.workflow_se
 create index bids_search_fts on public.bids using gin(private.workflow_search_vector(company_name||' '||job_title||' '||coalesce(external_id,'')||' '||job_description||' '||notes));
 create index bids_identity_fts on public.bids using gin(private.workflow_search_vector(company_name||' '||job_title));
 create index bids_id_trgm on public.bids using gin((id::text) extensions.gin_trgm_ops);
+create index bids_owner_id_trgm on public.bids using gin((owner_id::text) extensions.gin_trgm_ops);
 create index bids_external_trgm on public.bids using gin(private.workflow_search_text(external_id) extensions.gin_trgm_ops);
 create index bids_body_trgm on public.bids using gin(private.workflow_search_text(job_description||' '||notes) extensions.gin_trgm_ops);
 create index bids_company_trgm on public.bids using gin(private.workflow_search_text(company_name) extensions.gin_trgm_ops);
@@ -30,6 +31,7 @@ create index interviews_type_trgm on public.interviews using gin(private.workflo
 create index interviews_notes_trgm on public.interviews using gin(private.workflow_search_text(next_action) extensions.gin_trgm_ops);
 create index interviews_id_trgm on public.interviews using gin((id::text) extensions.gin_trgm_ops);
 create index interviews_bid_id_trgm on public.interviews using gin((bid_id::text) extensions.gin_trgm_ops);
+create index interviews_owner_id_trgm on public.interviews using gin((owner_id::text) extensions.gin_trgm_ops);
 create index feedback_search_fts on public.interview_feedback using gin(private.workflow_search_vector(feedback));
 create index feedback_body_trgm on public.interview_feedback using gin(private.workflow_search_text(feedback) extensions.gin_trgm_ops);
 create index bids_search_dates on public.bids(organization_id,created_at,id);
@@ -117,7 +119,7 @@ begin
  ),
  scoped as materialized (
   select s.*,array[private.workflow_search_text(candidate_name),private.workflow_search_text(company_name),private.workflow_search_text(job_title)] important,
-   private.workflow_search_text(concat_ws(' ',candidate_name,company_name,job_title,owner_name,external_id,id::text,bid_id::text,interview_type,interviewer,body)) all_text
+   private.workflow_search_text(concat_ws(' ',candidate_name,company_name,job_title,owner_name,owner_id::text,external_id,id::text,bid_id::text,interview_type,interviewer,body)) all_text
   from sources s
  ), term_matches as (
   -- Search the indexed source expressions, not an unscoped denormalized index.
@@ -126,7 +128,7 @@ begin
   select b.id,t.token from tokens t join public.bids b on b.organization_id=p_org where p_kind='bids' and
    (private.workflow_search_vector(b.company_name||' '||b.job_title||' '||coalesce(b.external_id,'')||' '||b.job_description||' '||b.notes)@@t.prefix
     or private.workflow_search_text(b.company_name) like t.pattern or private.workflow_search_text(b.job_title) like t.pattern
-    or private.workflow_search_text(b.external_id) like t.pattern or b.id::text like t.pattern
+    or private.workflow_search_text(b.external_id) like t.pattern or b.id::text like t.pattern or b.owner_id::text like t.pattern
     or private.workflow_search_text(b.job_description||' '||b.notes) like t.pattern
     or (length(t.token)>=3 and (private.workflow_search_text(b.company_name) operator(extensions.%>) t.token or private.workflow_search_text(b.job_title) operator(extensions.%>) t.token)))
   union
@@ -136,7 +138,7 @@ begin
     or private.workflow_search_vector(i.type||' '||i.interviewer||' '||i.next_action)@@t.prefix
     or private.workflow_search_text(i.interviewer) like t.pattern or private.workflow_search_text(i.type) like t.pattern
     or private.workflow_search_text(i.next_action) like t.pattern
-    or i.id::text like t.pattern or i.bid_id::text like t.pattern
+    or i.id::text like t.pattern or i.bid_id::text like t.pattern or i.owner_id::text like t.pattern
     or (length(t.token)>=3 and (private.workflow_search_text(b.company_name) operator(extensions.%>) t.token or private.workflow_search_text(b.job_title) operator(extensions.%>) t.token or private.workflow_search_text(i.interviewer) operator(extensions.%>) t.token or private.workflow_search_text(i.type) operator(extensions.%>) t.token)))
   union
   select s.id,t.token from tokens t join public.candidates c on c.organization_id=p_org join scoped s on s.candidate_id=c.id where
@@ -156,7 +158,7 @@ begin
   select s.*,
    -- Exact identity field, then field prefix, then identity partial, then fuzzy/
    -- weighted lexemes. Long descriptions cannot outrank an identity match.
-   (case when v_q=any(important) or v_q=id::text or v_q=coalesce(external_id,'') or v_q=coalesce(bid_id::text,'') then 10000
+   (case when v_q=any(important) or v_q=id::text or v_q=owner_id::text or v_q=coalesce(external_id,'') or v_q=coalesce(bid_id::text,'') then 10000
     when exists(select 1 from unnest(important) a where starts_with(a,v_q)) then 8000
     when exists(select 1 from unnest(important) a where position(v_q in a)>0) then 6000 else 0 end
     + 100*greatest(extensions.word_similarity(v_q,coalesce(candidate_name,'')),extensions.word_similarity(v_q,company_name),extensions.word_similarity(v_q,job_title))

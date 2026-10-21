@@ -66,7 +66,10 @@ reset role;
 select set_config('request.jwt.claims','{"role":"authenticated","sub":"15000000-0000-4000-8000-000000000003"}',true);
 set local role authenticated;
 select is((pg_temp.search('bids')->>'total')::int,27,'member assignment scopes count');
-select is((pg_temp.search('bids','{"q":"HiddenCompanyToken"}')->>'total')::int,0,'cross-team text match cannot leak');
+-- Similar authorized names can be fuzzy matches. Check the actual denied ID,
+-- plus the exact company filter, instead of equating every fuzzy hit with a leak.
+select ok(not exists(select 1 from jsonb_array_elements(pg_temp.search('bids','{"q":"HiddenCompanyToken"}')->'items') r where r->'record'->>'id'='15000000-0000-4000-8000-000000000499'),'cross-team record never appears in text results');
+select is((pg_temp.search('bids','{"q":"HiddenCompanyToken","company":"HiddenCompanyToken"}')->>'total')::int,0,'exact inaccessible company filter has zero authorized results');
 select is(jsonb_array_length(pg_temp.search('bids')->'options'->'teams'),1,'options use same authorized record scope');
 reset role;
 select set_config('request.jwt.claims','{"role":"authenticated","sub":"15000000-0000-4000-8000-000000000004"}',true);
@@ -76,6 +79,7 @@ select is((pg_temp.search('bids','{"q":"ultrasecretprofiletoken"}')->>'total')::
 select is((pg_temp.search('bids','{"q":"currentfeedbacktoken"}')->>'total')::int,0,'feedback cannot leak through bid matching');
 select throws_ok($$select pg_temp.search('interviews')$$,'42501','FORBIDDEN','bidder interview RPC denied');
 select is((pg_temp.search('bids','{"q":"Morgan"}')->>'total')::int,0,'owner names outside roster scope do not participate');
+select is((pg_temp.search('bids','{"q":"15000000-0000-4000-8000-000000000003"}')->>'total')::int,1,'readable owner IDs searchable without widening roster access');
 reset role;
 update public.bid_access_grants set revoked_at=now() where user_id='15000000-0000-4000-8000-000000000004';
 insert into public.bid_access_grants(organization_id,bid_id,user_id,capability,created_by) values('15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000401','15000000-0000-4000-8000-000000000004','bid.submit','15000000-0000-4000-8000-000000000001');

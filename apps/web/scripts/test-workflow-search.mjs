@@ -62,6 +62,12 @@ export async function testWorkflowSearch({call,command,identities,org,team,passw
   stage="clear and browser navigation";await page.getByRole("button",{name:"Clear all",exact:true}).click();await expect(page.getByRole("searchbox",{name:"Search interviews"})).toHaveValue("");await page.goBack();await expect(page.getByRole("searchbox",{name:"Search interviews"})).toHaveValue("Northstar");await expect(page.getByText("1 matching interviews in your current scope",{exact:true})).toBeVisible();checkpoints++;
   stage="mobile controls";await page.setViewportSize({width:390,height:844});await page.getByText("Filters",{exact:true}).click();await expect(page.getByLabel("Scheduled from (UTC)",{exact:true})).toBeVisible();assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),"Search screen has no horizontal overflow at 390px");checkpoints++;
  }catch(error){throw Error(`Workflow search browser ${stage}: ${error.message}`);}finally{await context.close();await browser.close();}
+ const current=await call(a,`/candidates/${candidate}?organizationId=${org}`);assert(current.status===200,"Reload profile before live rename");
+ assert((await call(a,`/candidates/${candidate}?organizationId=${org}`,{...profile,fullName:"Synthetic Renamed Harper"},current.data.rowVersion,{},"PATCH")).status===200,"Authorized profile rename persists");
+ assert((await search("bids",{...base,q:"Harper"})).total===27&&(await search("interviews",{...base,q:"Harper"})).total===2,"Live profile rename updates both search joins");
+ const beforeBid=await call(m,`/bids/${bids[0]}?organizationId=${org}`);const editId=randomUUID();
+ assert((await call(m,`/bids/${bids[0]}?organizationId=${org}`,{operationId:editId,input:{...input,jobTitle:"UpdatedSearchRole"}},beforeBid.data.bid.rowVersion,{"Idempotency-Key":editId},"PATCH")).status===200,"Authorized job title edit persists");
+ assert((await search("interviews",{...base,q:"UpdatedSearchRole"})).total===1,"Live job title edit updates associated interview search");
  console.log(JSON.stringify({result:"PASS",workflowSearchBrowserCheckpoints:checkpoints}));assert(checkpoints===11,"All eleven search browser checkpoints pass");
  return {candidate,bids,interview};
 }
