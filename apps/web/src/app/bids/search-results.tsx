@@ -29,7 +29,7 @@ export function WorkflowSearchResults({kind,org,tick,locked,onOpen,extraAction}:
   if(reset)next.delete("page");
   window.history.pushState(null,"",pathname+"?"+next.toString());
  }
- function submitSearch(value:string) {if(timer.current)clearTimeout(timer.current);navigate({q:value.trim().replace(/\s+/gu," ")});}
+ function submitSearch(value:string) {if(timer.current)clearTimeout(timer.current);const normalized=value.trim().replace(/\s+/gu," ");const current=new URLSearchParams(window.location.search);if(normalized===(current.get("q")??"")&&(!current.has("page")||current.get("page")==="1")){setRetry(n=>n+1);return;}navigate({q:normalized});}
  useEffect(()=>{
   const controller=new AbortController();let current=true;
   const q=new URLSearchParams(serialized);q.set("organizationId",org);q.set("search","true");

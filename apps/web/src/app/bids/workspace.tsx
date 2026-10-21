@@ -25,6 +25,7 @@ export function WorkflowWorkspace({scope,actorId,initialId="",candidateId="",ini
  const urlView=useSearchParams().get("view")??initialView;
  const [view,setView]=useState(initialView);const [id,setId]=useState(initialId);const [detail,setDetail]=useState<BidWorkspace|null>(null);const [form,setForm]=useState<BidInput>(emptyBid(actorId,scope.teams[0]?.teamId??"",candidateId));
  useEffect(()=>setView(urlView),[urlView]);
+ useEffect(()=>{if(initialId&&initialView==="interviews"){const next=new URLSearchParams(window.location.search);if(!next.has("bidId")){next.set("bidId",initialId);window.history.replaceState(null,"",window.location.pathname+"?"+next);}}},[initialId,initialView]);
  const [documents,setDocuments]=useState<DocumentOption[]>([]);const [tasks,setTasks]=useState<WorkflowTask[]>([]);const [notices,setNotices]=useState<Notice[]>([]);const [error,setError]=useState("");const [tick,setTick]=useState(0);const [onlyOverdue,setOnlyOverdue]=useState(false);
  const mutation=useWorkflowMutation(actorId,org,async(result,op)=>{if(op.method==="POST"&&op.url===path("bids"))setId(result.id);setTick(n=>n+1);});
  useEffect(()=>{let active=true;setError("");void(async()=>{try{
