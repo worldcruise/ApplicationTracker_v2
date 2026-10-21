@@ -6,6 +6,8 @@ An npm workspace for the candidate management web application, Chrome extension,
 
 ## Local setup
 
+Public account requests are available at `/register` after operator setup. Email confirmation and Admin approval are separate. Follow [registration, controlled first-Admin bootstrap and review testing](docs/REGISTRATION.md); existing approved accounts continue using `/sign-in`.
+
 **Active pilot: localhost web/API + existing hosted Supabase development project `xsyxlxpsglhkmvzlmhih`.** Public hosting, custom domains and production provisioning are deferred. Follow [Stage 1 setup, exact dashboard Auth URLs and five-flow manual verification](docs/LOCAL_PILOT.md). Existing features are retained; start with sign-in, candidate management, ATS Classic JSON/PDF and basic bids. Extension authentication is a separate later workflow.
 
 Install **Node.js 24 LTS** and **npm 11**. The verified runtime is recorded in `.nvmrc` and `package.json`. On Windows use the official Node installer, or a version manager that honors `.nvmrc`. Restart your terminal after installation. Run commands from the repository root.
@@ -39,6 +41,7 @@ If using the task-local portable runtime instead of an installed Node, add its d
 | `npm run feasibility:pdf` | Generate the two-page synthetic sample, parse/render it with PDF.js, verify text/bounds/repeated hash, and write `output/pdf/phase0-synthetic-resume.pdf` plus ignored page PNGs. Uses the native canvas development dependency. |
 | `npm run history:fixture -- --organization-id <synthetic UUID> --candidate-id <synthetic UUID>` | Create a new ignored synthetic archive root with two hashed packages for manual Quick Check tests; no API or existing-file overwrite. |
 | `npm run admin:bootstrap -- --organization-id <new UUID> --admin-user-id <confirmed Auth UUID> --name "Synthetic Development"` | Audited new-organization bootstrap; operator-only key in the ignored server environment. See FOUNDATION.md before running. |
+| `npm run registration:configure -- --organization-id <existing UUID>` | Operator-only selection of the existing active organization for public account requests. Add `--disable` to close intake; see REGISTRATION.md for hosted email settings. |
 | `npm run test:foundation:http` | Isolated CI-only production build/Auth/API and web/unpacked-MV3 Chromium harness; refuses hosted settings and a configured `.env.local`. Requires the CI local Supabase stack and installed Playwright Chromium. |
 | `npm run db:stop` | Stop this project's local Supabase services, preserving local data. |
 | `npm run db:reset` | Reset the **local** database, reapply migrations and seeds. Destructive to local development data; use intentionally. |

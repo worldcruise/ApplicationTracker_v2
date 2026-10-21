@@ -35,10 +35,10 @@ export function RegistrationForm({ available }: { available: boolean }) {
     finally { setBusy(false); }
   }
   return <form onSubmit={submit} noValidate className="mx-auto grid max-w-md gap-4 rounded border bg-white p-6">
-    {([['fullName','Full name','text','name'],['email','Email','email','email'],['password','Password','password','new-password'],['confirmation','Confirm password','password','new-password']] as const).map(([name,label,type,complete]) => <label key={name} className="grid gap-1">{label}
-      <input name={name} type={type} autoComplete={complete} required maxLength={name === 'fullName' ? 200 : name === 'email' ? 320 : 256} disabled={busy || sent || !available} aria-invalid={errors.some(e => e.path === name)} aria-describedby={`${name}-error`} className="rounded border p-2" />
+    {([['fullName','Full name','text','name'],['email','Email','email','email'],['password','Password','password','new-password'],['confirmation','Confirm password','password','new-password']] as const).map(([name,label,type,complete]) => <div key={name} className="grid gap-1"><label htmlFor={name}>{label}</label>
+      <input id={name} name={name} type={type} autoComplete={complete} required maxLength={name === 'fullName' ? 200 : name === 'email' ? 320 : 256} disabled={busy || sent || !available} aria-invalid={errors.some(e => e.path === name)} aria-describedby={`${name}-error`} className="rounded border p-2" />
       <span id={`${name}-error`} className="text-sm text-red-800">{errors.find(e => e.path === name)?.message}</span>
-    </label>)}
+    </div>)}
     <p className="text-sm">Use 12–256 characters for your password. An Admin assigns your role and team after review.</p>
     <button disabled={busy || sent || !available} className="rounded bg-slate-900 p-2 text-white disabled:opacity-50">{busy ? "Creating account…" : "Create account"}</button>
     <p role="status">{message}</p><div className="flex gap-4 underline"><Link href="/sign-in">Sign in</Link><Link href="/account/recovery">Account recovery</Link></div>

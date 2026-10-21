@@ -56,7 +56,7 @@ The diagnostic verifies claims, then issues a HEAD/select-id request with the su
 
 Results distinguish service/network errors, missing authentication, missing table configuration, invalid authentication, missing relations (`PGRST205`/`42P01`), and database permission failures (`42501`/HTTP 403). Missing table configuration means remote existence is **unverified**, not that the table is absent. Missing prerequisites produce a nonzero/incomplete result even when connectivity passes (the script uses exit 2; npm may wrap it as a lifecycle failure).
 
-Repository migrations now define foundation tables and RLS, but they have not been applied to hosted development by this task. No hosted test-user credentials/session were supplied. Do not create a `todos` table, enable public signup, bypass the shared API for product features, disable RLS, or use an admin key to make this probe pass.
+Repository migrations now define foundation tables and RLS, but they have not been applied to hosted development by this task. No hosted test-user credentials/session were supplied. Do not create a `todos` table, change signup merely for this connectivity probe, bypass the shared API for product features, disable RLS, or use an admin key to make this probe pass. The later explicitly requested registration workflow has its own reviewed setup in [REGISTRATION.md](REGISTRATION.md).
 
 ## Hosted migrations without Docker
 
@@ -86,7 +86,7 @@ npx supabase db push --linked
 npx supabase migration list --linked
 ```
 
-No schema change or CLI login/link/push was performed by H001. No application SQL migration is needed for client configuration. The local `supabase/config.toml` does not configure hosted Auth; an authorized owner must check invite-only onboarding and exact localhost/future callback redirect allowlists in the hosted project when T013 is implemented.
+No schema change or CLI login/link/push was performed by H001. No application SQL migration was needed for that client configuration. The local `supabase/config.toml` does not configure hosted Auth. Current onboarding uses the later user-requested Admin-approved registration workflow; an authorized owner must apply [REGISTRATION.md](REGISTRATION.md), including migration, explicit intake organization, email confirmation and localhost callback settings.
 
 For database tests, `npm run db:test` remains **local**. The CLI also supports `npx supabase test db --linked`; its test-runner tooling may require Docker and is not required to run this application. For Docker-free SQL checks, use an approved PostgreSQL client against a dedicated hosted development/test database and run the reviewed rollback-only test SQL. Tests requiring pgTAP need that extension available; psql alone prints assertions and does not constitute a TAP pass/fail runner. Use an appropriate TAP-aware runner and inspect every assertion. H001 does not claim database tests passed. Never run development fixtures or mutation tests against production.
 

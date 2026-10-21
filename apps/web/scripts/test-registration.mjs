@@ -78,7 +78,9 @@ export async function testRegistration({ operator, url, publicKey, call, org, ot
     const docs=await race.client.from("resume_versions").select("id");assert(!docs.error && docs.data.length===0,"Pending direct document RLS denies data");
     const self=await race.client.from("account_requests").update({status:"approved",assigned_role:"admin"}).eq("user_id",race.id);assert(self.error?.code==="42501","Direct self promotion denied");
     const review={userId:race.id,decision:"approved",role:"bidder",teamId:team,reason:"Synthetic approval"};
-    assert((await call(race,endpoint,review,1)).status===403,"Pending review attempt denied");assert((await call(identities.leaderA,endpoint,review,1)).status===403,"Leader cannot approve accounts");assert((await call(identities.adminB,endpoint,review,1)).status===403,"Other organization Admin denied");
+    assert((await call(race,endpoint,review,1)).status===403,"Pending review attempt denied");
+    for(const person of [identities.leaderA,identities.memberA,identities.bidderA]) assert((await call(person,endpoint,review,1)).status===403,"Non-Admin role cannot approve accounts");
+    assert((await call(identities.adminB,endpoint,review,1)).status===403,"Other organization Admin denied");
     const wrong=await call(identities.adminA,`/organizations/${otherOrg}/account-requests`,review,1);assert(wrong.status===403,"Client cannot redirect review to other organization");
     const results=await Promise.all([call(identities.adminA,endpoint,review,1),call(identities.adminA,endpoint,{userId:race.id,decision:"rejected",role:null,teamId:null,reason:"Concurrent rejection"},1)]);
     assert(results.filter(r=>r.status===200).length===1 && results.filter(r=>r.status===409).length===1,"Simultaneous opposing reviews commit exactly one terminal decision");

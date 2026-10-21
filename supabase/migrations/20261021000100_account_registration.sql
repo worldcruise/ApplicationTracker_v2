@@ -120,7 +120,9 @@ language plpgsql stable security definer set search_path='' as $$
 begin
  if private.org_role(p_org) is distinct from 'admin' then raise exception 'FORBIDDEN' using errcode='42501'; end if;
  if p_offset<0 or p_offset>100000 then raise exception 'INVALID_OFFSET' using errcode='22023'; end if;
- return coalesce((select jsonb_agg(to_jsonb(r)||jsonb_build_object('email_verified',coalesce((private.registration_identity(r.user_id)->>'emailVerified')::boolean,false)))
+ return coalesce((select jsonb_agg(to_jsonb(r)||jsonb_build_object('registered_email',r.email,
+ 'email',coalesce(private.registration_identity(r.user_id)->>'email',r.email),
+ 'email_verified',coalesce((private.registration_identity(r.user_id)->>'emailVerified')::boolean,false)))
  from (select * from public.account_requests where organization_id=p_org order by registered_at desc,user_id limit 50 offset p_offset) r),'[]'::jsonb);
 end $$;
 alter function public.list_account_requests(uuid,integer) owner to app_command;

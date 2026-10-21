@@ -48,7 +48,7 @@ function Review({ row, teams, endpoint, reload }: { row: AccountRequest; teams: 
     finally { setBusy(false); }
   }
   return <article className="grid gap-2 rounded border bg-white p-5">
-    <h2 className="font-semibold">{row.full_name}</h2><p>{row.email}</p><p>Registered: {new Date(row.registered_at).toLocaleString()}</p>
+    <h2 className="font-semibold">{row.full_name}</h2><p>{row.email}</p>{row.registered_email !== row.email && <p>Registered email: {row.registered_email}</p>}<p>Registered: {new Date(row.registered_at).toLocaleString()}</p>
     <p>Email verification: {row.email_verified ? "Verified" : "Not verified"}</p><p>Review status: {row.status}</p>
     {row.status === "pending" ? <form onSubmit={submit} className="grid gap-3">
       <label className="grid gap-1">Role<select name="role" value={role} onChange={e => setRole(e.target.value)} disabled={busy} className="rounded border p-2">{organizationRoles.map(r => <option key={r} value={r}>{r.replaceAll("_"," ")}</option>)}</select></label>

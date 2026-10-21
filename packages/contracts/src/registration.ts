@@ -6,7 +6,7 @@ export interface AccountStatus {
   emailVerified?: boolean;
 }
 export interface AccountRequest {
-  user_id: string; organization_id: string; full_name: string; email: string;
+  user_id: string; organization_id: string; full_name: string; email: string; registered_email: string;
   registered_at: string; email_verified: boolean;
   status: "pending" | "approved" | "rejected";
   assigned_role: string | null; team_id: string | null;

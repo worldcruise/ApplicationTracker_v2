@@ -3,6 +3,7 @@ import { requestContext } from "@/lib/api/context";
 import { ApiFailure, databaseResult } from "@/lib/api/errors";
 import { checkMutationOrigin, currentOrganization, expectedVersion, requireRole, uuid } from "@/lib/api/guards";
 import type { AccountRequest } from "@candidate/contracts";
+import { readJson } from "@/lib/api/body";
 export const dynamic = "force-dynamic";
 export const OPTIONS = preflight;
 type Params = { params: Promise<{ organizationId: string }> };
@@ -22,12 +23,11 @@ export async function POST(request: Request, { params }: Params) {
     checkMutationOrigin(request, token);
     const org = uuid((await params).organizationId);
     requireRole(currentOrganization(context, org), ["admin"]);
-    if (Number(request.headers.get("content-length")) > 10000) throw new ApiFailure(413, "SCHEMA_INVALID", "Review request is too large.");
-    let body;
-    try { body = await request.json(); } catch { throw new ApiFailure(400, "SCHEMA_INVALID", "Send a JSON review request."); }
-    if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).some(k => !["userId","decision","role","teamId","reason"].includes(k))) throw new ApiFailure(400, "SCHEMA_INVALID", "Invalid review fields.");
-    if (!["approved","rejected"].includes(body.decision) || (body.reason != null && (typeof body.reason !== "string" || body.reason.length > 2000))) throw new ApiFailure(400, "SCHEMA_INVALID", "Choose Approve or Reject; keep the reason under 2,000 characters.");
-    if (body.decision === "approved" && !["admin","team_leader","team_member","bidder"].includes(body.role)) throw new ApiFailure(400, "SCHEMA_INVALID", "Select an authorized role.");
+    const input = await readJson(request, 10000);
+    if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).some(k => !["userId","decision","role","teamId","reason"].includes(k))) throw new ApiFailure(400, "SCHEMA_INVALID", "Invalid review fields.");
+    const body = input as Record<string, unknown>;
+    if (typeof body.decision !== "string" || !["approved","rejected"].includes(body.decision) || (body.reason != null && (typeof body.reason !== "string" || body.reason.length > 2000))) throw new ApiFailure(400, "SCHEMA_INVALID", "Choose Approve or Reject; keep the reason under 2,000 characters.");
+    if (body.decision === "approved" && (typeof body.role !== "string" || !["admin","team_leader","team_member","bidder"].includes(body.role))) throw new ApiFailure(400, "SCHEMA_INVALID", "Select an authorized role.");
     if (body.decision === "rejected" && (body.role != null || body.teamId != null)) throw new ApiFailure(400, "SCHEMA_INVALID", "A rejection cannot assign access.");
     const version = await databaseResult<number>(client.rpc("review_account_request", {
       p_org: org, p_user: uuid(body.userId, "applicant"), p_decision: body.decision, p_role: body.role ?? null,

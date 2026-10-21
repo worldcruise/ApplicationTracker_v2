@@ -38,6 +38,9 @@ export function databaseFailure(error: DatabaseFailure): ApiFailure {
   if (error.message === "KEY_PAYLOAD_MISMATCH") return new ApiFailure(409, "KEY_PAYLOAD_MISMATCH", "Reuse the original operation ID only with its original payload and actor.");
   if (error.message === "LAST_ACTIVE_ADMIN") return new ApiFailure(409, "FORBIDDEN", "Keep at least one active organization administrator.");
   if (error.message === "IDENTITY_NOT_CONFIRMED") return new ApiFailure(409, "SCHEMA_INVALID", "Confirm the account email before activation.");
+  if (error.message === "INVALID_REVIEW") return new ApiFailure(400, "SCHEMA_INVALID", "Choose Approve or Reject. Assign an authorized role and an active team for non-Admin approvals; rejection must not assign access.");
+  if (error.message === "INVALID_TEAM") return new ApiFailure(400, "SCHEMA_INVALID", "Choose an active team in this organization, then retry the review.");
+  if (error.message === "EXISTING_MEMBERSHIP") return new ApiFailure(409, "VERSION_CONFLICT", "This identity already has a membership or is deactivated. Reload and ask the administrator to reconcile its existing provisioning before review.");
   if (["22023", "22008", "22P02", "23503", "23505", "23514", "23502"].includes(error.code ?? "")) {
     return new ApiFailure(400, "SCHEMA_INVALID", "The requested values conflict with the current membership or resource constraints.");
   }
