@@ -34,6 +34,11 @@ try{
    if(await query('select rolsuper from pg_roles where rolname=current_user;')!=='t')throw Error('Exact managed-object ownership restoration needs an isolated maintenance superuser. Do not grant this to hosted postgres; use the provider recovery workflow.');
    const count=await query("select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname not in ('pg_catalog','information_schema') and n.nspname not like 'pg_toast%' and c.relkind in ('r','p');");
    if(count!=='0')throw Error('Restore target contains user tables. Refusing to overwrite.');
+   const schemas=await query("select count(*) from pg_namespace where nspname not in ('public','pg_catalog','information_schema') and nspname not like 'pg_toast%' and nspname not like 'pg_temp%';");
+   if(schemas!=='0')throw Error('Restore target has existing user schemas. Use a genuinely empty isolated database.');
+   // DROP without CASCADE refuses any dependent object. Only template0's empty
+   // public namespace is removed so its exact archived ACL/owner can be restored.
+   await query('drop schema if exists public;');
    const {p,done}=client('pg_restore',['--single-transaction','--exit-on-error','--no-password','--dbname='+process.env.PGDATABASE]);p.stdout.resume();const observed=done;observed.catch(()=>{});
    try{await backup.pipeTo(p.stdin);await observed;}catch(e){p.kill();throw e;}
    console.log(JSON.stringify({result:'restored-into-empty-isolated-database',target:process.env.PGDATABASE,verify:'Run recovery fingerprint/RLS checks before serving any traffic.'}));

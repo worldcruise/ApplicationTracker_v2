@@ -7,4 +7,5 @@ test('production rejects development fallback, public secrets, insecure origins 
  assert.equal(productionConfig(publicOnly,false,false).projectRef,ref);assert.throws(()=>productionConfig(publicOnly));
  for(const patch of [{PRODUCTION_SUPABASE_PROJECT_REF:'xsyxlxpsglhkmvzlmhih'},{NEXT_PUBLIC_SUPABASE_URL:'https://xsyxlxpsglhkmvzlmhih.supabase.co'},{NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'sb_secret_test'},{NEXT_PUBLIC_APP_URL:'http://localhost:3000'},{PILOT_DATA_MODE:'approved-production'},{FEASIBILITY_API_ENABLED:'true'}])assert.throws(()=>productionConfig({...env,...patch}));
  assert.throws(()=>productionConfig({},true));
+ assert.throws(()=>productionConfig({...env,NEXT_PUBLIC_APP_URL:'synthetic-private-invalid-input'}),error=>!error.message.includes('synthetic-private-invalid-input'));
 });

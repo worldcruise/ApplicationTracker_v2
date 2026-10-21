@@ -34,6 +34,9 @@ export async function testRecovery({identities,assert}){
  try{
   phase='create isolated target';
   sql('postgres',`create database ${target} template template0;`);
+  // template0 still supplies an empty public namespace, while this archive
+  // explicitly recreates its original ownership/ACL. Never use CASCADE.
+  sql(target,'drop schema public;');
   phase='restore archive';
   // Restoring managed Auth ownership needs the isolated maintenance superuser.
   // Supabase's limited migration role cannot SET ROLE supabase_admin. Never
