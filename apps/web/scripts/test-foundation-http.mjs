@@ -294,7 +294,7 @@ try {
   step = "bid and interview production API acceptance";
   const workflowFixture = await testWorkflowHTTP({call,command,identities,org:orgA,team:teamA,expect});
   step = "bid/interview indexed search and browser acceptance";
-  await testWorkflowSearch({call,command,identities,org:orgA,team:teamA,password,assert:expect});
+  try {await testWorkflowSearch({call,command,identities,org:orgA,team:teamA,password,assert:expect});}catch(error){throw new TestFailure(error.message);}
   step="archive package HTTP";
   const archiveFixture=await testArchiveHTTP({call,command,identities,org:orgA,team:teamA,assert:expect,renderKey});
   step = "bid and interview browser acceptance";
