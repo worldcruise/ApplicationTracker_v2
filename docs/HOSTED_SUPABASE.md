@@ -56,7 +56,7 @@ The diagnostic verifies claims, then issues a HEAD/select-id request with the su
 
 Results distinguish service/network errors, missing authentication, missing table configuration, invalid authentication, missing relations (`PGRST205`/`42P01`), and database permission failures (`42501`/HTTP 403). Missing table configuration means remote existence is **unverified**, not that the table is absent. Missing prerequisites produce a nonzero/incomplete result even when connectivity passes (the script uses exit 2; npm may wrap it as a lifecycle failure).
 
-Repository migrations now define foundation tables and RLS, but they have not been applied to hosted development by this task. No hosted test-user credentials/session were supplied. Do not create a `todos` table, change signup merely for this connectivity probe, bypass the shared API for product features, disable RLS, or use an admin key to make this probe pass. The later explicitly requested registration workflow has its own reviewed setup in [REGISTRATION.md](REGISTRATION.md).
+H001 originally supplied client configuration only. The later LC02A operator setup now applies and verifies all 28 migrations in this hosted development project and establishes the trusted first Admin, including an authenticated-role database permission check. Interactive hosted password sign-in remains manual. Do not create a `todos` table, change signup merely for this connectivity probe, bypass the shared API for product features, disable RLS, or use an admin key to make this probe pass. Current migration/first-Admin results and remaining intake/email setup are in [REGISTRATION.md](REGISTRATION.md).
 
 ## Hosted migrations without Docker
 
