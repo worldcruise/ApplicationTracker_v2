@@ -44,7 +44,7 @@ export function workflow(request:Request,resource:string,parts:string[]) {
    if(read && !id && q.get("search")==="true" && (resource==="bids" || resource==="interviews")) {
     if(resource==="interviews")requireRole(scope,["admin","team_leader","team_member"]);
     const filters=parseWorkflowSearch(q,resource);
-    const result=await databaseResult<{items:{record:Record<string,unknown>}[]}>(client.rpc("search_workflow",{p_org:org,p_kind:resource,p_filters:filters}));
+    const result=await databaseResult<{items:{record:Record<string,unknown>}[]}>(client.rpc("search_workflow",{p_org:org,p_kind:resource,p_filters:filters}).abortSignal(request.signal));
     const columns=(resource==="bids"?bidColumns:interviewColumns).split(",").map(value=>{const [alias,column]=value.split(":");return [alias!,column??alias!] as const;});
     return {...result,items:result.items.map(item=>({...item,record:Object.fromEntries(columns.map(([alias,column])=>[alias,item.record[column]]))}))};
    }

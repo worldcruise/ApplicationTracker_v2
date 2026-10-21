@@ -23,6 +23,7 @@ insert into public.interviews(id,organization_id,bid_id,round_number,type,interv
 insert into public.interview_feedback(organization_id,interview_id,revision_number,feedback,created_by) values
  ('15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000501',1,'supersededfeedbacktoken','15000000-0000-4000-8000-000000000003'),
  ('15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000501',2,'currentfeedbacktoken strong systems reasoning','15000000-0000-4000-8000-000000000003');
+insert into public.workflow_tasks(organization_id,bid_id,interview_id,assignee_id,title,due_at,source_key) values('15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000401','15000000-0000-4000-8000-000000000501','15000000-0000-4000-8000-000000000003','Synthetic interview follow-up',now()-interval '1 hour','synthetic-search-interview');
 insert into public.bid_access_grants(organization_id,bid_id,user_id,capability,created_by) values('15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000401','15000000-0000-4000-8000-000000000004','bid.prepare','15000000-0000-4000-8000-000000000001');
 -- More than the legacy agenda's 200 rows. This candidate is not assigned to the
 -- Member, so it also exercises different authorized counts without changing the
@@ -61,6 +62,10 @@ select is((pg_temp.search('interviews','{"upcoming":true}')->>'total')::int,1,'u
 select is((pg_temp.search('interviews','{"followup":"overdue"}')->>'total')::int,1,'interview followup independent of outcome');
 select is((pg_temp.search('interviews','{"company":"Pagination Company","page":3,"pageSize":100}')->>'total')::int,201,'interview count searches beyond the old 200-row agenda');
 select is(jsonb_array_length(pg_temp.search('interviews','{"company":"Pagination Company","page":3,"pageSize":100}')->'items'),1,'interview pagination retrieves the 201st authorized round');
+select lives_ok($$select public.complete_workflow_task('15000000-0000-4000-8000-000000000100',(select id from public.workflow_tasks where bid_id='15000000-0000-4000-8000-000000000401' and interview_id is null),1,gen_random_uuid(),gen_random_uuid())$$,'authorized completion preserves stored follow-up date');
+select is((pg_temp.search('bids','{"followup":"overdue"}')->>'total')::int,0,'completed bid follow-up no longer matches overdue');
+select lives_ok($$select public.complete_workflow_task('15000000-0000-4000-8000-000000000100',(select id from public.workflow_tasks where source_key='synthetic-search-interview'),1,gen_random_uuid(),gen_random_uuid())$$,'authorized interview task completion');
+select is((pg_temp.search('interviews','{"followup":"overdue"}')->>'total')::int,0,'completed interview follow-up no longer matches overdue');
 select throws_ok($$select pg_temp.search('bids','{"createdFrom":"2026-02-30"}')$$,'22008',null,'direct invalid date rejected');
 select throws_ok($$select pg_temp.search('bids','{"pageSize":101}')$$,'22023','INVALID_SEARCH','direct oversized page rejected');
 select throws_ok($$select pg_temp.search('interviews','{"status":"offer"}')$$,'22023','INVALID_SEARCH','outcome cannot masquerade as lifecycle');

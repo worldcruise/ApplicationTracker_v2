@@ -38,6 +38,7 @@ create index bids_search_dates on public.bids(organization_id,created_at,id);
 create index bids_search_submitted on public.bids(organization_id,submitted_at,id) where submitted_at is not null;
 create index bids_search_followup on public.bids(organization_id,follow_up_at,id) where follow_up_at is not null;
 create index interviews_search_followup on public.interviews(organization_id,follow_up_at,id) where follow_up_at is not null;
+create index workflow_tasks_search_due on public.workflow_tasks(organization_id,bid_id,interview_id,due_at) where state='open';
 
 -- Narrow reuse of the existing safe bidder projection. Submit-only grants must
 -- not silently gain candidate-name visibility. No raw candidate SELECT is added.
@@ -185,8 +186,9 @@ begin
    and (not p_filters ? 'submittedTo' or submitted_at < (((p_filters->>'submittedTo')::date+1)::timestamp at time zone 'UTC'))
    and (not p_filters ? 'scheduledFrom' or scheduled_at >= ((p_filters->>'scheduledFrom')::date::timestamp at time zone 'UTC'))
    and (not p_filters ? 'scheduledTo' or scheduled_at < (((p_filters->>'scheduledTo')::date+1)::timestamp at time zone 'UTC'))
-   and (not p_filters ? 'followup' or (follow_up_at is not null and status not in ('closed','withdrawn','expired','rejected','cancelled') and
-    (case when p_filters->>'followup'='overdue' then follow_up_at<v_now else follow_up_at<((v_now at time zone 'UTC')::date+1)::timestamp at time zone 'UTC' end)))
+   and (not p_filters ? 'followup' or exists(select 1 from public.workflow_tasks task where task.organization_id=p_org and task.state='open'
+    and ((p_kind='bids' and task.bid_id=s.id and task.interview_id is null) or (p_kind='interviews' and task.interview_id=s.id and task.bid_id=s.bid_id))
+    and (case when p_filters->>'followup'='overdue' then task.due_at<v_now else task.due_at<((v_now at time zone 'UTC')::date+1)::timestamp at time zone 'UTC' end)))
    and (coalesce((p_filters->>'upcoming')::boolean,false)=false or (status='scheduled' and scheduled_at>=v_now))
    and (coalesce((p_filters->>'feedbackPending')::boolean,false)=false or status='feedback_pending' or (status='completed' and not has_feedback))
    and (v_q='' or id in (select id from matched) or (not exists(select 1 from tokens) and position(v_q in all_text)>0))
