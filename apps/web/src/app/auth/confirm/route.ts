@@ -10,10 +10,10 @@ export async function GET(request: Request) {
   const hash = query.get("token_hash");
   const type = query.get("type");
   let valid = false;
-  if (hash && (type === "invite" || type === "recovery")) {
+  if (hash && (type === "invite" || type === "recovery" || type === "email" || type === "signup")) {
     const { error } = await (await createClient()).auth.verifyOtp({ token_hash: hash, type });
     valid = !error;
   }
-  return preventSessionCaching(NextResponse.redirect(new URL(valid ? "/account/update-password" : "/sign-in?link=invalid", applicationOrigin())));
+  return preventSessionCaching(NextResponse.redirect(new URL(valid ? (type === "email" || type === "signup" ? "/workspace" : "/account/update-password") : "/sign-in?link=invalid", applicationOrigin())));
 }
 

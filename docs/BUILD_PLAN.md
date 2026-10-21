@@ -29,6 +29,16 @@ All five priority flows already have implementations and isolated CI coverage. R
 
 ## Requirements comparison and decision register
 
+### Current requested increment — registration approval (21 October 2026)
+
+The explicit registration request supersedes D10's invite-only restriction for configured public intake; controlled initial Admin bootstrap and trusted invitations remain. See [decision 0003](decisions/0003-registration-approval.md) and [REGISTRATION.md](REGISTRATION.md). No public hosting/production provisioning is introduced.
+
+| Task | Dependencies / design | Acceptance |
+| --- | --- | --- |
+| RG01 | Existing FN foundation; design §§4–5, 8 | Versioned actual-schema request/configuration, self-only status projection, Admin review RLS, atomic membership/team/decision/audit, confirmed identity, no self/default Admin, stale/concurrent/idempotent review tests. |
+| RG02 | RG01; design §§3–5 | Validated registration and confirmation/no-session UI, awaiting/rejected status, current Admin review screen/navigation, existing-user sign-in preserved. |
+| RG03 | RG01–RG02; design §§21–22 | Local checks/build, isolated real Auth/email/API/RLS/browser/concurrency checks, exact hosted/first-Admin/manual setup, decisions and progress evidence; distinguish unexecuted hosted checks. |
+
 ### Contradiction requiring resolution
 
 | ID | PRD statement | Design statement | Classification and required action | Affected tasks |

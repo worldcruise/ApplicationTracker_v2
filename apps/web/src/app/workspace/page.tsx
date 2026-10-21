@@ -6,6 +6,8 @@ import { ApiFailure } from "@/lib/api/errors";
 import { SignOut } from "./sign-out";
 import { FoundationWorkspace } from "./workspace";
 import { currentOrganization, uuid } from "@/lib/api/guards";
+import { databaseResult } from "@/lib/api/errors";
+import type { AccountStatus } from "@candidate/contracts";
 
 export const dynamic = "force-dynamic";
 export default async function Workspace({ searchParams }: { searchParams: Promise<{ organizationId?: string }> }) {
@@ -17,6 +19,11 @@ export default async function Workspace({ searchParams }: { searchParams: Promis
     return <WorkspaceShell title="Application access unavailable" description="The account or application service could not be checked.">
       <p>Check service connectivity and apply the foundation migrations before retrying.</p><Link href="/sign-in" className="underline">Return to sign in</Link><SignOut />
     </WorkspaceShell>;
+  }
+  if (!context.organizations.length) {
+    const { client } = await requestContext();
+    const status = await databaseResult<AccountStatus>(client.rpc("get_my_account_status"));
+    if (status.status === "pending" || status.status === "rejected") redirect("/account/status");
   }
   return <WorkspaceShell title="Candidate workspace" description="Your access follows your current organization, team and assignments.">
     <div className="mb-5 flex items-center justify-between gap-4"><p className="text-sm">Account: {context.userId}</p><SignOut /></div>

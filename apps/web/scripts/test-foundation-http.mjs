@@ -23,6 +23,7 @@ import { testOperationsHTTP } from "./test-operations-http.mjs";
 import { testOperationsBrowser } from "./test-operations-browser.mjs";
 import { testRecovery } from "./test-recovery.mjs";
 import { pilotSmoke } from "../../../scripts/lib/pilot-smoke.mjs";
+import { testRegistration } from "./test-registration.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -376,6 +377,8 @@ try {
   }
   inspect(`${web}/.next/static`);
   inspect(`${root}/apps/extension/dist`);
+  step = "registration and administrator approval";
+  try { await testRegistration({operator,url,publicKey,call,org:orgA,otherOrg:orgB,team:teamA,identities,password:replacement,assert:expect}); } catch(e) { throw new TestFailure(e.message); }
   step = "reusable pilot smoke against isolated synthetic backend";
   let smoke;
   try{smoke=await pilotSmoke({supabaseUrl:url,publishableKey:publicKey,appOrigin:'http://localhost:3000',email:identities.adminA.email,password:replacement,organizationId:orgA,teamId:teamA});}catch(e){throw new TestFailure(e.message);}

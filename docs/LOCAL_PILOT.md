@@ -69,7 +69,7 @@ Open the **existing project**, verify its ref `xsyxlxpsglhkmvzlmhih`, then:
    ```
 
    If using an alternate printed port, add the corresponding exact URLs for that port. Avoid wildcard public origins. Existing approved URLs for other development users need not be removed; coordinate project-wide Site URL changes. For invitations using the SiteURL-based template, Site URL must point to the intended running app.
-3. Under **Authentication → Sign In / Providers**, enable the existing **email/password** provider. Use designated synthetic accounts. Keep the existing app's invite/activation model: disable public signup and anonymous sign-in for the pilot; no self-registration UI or automatic admin role is added.
+3. Under **Authentication → Sign In / Providers**, enable **email/password**, allow new email signups and enable **Confirm email** for the requested administrator-approved registration workflow. Keep anonymous sign-in disabled. Apply the migration, controlled first-Admin setup, explicit intake organization and confirmation template in [REGISTRATION.md](REGISTRATION.md) before opening intake. Email verification alone grants no membership.
 4. Under **Authentication → Email Templates**, use the committed `supabase/templates/invite.html` invitation template, whose link is `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite`. The app exchanges the one-time hash server-side and uses a fixed password page. Keep the default recovery `{{ .ConfirmationURL }}` for the browser-initiated PKCE recovery flow and open recovery links in the **same browser profile** that requested them. Verify the chosen sender/SMTP can deliver to your controlled synthetic test mailbox.
 5. Confirm/create the existing synthetic Auth test identity in **Authentication → Users**. An Auth user is not automatically an application admin/member. Complete the migration/membership setup below before expecting candidate access.
 
@@ -77,7 +77,7 @@ These are **manual changes, not changes already made remotely**. `supabase/confi
 
 ## Database and account setup without Docker
 
-The repository has **27 ordered migrations** and existing four-role authorization. Hosted application schema/migration state must be checked; a successful Auth endpoint call does not establish it. An authorized operator needs CLI login/project access and the development database password. From this checkout:
+The repository has **28 ordered migrations** and existing four-role authorization. Hosted application schema/migration state must be checked; a successful Auth endpoint call does not establish it. An authorized operator needs CLI login/project access and the development database password. From this checkout:
 
 ```powershell
 npm exec --no -- supabase login

@@ -12,3 +12,4 @@ export * from "./workflow.js";
 export * from "./history.js";
 export * from "./archive-package.js";
 export * from "./reporting.js";
+export * from "./registration.js";

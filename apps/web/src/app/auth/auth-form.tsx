@@ -50,6 +50,7 @@ export function AuthForm({ mode, initialMessage = "" }: { mode: "sign-in" | "rec
       <p role="status" className="text-sm">{message}</p>
       <div className="flex flex-wrap gap-4 text-sm underline">
         <Link href="/sign-in">Sign in</Link><Link href="/account/recovery">Account recovery</Link>
+        {mode === "sign-in" && <Link href="/register">Create account</Link>}
         {mode === "update" && <Link href="/workspace">Open workspace</Link>}
       </div>
     </form>
