@@ -35,9 +35,9 @@ The explicit registration request supersedes D10's invite-only restriction for c
 
 | Task | Dependencies / design | Acceptance |
 | --- | --- | --- |
-| RG01 | Existing FN foundation; design §§4–5, 8 | Versioned actual-schema request/configuration, self-only status projection, Admin review RLS, atomic membership/team/decision/audit, confirmed identity, no self/default Admin, stale/concurrent/idempotent review tests. |
-| RG02 | RG01; design §§3–5 | Validated registration and confirmation/no-session UI, awaiting/rejected status, current Admin review screen/navigation, existing-user sign-in preserved. |
-| RG03 | RG01–RG02; design §§21–22 | Local checks/build, isolated real Auth/email/API/RLS/browser/concurrency checks, exact hosted/first-Admin/manual setup, decisions and progress evidence; distinguish unexecuted hosted checks. |
+| RG01 (complete) | Existing FN foundation; design §§4–5, 8 | Versioned actual-schema request/configuration, self-only status projection, Admin review RLS, atomic membership/team/decision/audit, confirmed identity, no self/default Admin, stale/concurrent/idempotent review tests. Final d563644 CI passes 28 migrations / 306 SQL assertions. |
+| RG02 (complete) | RG01; design §§3–5 | Validated registration and confirmation/no-session UI, awaiting/rejected status, current Admin review screen/navigation, existing-user sign-in preserved. Seven new actual-email/browser checkpoints pass alongside existing 86. |
+| RG03 (complete) | RG01–RG02; design §§21–22 | Local 61 tests/build pass; isolated Auth/email/API/RLS/browser/concurrency checks pass (2,225 assertions); exact hosted/first-Admin/manual setup, decisions and progress recorded. Hosted activation remains LC02, not claimed complete. |
 
 ### Contradiction requiring resolution
 
