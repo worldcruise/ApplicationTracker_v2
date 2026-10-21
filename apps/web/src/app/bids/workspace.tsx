@@ -1,11 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { interviewLifecycles, interviewOutcomes, type Bid, type BidInput, type BidWorkspace, type Interview, type InterviewInput, type OrganizationScope, type WorkflowTask } from "@candidate/contracts";
 import { availableBidTransitions,schedulingChoices } from "@candidate/domain";
 import { readApi } from "../workspace/requests";
 import { useWorkflowMutation } from "@/lib/workflow/journal";
-import { WorkflowSearchResults, clearWorkflowSearchParameters } from "./search-results";
+import { WorkflowSearchResults, clearWorkflowSearchParameters, useWorkflowSearchParameters, writeWorkflowSearchParameters } from "./search-results";
 const inputClass="rounded border border-slate-300 bg-white p-2 text-slate-950";
 const buttonClass="w-fit rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40";
 const sectionClass="grid gap-3 rounded border bg-white p-5";
@@ -22,10 +21,10 @@ interface DocumentOption{id:string;kind:string;filename:string;reviewed:boolean}
 interface Notice{id:string;bidId:string;interviewId:string|null;title:string;readAt:string|null}
 export function WorkflowWorkspace({scope,actorId,initialId="",candidateId="",initialView="bids"}:{scope:OrganizationScope;actorId:string;initialId?:string;candidateId?:string;initialView?:string}){
  const org=scope.organizationId;const query=`?organizationId=${org}`;const path=(p:string)=>`/api/v1/${p}${query}`;
- const urlView=useSearchParams().get("view")??initialView;
+ const urlView=new URLSearchParams(useWorkflowSearchParameters()).get("view")??initialView;
  const [view,setView]=useState(initialView);const [id,setId]=useState(initialId);const [detail,setDetail]=useState<BidWorkspace|null>(null);const [form,setForm]=useState<BidInput>(emptyBid(actorId,scope.teams[0]?.teamId??"",candidateId));
  useEffect(()=>setView(urlView),[urlView]);
- useEffect(()=>{if(initialId&&initialView==="interviews"){const next=new URLSearchParams(window.location.search);if(!next.has("bidId")){next.set("bidId",initialId);window.history.replaceState(null,"",window.location.pathname+"?"+next);}}},[initialId,initialView]);
+ useEffect(()=>{if(initialId&&initialView==="interviews"){const next=new URLSearchParams(window.location.search);if(!next.has("bidId")){next.set("bidId",initialId);writeWorkflowSearchParameters(next,window.location.pathname,true);}}},[initialId,initialView]);
  const [documents,setDocuments]=useState<DocumentOption[]>([]);const [tasks,setTasks]=useState<WorkflowTask[]>([]);const [notices,setNotices]=useState<Notice[]>([]);const [error,setError]=useState("");const [tick,setTick]=useState(0);const [onlyOverdue,setOnlyOverdue]=useState(false);
  const mutation=useWorkflowMutation(actorId,org,async(result,op)=>{if(op.method==="POST"&&op.url===path("bids"))setId(result.id);setTick(n=>n+1);});
  useEffect(()=>{let active=true;setError("");void(async()=>{try{
@@ -39,7 +38,7 @@ export function WorkflowWorkspace({scope,actorId,initialId="",candidateId="",ini
  function change<K extends keyof BidInput>(key:K,value:BidInput[K]){setForm(f=>({...f,[key]:value}));}
  const transitions=detail?availableBidTransitions(detail.bid):[];
  return <div className="mt-5 grid gap-5">
-  <nav className="flex flex-wrap gap-3">{["bids",...(scope.role==="bidder"?[]:["interviews"]),"followups"].map(v=><button className="underline" key={v} onClick={()=>{const next=new URLSearchParams(window.location.search);const candidate=next.get("candidateId");clearWorkflowSearchParameters(next);if(candidate)next.set("candidateId",candidate);if(v==="interviews"&&id)next.set("bidId",id);next.set("view",v);window.history.pushState(null,"",window.location.pathname+"?"+next);setView(v);}} aria-pressed={view===v}>{label(v)}</button>)}</nav>
+  <nav className="flex flex-wrap gap-3">{["bids",...(scope.role==="bidder"?[]:["interviews"]),"followups"].map(v=><button className="underline" key={v} onClick={()=>{const next=new URLSearchParams(window.location.search);const candidate=next.get("candidateId");clearWorkflowSearchParameters(next);if(candidate)next.set("candidateId",candidate);if(v==="interviews"&&id)next.set("bidId",id);next.set("view",v);writeWorkflowSearchParameters(next,window.location.pathname);setView(v);}} aria-pressed={view===v}>{label(v)}</button>)}</nav>
   {error&&<p role="alert">{error}</p>}{mutation.message&&<p role="status" className="rounded border p-3">{mutation.message}</p>}
   {mutation.pending&&<section className={sectionClass}><p>Pending operation: {mutation.pending.operationId}. Editing is paused until this request is reconciled.</p><button className={buttonClass} disabled={mutation.busy} onClick={()=>void mutation.reconcile()}>Reconcile / retry original request</button><details><summary>Frozen request</summary><pre className="overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(mutation.pending.body,null,2)}</pre></details></section>}
   {view==="bids"&&<>

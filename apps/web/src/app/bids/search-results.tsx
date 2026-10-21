@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { bidStatuses, interviewLifecycles, type SearchOption, type WorkflowSearchKind, type WorkflowSearchResult, type WorkflowSearchRow } from "@candidate/contracts";
 import { ClientApiFailure, readApi } from "../workspace/requests";
@@ -10,10 +10,15 @@ const bidFilters={...common,priority:"Priority",createdFrom:"Created from (UTC)"
 const interviewFilters={...common,bidId:"Associated bid ID",type:"Interview type",round:"Round",scheduledFrom:"Scheduled from (UTC)",scheduledTo:"Scheduled through (UTC)",upcoming:"Upcoming interviews",feedbackPending:"Feedback pending"};
 const allKeys=[...new Set(["q",...Object.keys(bidFilters),...Object.keys(interviewFilters),"sort","page","pageSize"])];
 const label=(value:string)=>value.replaceAll("_"," ");
+const urlEvent="application-tracker:workflow-search";
+function subscribeUrl(notify:()=>void) {window.addEventListener("popstate",notify);window.addEventListener(urlEvent,notify);return()=>{window.removeEventListener("popstate",notify);window.removeEventListener(urlEvent,notify);};}
+const currentUrlParameters=()=>new URLSearchParams(window.location.search).toString();
+export function useWorkflowSearchParameters() {const params=useSearchParams();return useSyncExternalStore(subscribeUrl,currentUrlParameters,()=>params.toString());}
+export function writeWorkflowSearchParameters(params:URLSearchParams,pathname:string,replace=false) {window.history[replace?"replaceState":"pushState"](null,"",pathname+"?"+params.toString());window.dispatchEvent(new Event(urlEvent));}
 
 export function clearWorkflowSearchParameters(params:URLSearchParams) {for(const key of allKeys)params.delete(key);}
 export function WorkflowSearchResults({kind,org,tick,locked,onOpen,extraAction}:{kind:WorkflowSearchKind;org:string;tick:number;locked:boolean;onOpen:(row:WorkflowSearchRow)=>void;extraAction?:(row:WorkflowSearchRow)=>React.ReactNode}) {
- const params=useSearchParams();const pathname=usePathname();const serialized=params.toString();
+ const serialized=useWorkflowSearchParameters();const params=new URLSearchParams(serialized);const pathname=usePathname();
  const [draft,setDraft]=useState(params.get("q")??"");const [result,setResult]=useState<WorkflowSearchResult|null>(null);
  const [options,setOptions]=useState<WorkflowSearchResult["options"]|null>(null);const [loading,setLoading]=useState(true);
  const [failure,setFailure]=useState<{permission:boolean;message:string}|null>(null);const [retry,setRetry]=useState(0);
@@ -28,7 +33,7 @@ export function WorkflowSearchResults({kind,org,tick,locked,onOpen,extraAction}:
   const next=new URLSearchParams(window.location.search);next.set("organizationId",org);
   for(const [key,value] of Object.entries(changes))if(value)next.set(key,value);else next.delete(key);
   if(reset)next.delete("page");
-  window.history.pushState(null,"",pathname+"?"+next.toString());
+  writeWorkflowSearchParameters(next,pathname);
  }
  function submitSearch(value:string) {if(timer.current)clearTimeout(timer.current);const normalized=value.trim().replace(/\s+/gu," ");const current=new URLSearchParams(window.location.search);if(normalized===(current.get("q")??"")&&(!current.has("page")||current.get("page")==="1")){setRetry(n=>n+1);return;}if(normalized!==(current.get("q")??""))submittedQuery.current=normalized;navigate({q:normalized});}
  useEffect(()=>{
@@ -54,7 +59,7 @@ export function WorkflowSearchResults({kind,org,tick,locked,onOpen,extraAction}:
     })}
    </div></details>
   </form>
-  <div className="flex flex-wrap gap-2" aria-label="Active search filters">{chips.map(([key,title])=><button className="max-w-full break-all rounded-full border px-3 py-1 text-sm" key={key} aria-label={`Remove ${title} filter`} onClick={()=>{if(key==="q")setDraft("");navigate({[key]:""});}}>{title}: {optionMap[key]?.find(o=>o.value===values.get(key))?.label??values.get(key)} ×</button>)}{(chips.length>0||values.has("sort")||values.has("page"))&&<button className="underline" onClick={()=>{if(timer.current)clearTimeout(timer.current);const next=new URLSearchParams(window.location.search);clearWorkflowSearchParameters(next);setDraft("");window.history.pushState(null,"",pathname+"?"+next);}}>Clear all</button>}</div>
+  <div className="flex flex-wrap gap-2" aria-label="Active search filters">{chips.map(([key,title])=><button className="max-w-full break-all rounded-full border px-3 py-1 text-sm" key={key} aria-label={`Remove ${title} filter`} onClick={()=>{if(key==="q")setDraft("");navigate({[key]:""});}}>{title}: {optionMap[key]?.find(o=>o.value===values.get(key))?.label??values.get(key)} ×</button>)}{(chips.length>0||values.has("sort")||values.has("page")||values.has("pageSize"))&&<button className="underline" onClick={()=>{if(timer.current)clearTimeout(timer.current);submittedQuery.current=null;const next=new URLSearchParams(window.location.search);clearWorkflowSearchParameters(next);setDraft("");writeWorkflowSearchParameters(next,pathname);}}>Clear all</button>}</div>
   <div className="flex flex-wrap items-end gap-3">
    <label className="grid gap-1 text-sm">Sort results<select aria-label="Sort results" className={inputClass} value={values.get("sort")??(query?"relevance":kind==="bids"?"updated_desc":"scheduled_asc")} onChange={e=>navigate({sort:e.target.value})}>{[["relevance","Best match"],["updated_desc","Recently updated"],["created_desc","Newest created"],["company_asc","Company A–Z"],["candidate_asc","Candidate A–Z"],["followup_asc","Follow-up soonest"],...(kind==="bids"?[["submitted_desc","Latest submitted"]]:[["scheduled_asc","Scheduled soonest"],["scheduled_desc","Scheduled latest"]])].map(([value,title])=><option key={value} value={value}>{title}</option>)}</select></label>
    <label className="grid gap-1 text-sm">Results per page<select aria-label="Results per page" className={inputClass} value={values.get("pageSize")??"25"} onChange={e=>navigate({pageSize:e.target.value})}>{[10,25,50,100].map(n=><option key={n}>{n}</option>)}</select></label>
