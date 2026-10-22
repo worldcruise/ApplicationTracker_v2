@@ -73,7 +73,8 @@ export async function testWorkspaceUI({ org, identities, password, adminPassword
     for (const label of ["Interviews", "Candidates", "Resume Studio", "Account approvals", "Team & permissions"]) await expect(bidderNav.getByRole("link", { name: label, exact: true })).toHaveCount(0);
     await bidder.goto(`http://localhost:3000/interviews?organizationId=${org}`);
     await expect(bidder.getByRole("heading", { name: "Interview access unavailable", exact: true })).toBeVisible();
-    expect((await bidder.request.get(`/api/v1/interviews?organizationId=${org}&search=true`)).status()).toBe(403); checks++;
+    const denied = await bidder.evaluate(async url => (await fetch(url, { credentials: "same-origin" })).status, `/api/v1/interviews?organizationId=${org}&search=true`);
+    expect(denied).toBe(403); checks++;
     await expect(bidder.getByRole("button", { name: "Sign out", exact: true })).toBeVisible();
     return checks;
   } catch (e) { throw new Error(`Workspace UI ${step}: ${e.message}`); }

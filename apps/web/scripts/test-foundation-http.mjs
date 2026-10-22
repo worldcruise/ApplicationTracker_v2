@@ -383,8 +383,9 @@ try {
   inspect(`${root}/apps/extension/dist`);
   step = "registration and administrator approval";
   try { await testRegistration({operator,url,publicKey,call,org:orgA,otherOrg:orgB,team:teamA,identities,password:replacement,assert:expect}); } catch(e) { throw new TestFailure(e.message); }
-  step = "reusable pilot smoke against isolated synthetic backend";
+  step = "responsive workspace UI and role acceptance";
   try { const checks = await testWorkspaceUI({ org: orgA, identities, password, adminPassword: replacement }); expect(checks >= 13, "Responsive workspace UI checkpoints complete"); console.log(JSON.stringify({ workspaceUI: "PASS", browserCheckpoints: checks })); } catch (e) { throw new TestFailure(e.message); }
+  step = "reusable pilot smoke against isolated synthetic backend";
   let smoke;
   try{smoke=await pilotSmoke({supabaseUrl:url,publishableKey:publicKey,appOrigin:'http://localhost:3000',email:identities.adminA.email,password:replacement,organizationId:orgA,teamId:teamA});}catch(e){throw new TestFailure(e.message);}
   expect(smoke.checks===11,'All eleven reusable pilot smoke checkpoints pass');console.log(JSON.stringify({pilotSmoke:smoke}));
