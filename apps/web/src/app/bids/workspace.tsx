@@ -5,6 +5,7 @@ import { availableBidTransitions,schedulingChoices } from "@candidate/domain";
 import { readApi } from "../workspace/requests";
 import { useWorkflowMutation } from "@/lib/workflow/journal";
 import { WorkflowSearchResults, clearWorkflowSearchParameters, useWorkflowSearchParameters, writeWorkflowSearchParameters } from "./search-results";
+import { StatePanel } from "@candidate/ui";
 const inputClass="rounded border border-slate-300 bg-white p-2 text-slate-950";
 const buttonClass="w-fit rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-40";
 const sectionClass="grid gap-3 rounded border bg-white p-5";
@@ -38,7 +39,7 @@ export function WorkflowWorkspace({scope,actorId,initialId="",candidateId="",ini
  function change<K extends keyof BidInput>(key:K,value:BidInput[K]){setForm(f=>({...f,[key]:value}));}
  const transitions=detail?availableBidTransitions(detail.bid):[];
  return <div className="mt-5 grid gap-5">
-  <nav className="flex flex-wrap gap-3">{["bids",...(scope.role==="bidder"?[]:["interviews"]),"followups"].map(v=><button className="underline" key={v} onClick={()=>{const next=new URLSearchParams(window.location.search);const candidate=next.get("candidateId");clearWorkflowSearchParameters(next);if(candidate)next.set("candidateId",candidate);if(v==="interviews"&&id)next.set("bidId",id);next.set("view",v);writeWorkflowSearchParameters(next,window.location.pathname);setView(v);}} aria-pressed={view===v}>{label(v)}</button>)}</nav>
+  <nav aria-label="Workflow views" className="record-tabs">{["bids",...(scope.role==="bidder"?[]:["interviews"]),"followups"].map(v=><button key={v} onClick={()=>{const next=new URLSearchParams(window.location.search);const candidate=next.get("candidateId");clearWorkflowSearchParameters(next);if(candidate)next.set("candidateId",candidate);if(v==="interviews"&&id)next.set("bidId",id);next.set("view",v);writeWorkflowSearchParameters(next,window.location.pathname);setView(v);}} aria-pressed={view===v}>{label(v)}</button>)}</nav>
   {error&&<p role="alert">{error}</p>}{mutation.message&&<p role="status" className="rounded border p-3">{mutation.message}</p>}
   {mutation.pending&&<section className={sectionClass}><p>Pending operation: {mutation.pending.operationId}. Editing is paused until this request is reconciled.</p><button className={buttonClass} disabled={mutation.busy} onClick={()=>void mutation.reconcile()}>Reconcile / retry original request</button><details><summary>Frozen request</summary><pre className="overflow-auto whitespace-pre-wrap text-xs">{JSON.stringify(mutation.pending.body,null,2)}</pre></details></section>}
   {view==="bids"&&<>
@@ -63,6 +64,7 @@ export function WorkflowWorkspace({scope,actorId,initialId="",candidateId="",ini
    </section>
   </>}
   {view==="interviews"&&scope.role!=="bidder"&&<InterviewPanel org={org} actor={actorId} bidId={id} tick={tick} mutation={mutation}/>}
+  {view==="interviews"&&scope.role==="bidder"&&<StatePanel kind="permission" title="Interview access unavailable"><p>Your current role does not include interview management or feedback. Open Bids to continue your authorized work.</p></StatePanel>}
   {view==="followups"&&<section className={sectionClass}><h2 className="text-xl font-semibold">Follow-up queue</h2><label><input type="checkbox" checked={onlyOverdue} onChange={e=>setOnlyOverdue(e.target.checked)}/> Overdue only</label>{tasks.map(t=><article className="border-b py-3" key={t.id}><a className="underline" href={`/bids/${t.bidId}${query}`}>{t.title}</a><p>{new Date(t.dueAt).toLocaleString()} · {t.state} · assignee {t.assigneeId}{new Date(t.dueAt).getTime()<Date.now()&&t.state==="open"?" · Overdue":""}</p>{t.state==="open"&&<button className={buttonClass} disabled={mutation.locked} onClick={()=>void mutation.execute(path("tasks/"+t.id+"/complete"),{},"POST",t.rowVersion)}>Complete task</button>}</article>)}</section>}
   <details className={sectionClass}><summary>In-app notifications ({notices.filter(n=>!n.readAt).length} unread)</summary>{notices.map(n=><article className="flex gap-3" key={n.id}><a className="underline" href={`/bids/${n.bidId}${query}`}>{n.title}</a>{!n.readAt&&<button className="underline" onClick={()=>void readApi(path("notifications/"+n.id+"/read"),{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}).then(()=>setTick(t=>t+1)).catch(e=>setError(e.message))}>Mark read</button>}</article>)}</details>
  </div>;

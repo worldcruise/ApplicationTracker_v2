@@ -25,6 +25,7 @@ import { testRecovery } from "./test-recovery.mjs";
 import { pilotSmoke } from "../../../scripts/lib/pilot-smoke.mjs";
 import { testRegistration } from "./test-registration.mjs";
 import { testWorkflowSearch } from "./test-workflow-search.mjs";
+import { testWorkspaceUI } from "./test-workspace-ui.mjs";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
 const web = fileURLToPath(new URL("../", import.meta.url));
@@ -383,6 +384,7 @@ try {
   step = "registration and administrator approval";
   try { await testRegistration({operator,url,publicKey,call,org:orgA,otherOrg:orgB,team:teamA,identities,password:replacement,assert:expect}); } catch(e) { throw new TestFailure(e.message); }
   step = "reusable pilot smoke against isolated synthetic backend";
+  try { const checks = await testWorkspaceUI({ org: orgA, identities, password: replacement }); expect(checks >= 13, "Responsive workspace UI checkpoints complete"); console.log(JSON.stringify({ workspaceUI: "PASS", browserCheckpoints: checks })); } catch (e) { throw new TestFailure(e.message); }
   let smoke;
   try{smoke=await pilotSmoke({supabaseUrl:url,publishableKey:publicKey,appOrigin:'http://localhost:3000',email:identities.adminA.email,password:replacement,organizationId:orgA,teamId:teamA});}catch(e){throw new TestFailure(e.message);}
   expect(smoke.checks===11,'All eleven reusable pilot smoke checkpoints pass');console.log(JSON.stringify({pilotSmoke:smoke}));

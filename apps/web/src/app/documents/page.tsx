@@ -1,4 +1,4 @@
-import { WorkspaceShell } from "@candidate/ui";
+import { AppShell as WorkspaceShell } from "@/components/app-shell";
 import { candidatePageFailure } from "@/lib/candidates/page-context";
 import { requestContext } from "@/lib/api/context";
 import { currentOrganization, uuid } from "@/lib/api/guards";
@@ -10,3 +10,4 @@ export default async function Documents({ searchParams }: { searchParams: Promis
     return <WorkspaceShell title="Document history" description="Frozen PDFs available through your current document permissions."><a className="mb-4 inline-block underline" href="/workspace">Workspace</a><DocumentHistory scope={scope} {...(query.candidateId ? { candidateId: uuid(query.candidateId) } : {})} /></WorkspaceShell>;
   } catch (e) { return candidatePageFailure(e); }
 }
+export const metadata = { title: "Document history" };

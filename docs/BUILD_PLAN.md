@@ -29,6 +29,14 @@ All five priority flows already have implementations and isolated CI coverage. R
 
 ## Requirements comparison and decision register
 
+### Current requested increment — consistent workspace redesign (21 October 2026)
+
+| Task | Dependencies / design | Acceptance |
+| --- | --- | --- |
+| UI01 (implemented; verifying) | Existing RG/FN and shared UI; §3–5 | Review reference licenses, retain installed stack, consistent auth screens and role-aware responsive sidebar/top bar, accessible controls/focus, no operational navigation for applicants. Real Auth and approval handlers remain unchanged. |
+| UI02 (implemented; verifying) | UI01 and existing CM/RP/TP/BO/OP; §3, 6, 10–13, 18–19 | Consistent existing directory/details, action-first dashboards, bid/interview results, scoped administration, templates/prompts/history and Studio. Desktop 3–6–3; usable mobile stack/section navigation; independent outcomes and invalid source retained. No schema/API/extension replacement. |
+| UI03 (in progress) | UI01–UI02; §22 | Root checks/builds/PDF regression, actual desktop/mobile Chrome inspection and isolated real Auth/API/RLS workflows. Record hosted-account/intake prerequisites and corrected failures; no fabricated success. See UI_REDESIGN.md and PROGRESS.md. |
+
 ### Current requested increment — bid and interview search (21 October 2026)
 
 Application display name: **Application Tracker v2**. Repository/folder: `ApplicationTracker_v2`.

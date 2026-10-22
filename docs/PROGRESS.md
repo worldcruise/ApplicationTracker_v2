@@ -2,11 +2,13 @@
 
 Last updated: 21 October 2026, America/New_York.
 
-Current increment: **SR01–SR03 complete** for Application Tracker v2. Hosted search migration and authenticated-role execution are verified; signed-in hosted browser/role acceptance and representative load measurement remain manual.
+Current increment: **UI01–UI03 workspace redesign in verification** for Application Tracker v2. Shared authentication/layout and existing screen styling are implemented without schema/API/dependency changes. Local public Chrome review, lint/types, 65 tests and web build pass; isolated signed-in regressions are next. Hosted intake remains disabled and hosted role acceptance remains manual. SR01–SR03 search remains complete.
 
 Repository status: T001, T002, H001, F001A–F001C code increments, FN01–FN03 foundation, CM01–CM03 candidate, RP01–RP03 resume, TP01–TP04 template/letter/history, BO01–BO04 bid/interview, EX01–EX03 extension Resume/Profile, QC01–QC03 Quick Check, AP01–AP03 package saving/recovery and OP01–OP04 operational interface/acceptance audit increments are complete with the evidence below. Unpacked MV3 passes real isolated Auth/API/RLS/browser acceptance; hosted-user and interactive Windows/PKCE/directory gates remain pending. These increments deliver the explicitly requested subsets; broader T003–T063 contracts, reposting overrides, retention/recovery and release gates are not collectively marked complete.
 
 ## Completed work
+
+UI implementation and reference/license review are recorded in [UI_REDESIGN.md](UI_REDESIGN.md). Completion evidence will be recorded after isolated workflow verification; existing milestone results below remain unchanged.
 
 | Task | Result | Evidence |
 | --- | --- | --- |

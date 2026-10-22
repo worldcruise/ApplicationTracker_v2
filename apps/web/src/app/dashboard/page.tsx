@@ -1,4 +1,4 @@
-import { WorkspaceShell } from "@candidate/ui";
+import { AppShell as WorkspaceShell } from "@/components/app-shell";
 import { requestContext } from "@/lib/api/context";
 import { currentOrganization, uuid } from "@/lib/api/guards";
 import { candidatePageFailure } from "@/lib/candidates/page-context";
@@ -13,3 +13,4 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     </WorkspaceShell>;
   } catch (error) { return candidatePageFailure(error); }
 }
+export const metadata = { title: "Dashboard" };

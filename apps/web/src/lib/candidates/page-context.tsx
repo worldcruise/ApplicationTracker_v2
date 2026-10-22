@@ -1,7 +1,7 @@
 import "server-only";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { WorkspaceShell } from "@candidate/ui";
+import { AppShell as WorkspaceShell } from "@/components/app-shell";
 import { requestContext } from "@/lib/api/context";
 import { currentOrganization, requireRole, uuid } from "@/lib/api/guards";
 import { ApiFailure } from "@/lib/api/errors";

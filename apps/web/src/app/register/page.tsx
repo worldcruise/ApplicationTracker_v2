@@ -1,4 +1,4 @@
-import { WorkspaceShell } from "@candidate/ui";
+import { AuthShell as WorkspaceShell } from "@candidate/ui";
 import { createClient } from "@/lib/supabase/server";
 import { RegistrationForm } from "./registration-form";
 export const dynamic = "force-dynamic";
@@ -8,3 +8,4 @@ export default async function Register() {
     <RegistrationForm available={!error && data === true} />
   </WorkspaceShell>;
 }
+export const metadata = { title: "Create account" };

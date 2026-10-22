@@ -1,4 +1,4 @@
-import { WorkspaceShell } from "@candidate/ui";
+import { AppShell as WorkspaceShell } from "@/components/app-shell";
 import { candidateContext, candidatePageFailure } from "@/lib/candidates/page-context";
 import { listCandidates } from "@/lib/candidates/service";
 import { databaseResult } from "@/lib/api/errors";
@@ -26,3 +26,4 @@ export default async function Candidates({ searchParams }: { searchParams: Promi
     <CandidateDirectoryView {...data} query={query.toString()} />
   </WorkspaceShell>;
 }
+export const metadata = { title: "Candidates" };

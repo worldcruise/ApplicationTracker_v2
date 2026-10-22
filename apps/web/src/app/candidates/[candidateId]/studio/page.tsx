@@ -1,4 +1,4 @@
-import { WorkspaceShell } from "@candidate/ui";
+import { AppShell as WorkspaceShell } from "@/components/app-shell";
 import { candidateContext, candidatePageFailure } from "@/lib/candidates/page-context";
 import { getProfile } from "@/lib/candidates/service";
 import { uuid } from "@/lib/api/guards";
@@ -10,3 +10,4 @@ export default async function Studio({ params, searchParams }: { params: Promise
   catch (error) { return candidatePageFailure(error); }
   return <WorkspaceShell title="Resume Studio" description="Versioned templates · external AI paste workflow · saving a source or PDF does not submit an application."><ResumeStudio {...data} /></WorkspaceShell>;
 }
+export const metadata = { title: "Resume Studio" };

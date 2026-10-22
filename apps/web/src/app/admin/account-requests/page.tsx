@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { WorkspaceShell } from "@candidate/ui";
+import { AppShell as WorkspaceShell } from "@/components/app-shell";
 import { requestContext } from "@/lib/api/context";
 import { ApiFailure } from "@/lib/api/errors";
 import { currentOrganization, requireRole, uuid } from "@/lib/api/guards";
@@ -17,3 +17,4 @@ export default async function AccountRequests({ searchParams }: { searchParams: 
   }
   return <WorkspaceShell title="Account approval" description="Review verified applicants for this organization. Approval creates current role and team membership."><AccountReviews organizationId={org} /></WorkspaceShell>;
 }
+export const metadata = { title: "Account approval" };

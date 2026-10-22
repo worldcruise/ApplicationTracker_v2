@@ -1,4 +1,4 @@
-import { WorkspaceShell } from "@candidate/ui";
+import { AuthShell as WorkspaceShell } from "@candidate/ui";
 import { AuthForm } from "@/app/auth/auth-form";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -9,3 +9,4 @@ export default async function UpdatePassword() {
   return <WorkspaceShell title="Set your password" description="Use an authenticated account, invitation or recovery session."><AuthForm mode="update" /></WorkspaceShell>;
 }
 
+export const metadata = { title: "Set your password" };

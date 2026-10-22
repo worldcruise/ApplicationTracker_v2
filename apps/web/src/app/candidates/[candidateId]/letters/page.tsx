@@ -1,4 +1,4 @@
-import { WorkspaceShell } from "@candidate/ui";
+import { AppShell as WorkspaceShell } from "@/components/app-shell";
 import { candidateContext, candidatePageFailure } from "@/lib/candidates/page-context";
 import { getProfile } from "@/lib/candidates/service";
 import { uuid } from "@/lib/api/guards";
@@ -9,3 +9,4 @@ export default async function Letters({ params, searchParams }: { params: Promis
     return <WorkspaceShell title="Cover letters" description="Edit, review and append immutable letter versions. Saving or exporting never submits an application."><LetterEditor profile={profile} scope={scope} actorId={context.userId} /></WorkspaceShell>;
   } catch (error) { return candidatePageFailure(error); }
 }
+export const metadata = { title: "Cover letters" };

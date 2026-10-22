@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { WorkspaceShell } from "@candidate/ui";
+import { AppShell as WorkspaceShell } from "@/components/app-shell";
 import { requestContext } from "@/lib/api/context";
 import { ApiFailure } from "@/lib/api/errors";
 import { SignOut } from "./sign-out";
@@ -26,9 +26,10 @@ export default async function Workspace({ searchParams }: { searchParams: Promis
     if (status.status === "pending" || status.status === "rejected") redirect("/account/status");
   }
   return <WorkspaceShell title="Candidate workspace" description="Your access follows your current organization, team and assignments.">
-    <div className="mb-5 flex items-center justify-between gap-4"><p className="text-sm">Account: {context.userId}</p><SignOut /></div>
+    {!context.organizations.length && <SignOut />}
     {context.organizations.length ? <FoundationWorkspace context={context} initialOrganization={initialOrganization} /> :
       <div role="status" className="rounded border p-5"><h2 className="font-semibold">No active organization membership</h2><p>Ask an organization administrator to check your invitation or activation. Signing in alone does not grant access.</p></div>}
   </WorkspaceShell>;
 }
 
+export const metadata = { title: "Workspace" };

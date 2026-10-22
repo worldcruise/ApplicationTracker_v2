@@ -32,7 +32,7 @@ export function ProductionPdfPreview({ bytes, sha256, text }: { bytes: Uint8Arra
   }, [pdf, number, zoom]);
   return <section aria-label="PDF preview" className="grid gap-3"><div className="flex flex-wrap gap-2"><button className={button} disabled={!pdf || number <= 1} onClick={() => setNumber(n => n - 1)}>Previous page</button><button className={button} disabled={!pdf || number >= pdf.numPages} onClick={() => setNumber(n => n + 1)}>Next page</button>
     <label>Zoom<select aria-label="PDF zoom" className={control} value={zoom} onChange={e => setZoom(Number(e.target.value))}><option value={.7}>70%</option><option value={1}>100%</option><option value={1.4}>140%</option></select></label></div>
-    <p role="status" data-testid="pdf-preview-status">{status}</p><div className="overflow-auto rounded border bg-slate-100 p-2"><canvas ref={canvas} className="mx-auto bg-white" aria-label={`Resume PDF page ${number}`} /></div>
+    <p role="status" data-testid="pdf-preview-status" className="text-xs text-slate-500">{status}</p><div className="pdf-stage"><canvas ref={canvas} className="mx-auto bg-white" style={{ width: `${zoom * 100}%`, maxWidth: "none", height: "auto" }} aria-label={`Resume PDF page ${number}`} /></div>
     <p className="break-all text-xs">PDF SHA-256: <span data-testid="pdf-hash">{sha256}</span></p><details><summary className="cursor-pointer underline">Accessible text from this layout</summary><pre className="whitespace-pre-wrap text-sm">{text || extractedText || "Extracting selectable PDF text…"}</pre></details>
   </section>;
 }

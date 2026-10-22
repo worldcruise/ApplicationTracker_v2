@@ -10,7 +10,7 @@ export default function HomePage() {
       title="Your candidate workspace"
       description="Keep candidate profiles, resume preparation, and application activity together."
     >
-      <nav className="mb-6 flex gap-5 underline"><Link href="/sign-in">Sign in</Link><Link href="/workspace">Open workspace</Link><Link href="/account/recovery">Account recovery</Link></nav>
+      <nav className="mb-6 flex flex-wrap gap-3"><Link className="ui-button ui-button-primary" href="/sign-in">Sign in</Link><Link className="ui-button ui-button-secondary" href="/register">Create account</Link><Link className="ui-button ui-button-secondary" href="/workspace">Open workspace</Link><Link className="ui-button ui-button-ghost" href="/account/recovery">Account recovery</Link></nav>
       <div className="grid gap-5 md:grid-cols-2">
         <EmptyState title="Candidate management">
           <p>Open your workspace to view candidates within your current organization and assignment scope.</p>

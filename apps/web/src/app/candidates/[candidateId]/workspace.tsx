@@ -5,6 +5,7 @@ import { candidateWarnings, editableProfile, mergeCandidateDraft, ProfileValidat
 import { ClientApiFailure, readApi } from "@/app/workspace/requests";
 import { ProfileFields, fieldLabels } from "../profile-fields";
 import { button, primary, control } from "../directory";
+import { StatusBadge } from "@candidate/ui";
 
 type WorkspaceData = {
   bids: { id: string; companyName: string; jobTitle: string; status: string }[];
@@ -71,11 +72,11 @@ export function CandidateWorkspace({ profile: initial, scope, initialTab, direct
     catch (cause) { if (cause instanceof ProfileValidationFailure) { setErrors(cause.issues); setMessage(cause.message); } else fail(cause); }
   }
   return <div className="grid gap-5">
-    <h2 className="text-2xl font-semibold">{profile.fullName ?? "Untitled draft"}</h2>
+    <header className="record-hero"><span className="record-avatar" aria-hidden="true">{(profile.fullName ?? "?").split(/\s+/u).map(s => s.slice(0, 1)).slice(0, 2).join("").toUpperCase()}</span><div className="min-w-0 flex-1"><h2 className="text-2xl font-semibold">{profile.fullName ?? "Untitled draft"}</h2><p className="mt-1 text-sm text-slate-500">{profile.location ?? "Location not added"} · {profile.email ?? "Email not added"}</p></div><StatusBadge value={profile.status} /></header>
     <div className="flex flex-wrap items-center justify-between gap-3"><a className="underline" href={directoryHref} onClick={e => { if (dirty && !confirm("Leave this page and discard your unsaved draft?")) e.preventDefault(); }}>Candidate directory</a>
       <p className="text-sm">{profile.status} · Version <span data-testid="profile-version">{profile.rowVersion}</span> · {dirty ? "Unsaved changes" : "All changes saved"}</p></div>
     {archived && <p role="status" className="rounded border border-amber-400 bg-amber-50 p-3">Archived. Profile and assignments are read-only; history is retained.</p>}
-    <nav aria-label="Candidate tabs" className="flex flex-wrap gap-2 border-b pb-3">{tabs.map(t => <button key={t} type="button" aria-current={tab === t ? "page" : undefined} className={tab === t ? primary : button} onClick={() => {
+    <nav aria-label="Candidate tabs" className="record-tabs">{tabs.map(t => <button key={t} type="button" aria-current={tab === t ? "page" : undefined} onClick={() => {
       setTab(t); const url = new URL(location.href); url.searchParams.set("tab", t); historyReplace(url);
     }}>{t[0]!.toUpperCase() + t.slice(1)}</button>)}</nav>
     {message && <p role={errors.length || conflicted ? "alert" : "status"} className="rounded border bg-white p-3">{message}</p>}

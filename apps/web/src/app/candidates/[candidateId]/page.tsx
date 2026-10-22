@@ -1,4 +1,4 @@
-import { WorkspaceShell } from "@candidate/ui";
+import { AppShell as WorkspaceShell } from "@/components/app-shell";
 import { candidateContext, candidatePageFailure } from "@/lib/candidates/page-context";
 import { getProfile } from "@/lib/candidates/service";
 import { uuid } from "@/lib/api/guards";
@@ -15,3 +15,4 @@ export default async function Candidate({ params, searchParams }: { params: Prom
     <CandidateWorkspace {...data} initialTab={query.tab ?? "overview"} directoryHref={query.returnTo?.startsWith("/candidates?") ? query.returnTo : `/candidates?organizationId=${data.scope.organizationId}`} />
   </WorkspaceShell>;
 }
+export const metadata = { title: "Candidate workspace" };

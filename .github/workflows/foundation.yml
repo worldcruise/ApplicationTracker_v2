@@ -54,6 +54,14 @@ jobs:
       - name: Report local service status on failure
         if: failure()
         run: docker ps -a --format '{{.Names}} {{.Status}}'
+      - name: Retain synthetic workspace visual review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: synthetic-workspace-ui
+          path: .tools/ui-review/synthetic-*.png
+          if-no-files-found: ignore
+          retention-days: 3
       - name: Stop isolated stack
         if: always()
         run: npm run db:stop -- --no-backup

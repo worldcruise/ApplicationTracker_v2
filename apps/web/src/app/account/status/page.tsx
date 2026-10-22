@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { WorkspaceShell } from "@candidate/ui";
+import { AuthShell as WorkspaceShell, StatusBadge } from "@candidate/ui";
 import { CheckStatus } from "./check-status";
 import type { AccountStatus } from "@candidate/contracts";
 import { authenticatedIdentity } from "@/lib/api/context";
@@ -19,6 +19,7 @@ export default async function Status() {
   const title = status.status === "rejected" ? "Account request rejected" : status.status === "pending" ? "Awaiting administrator approval" : "No active organization membership";
   return <WorkspaceShell title={title} description="Email verification and administrator approval are separate requirements.">
     <div className="grid gap-4 rounded border bg-white p-6">
+      <StatusBadge value={status.status} />
       <p role="status">{status.status === "rejected" ? "An administrator rejected your request. Contact the organization administrator if you believe this is an error."
         : status.status === "pending" ? "Your request is pending. Candidate records, documents and operational tools are unavailable until approval."
         : "Ask the organization administrator to check your invitation or activation."}</p>
@@ -28,3 +29,4 @@ export default async function Status() {
     </div>
   </WorkspaceShell>;
 }
+export const metadata = { title: "Account status" };

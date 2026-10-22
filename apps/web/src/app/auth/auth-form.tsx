@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@candidate/ui";
 
 export function AuthForm({ mode, initialMessage = "" }: { mode: "sign-in" | "recover" | "update"; initialMessage?: string }) {
   const [busy, setBusy] = useState(false);
@@ -39,18 +40,18 @@ export function AuthForm({ mode, initialMessage = "" }: { mode: "sign-in" | "rec
     finally { setBusy(false); }
   }
   return (
-    <form onSubmit={submit} className="mx-auto grid max-w-md gap-4 rounded-2xl border border-slate-200 bg-white p-6">
+    <form onSubmit={submit} aria-busy={busy} className="auth-form grid gap-5">
       {mode !== "update" && <label className="grid gap-1">Email<input name="email" type="email" autoComplete="email" required maxLength={320} className="rounded border p-2" /></label>}
       {mode !== "recover" && <label className="grid gap-1">{mode === "update" ? "New password" : "Password"}
         <input name="password" type="password" autoComplete={mode === "update" ? "new-password" : "current-password"}
           required minLength={mode === "update" ? 12 : 1} maxLength={256} className="rounded border p-2" /></label>}
-      <button disabled={busy} className="rounded bg-slate-900 px-4 py-2 text-white disabled:opacity-50">
+      <Button type="submit" variant="primary" disabled={busy}>
         {busy ? "Please wait…" : mode === "sign-in" ? "Sign in" : mode === "recover" ? "Send recovery link" : "Update password"}
-      </button>
+      </Button>
       <p role="status" className="text-sm">{message}</p>
-      <div className="flex flex-wrap gap-4 text-sm underline">
-        <Link href="/sign-in">Sign in</Link><Link href="/account/recovery">Account recovery</Link>
-        {mode === "sign-in" && <Link href="/register">Create account</Link>}
+      <div className="auth-links">
+        {mode !== "sign-in" && <Link href="/sign-in">Sign in</Link>}<Link href="/account/recovery">Account recovery</Link>
+        {mode === "sign-in" && <span>New here? <Link className="font-semibold" href="/register">Create account</Link></span>}
         {mode === "update" && <Link href="/workspace">Open workspace</Link>}
       </div>
     </form>
