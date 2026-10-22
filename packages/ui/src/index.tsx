@@ -11,7 +11,8 @@ export function Button({ variant = "secondary", className = "", ...props }: Butt
 export function StatusBadge({ value, children }: { value: string; children?: ReactNode }) {
   const tone = /^(ready|approved|succeeded|completed|reviewed|active|offer|accepted|verified)$/.test(value) ? "success"
     : /^(failed|rejected|cancelled|error|withdrawn)$/.test(value) ? "danger"
-    : /^(pending|unknown|overdue|awaiting_review|feedback_pending|unverified|urgent)$/.test(value) ? "warning" : "neutral";
+    : /^(pending|unknown|overdue|awaiting_review|feedback_pending|unverified|urgent)$/.test(value) ? "warning"
+    : /^(scheduled|submitted|interview_invited|interviewing|prepared)$/.test(value) ? "accent" : "neutral";
   return <span className={`status-badge status-${tone}`}>{children ?? value.replaceAll("_", " ")}</span>;
 }
 

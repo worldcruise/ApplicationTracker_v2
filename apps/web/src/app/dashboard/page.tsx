@@ -8,7 +8,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
   try {
     const { context } = await requestContext();
     const scope = currentOrganization(context, uuid((await searchParams).organizationId ?? context.organizations[0]?.organizationId));
-    return <WorkspaceShell title="Operations" description="Action queues and reports within your current access.">
+    return <WorkspaceShell title="Dashboard" description="Your priorities, upcoming conversations and candidate progress in one place.">
       <OperationalDashboard scope={scope} actorId={context.userId} />
     </WorkspaceShell>;
   } catch (error) { return candidatePageFailure(error); }

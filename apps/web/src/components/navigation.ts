@@ -1,6 +1,14 @@
 import type { OrganizationScope } from "@candidate/contracts";
 
 export type NavigationItem = { label: string; href: string; icon: string; group: "Daily work" | "Production" | "Administration" };
+export function navigationIsActive(item: NavigationItem, path: string, params: { get: (key: string) => string | null }, hash: string): boolean {
+  const url = new URL(item.href, "http://localhost");
+  const studio = /^\/candidates\/[^/]+\/(studio|letters)\/?$/u.test(path);
+  if (studio && ["Resume Studio", "Templates", "Prompts"].includes(item.label)) return item.label === (hash === "#templates" ? "Templates" : hash === "#prompts" ? "Prompts" : "Resume Studio");
+  if (/^\/candidates\/[^/]+\/?$/u.test(path)) return item.label === "Candidates";
+  if (/^\/bids(\/[^/]+)?\/?$/u.test(path)) return item.label === (params.get("view") === "interviews" ? "Interviews" : params.get("view") === "followups" ? "Follow-ups" : "Bids");
+  return url.pathname === path && (url.hash ? hash === url.hash : !hash) && (url.searchParams.get("intent") ?? "") === (params.get("intent") ?? "");
+}
 /** Presentation only. Every destination independently resolves current backend permissions. */
 export function workspaceNavigation(scope: OrganizationScope): NavigationItem[] {
   const q = `organizationId=${encodeURIComponent(scope.organizationId)}`;

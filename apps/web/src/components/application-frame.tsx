@@ -6,7 +6,7 @@ import type { UserContext } from "@candidate/contracts";
 import { Brand, Button, StatusBadge } from "@candidate/ui";
 import { SignOut } from "@/app/workspace/sign-out";
 import { Icon } from "./icon";
-import { workspaceNavigation } from "./navigation";
+import { navigationIsActive, workspaceNavigation } from "./navigation";
 
 export function ApplicationFrame({ title, description, context, name, children }: { title: string; description: string; context: UserContext; name: string; children: ReactNode }) {
   const path = usePathname(); const query = useSearchParams();
@@ -19,7 +19,7 @@ export function ApplicationFrame({ title, description, context, name, children }
   function links() {
     return <nav aria-label="Main navigation">{(["Daily work", "Production", "Administration"] as const).map(group => <div className="nav-group" key={group}><p>{group}</p>{items.filter(i => i.group === group).map(item => {
       const url = new URL(item.href, "http://localhost");
-      const active = url.pathname === path && (url.hash ? hash === url.hash : !hash) && (url.searchParams.get("intent") ?? "") === (query.get("intent") ?? "");
+      const active = navigationIsActive(item, path, query, hash);
       return <a key={item.label} href={item.href} title={collapsed ? item.label : undefined} aria-label={item.label} aria-current={active ? "page" : undefined} className="sidebar-link" onClick={() => { drawer.current?.close(); setHash(url.hash); }}><Icon name={item.icon} /><span className="nav-label">{item.label}</span></a>;
     })}</div>)}</nav>;
   }
