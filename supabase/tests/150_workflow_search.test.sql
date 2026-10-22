@@ -31,6 +31,8 @@ insert into public.bid_access_grants(organization_id,bid_id,user_id,capability,c
 insert into public.candidates(id,organization_id,owning_team_id,full_name,created_by) values('15000000-0000-4000-8000-000000000303','15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000201','Synthetic Pagination Sol','15000000-0000-4000-8000-000000000001');
 insert into public.bids(id,organization_id,candidate_id,team_id,owner_id,company_name,job_title,created_by,prepared_by) values('15000000-0000-4000-8000-000000000498','15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000303','15000000-0000-4000-8000-000000000201','15000000-0000-4000-8000-000000000001','Pagination Company','Researcher','15000000-0000-4000-8000-000000000001','15000000-0000-4000-8000-000000000001');
 insert into public.interviews(id,organization_id,bid_id,round_number,type,owner_id,lifecycle_status,created_by) select ('15000000-0000-4000-8000-'||lpad((600+n)::text,12,'0'))::uuid,'15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000498',n,'Pagination','15000000-0000-4000-8000-000000000001','not_scheduled','15000000-0000-4000-8000-000000000001' from generate_series(1,201) n;
+insert into public.candidates(id,organization_id,owning_team_id,full_name,created_by) values('15000000-0000-4000-8000-000000000304','15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000201',null,'15000000-0000-4000-8000-000000000001');
+insert into public.bids(id,organization_id,candidate_id,team_id,owner_id,company_name,job_title,created_by,prepared_by) values('15000000-0000-4000-8000-000000000497','15000000-0000-4000-8000-000000000100','15000000-0000-4000-8000-000000000304','15000000-0000-4000-8000-000000000201','15000000-0000-4000-8000-000000000001','Anonymous Opportunity','Draft job','15000000-0000-4000-8000-000000000001','15000000-0000-4000-8000-000000000001');
 create function pg_temp.search(p_kind text,p_filters jsonb default '{}') returns jsonb language sql as $$select public.search_workflow('15000000-0000-4000-8000-000000000100',p_kind,p_filters)$$;
 select ok(not prosecdef,'search uses invoker RLS') from pg_proc where oid='public.search_workflow(uuid,text,jsonb)'::regprocedure;
 select ok(not has_function_privilege('anon','public.search_workflow(uuid,text,jsonb)','EXECUTE'),'anonymous RPC denied');
@@ -47,6 +49,8 @@ select is((pg_temp.search('bids','{"q":"Morgan"}')->>'total')::int,27,'authorize
 select is((pg_temp.search('bids','{"q":"PostgreSQL"}')->>'total')::int,27,'authorized job description matches');
 select is((pg_temp.search('bids','{"q":"%_"}')->>'total')::int,27,'punctuation is literal, not wildcard');
 select is((pg_temp.search('bids','{"q":"unmatchedzzzz"}')->>'total')::int,0,'unmatched input is empty');
+select is((pg_temp.search('bids','{"candidateId":"15000000-0000-4000-8000-000000000304"}')->>'total')::int,1,'incomplete draft candidate remains filterable');
+select ok(exists(select 1 from jsonb_array_elements(pg_temp.search('bids')->'options'->'candidates') o where o->>'value'='15000000-0000-4000-8000-000000000304' and o->>'label'='Candidate 15000000-0000-4000-8000-000000000304'),'unnamed draft has a safe reference option');
 select is((pg_temp.search('bids','{"q":"C++"}')->>'total')::int,0,'technical punctuation does not broaden to a letter search');
 select is((pg_temp.search('bids','{"q":"Northstar","priority":"urgent","status":"draft","company":"NORTHSTAR","followup":"overdue"}')->>'total')::int,1,'combined exact filters and text');
 select is((pg_temp.search('bids','{"q":"Northstar","createdFrom":"2026-10-21","createdTo":"2026-10-21"}')->>'total')::int,24,'UTC inclusive day excludes next midnight');
@@ -100,7 +104,7 @@ insert into public.bid_access_grants(organization_id,bid_id,user_id,capability,c
 set local role authenticated;
 select is((pg_temp.search('bids')->>'total')::int,1,'submit-only bid remains accessible');
 select is((pg_temp.search('bids','{"q":"Harper"}')->>'total')::int,0,'submit-only grant does not gain candidate-name matching');
-select is(jsonb_array_length(pg_temp.search('bids')->'options'->'candidates'),0,'submit-only filter options do not reveal candidate name');
+select is(pg_temp.search('bids')->'options'->'candidates'->0->>'label','Candidate 15000000-0000-4000-8000-000000000301','submit-only options expose only the already-readable bid candidate ID');
 reset role;
 select set_config('request.jwt.claims','{"role":"authenticated","sub":"15000000-0000-4000-8000-000000000005"}',true);
 set local role authenticated;

@@ -212,7 +212,7 @@ begin
  select jsonb_build_object('items',coalesce((select jsonb_agg(jsonb_build_object('record',record,'candidateName',candidate_name,'companyName',company_name,'jobTitle',job_title,'ownerName',owner_name,'teamName',team_name)) from page),'[]'::jsonb),
   'total',(select count(*) from filtered),'page',v_page,'pageSize',v_size,'asOf',v_now,
   'options',jsonb_build_object(
-   'candidates',(select coalesce(jsonb_agg(jsonb_build_object('value',candidate_id,'label',candidate_name) order by candidate_name,candidate_id),'[]'::jsonb) from (select distinct candidate_id,candidate_name from scoped where candidate_name is not null) o),
+   'candidates',(select coalesce(jsonb_agg(jsonb_build_object('value',candidate_id,'label',coalesce(candidate_name,'Candidate '||candidate_id::text)) order by candidate_name,candidate_id),'[]'::jsonb) from (select distinct candidate_id,candidate_name from scoped) o),
    'companies',(select coalesce(jsonb_agg(jsonb_build_object('value',company,'label',company_label) order by company),'[]'::jsonb) from (select private.workflow_search_text(company_name) company,min(company_name) company_label from scoped group by private.workflow_search_text(company_name)) o),
    'owners',(select coalesce(jsonb_agg(jsonb_build_object('value',owner_id,'label',coalesce(owner_name,'Owner '||owner_id::text)) order by owner_name,owner_id),'[]'::jsonb) from (select distinct owner_id,owner_name from scoped where owner_id is not null) o),
    'teams',(select coalesce(jsonb_agg(jsonb_build_object('value',team_id,'label',coalesce(team_name,'Team '||team_id::text)) order by team_name,team_id),'[]'::jsonb) from (select distinct team_id,team_name from scoped) o),
