@@ -140,6 +140,8 @@ All six top-level fields are retained. Empty arrays are allowed structural conte
 
 ## Checks and current evidence
 
+Bids and Interviews now have [scoped full-text/trigram search and URL filters](WORKFLOW_SEARCH.md). The hosted development project has all 29 migrations applied, including the additive search migration; no new env setting or Docker startup is required. Database execution is verified under the existing confirmed Admin's authenticated role. Repeat the signed-in hosted role checklist separately; isolated Chromium evidence does not replace it.
+
 ```powershell
 npm run check
 npm run resume:verify

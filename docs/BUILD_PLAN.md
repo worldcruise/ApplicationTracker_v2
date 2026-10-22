@@ -35,9 +35,9 @@ Application display name: **Application Tracker v2**. Repository/folder: `Applic
 
 | Task | Dependencies / design | Acceptance |
 | --- | --- | --- |
-| SR01 | Existing BO/FN authorization; §§5–8, 18–20 | User-context PostgreSQL full-text/trigram search with live related names, combined validated filters, scoped options/counts, stable pagination/sorting and direct-RPC denials. Preserve legacy API responses. |
-| SR02 | SR01; §§3, 18–19 | Existing screens gain accessible debounced/Enter search, URL state, removable chips, independent errors/retry, counts and paging without altering mutations/history. |
-| SR03 | SR01–SR02; §§20–22 | Focused unit, isolated SQL/API/browser evidence including permissions, typo/related matches, boundaries and stale requests; documented migration/setup and accurate remaining checks. |
+| SR01 (complete) | Existing BO/FN authorization; §§5–8, 18–20 | User-context PostgreSQL full-text/trigram search with live related names, combined validated filters, scoped options/counts, stable pagination/sorting and direct-RPC denials. Legacy API responses preserved; hosted migration 29 applied and authenticated-role queries verified. |
+| SR02 (complete) | SR01; §§3, 18–19 | Existing screens gain accessible debounced/Enter search, URL state/Back/Forward, removable chips, independent errors/retry, counts and paging without altering mutations/history. Eleven new actual Chromium checkpoints pass. |
+| SR03 (complete) | SR01–SR02; §§20–22 | Final 1510345 CI passes 29 migrations / 362 SQL / 64 tests / 2,609 Auth/API assertions / 104 workflow + three release browser checkpoints and populated encrypted restore including search dependencies. Hosted migration/source/authenticated-role checks pass; interactive hosted roles/load remain manual. See WORKFLOW_SEARCH.md and PROGRESS.md. |
 
 ### Current requested increment — registration approval (21 October 2026)
 

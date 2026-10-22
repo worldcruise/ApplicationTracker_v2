@@ -60,6 +60,8 @@ H001 originally supplied client configuration only. The later LC02A operator set
 
 ## Hosted migrations without Docker
 
+Current search increment SR03 brings this development project to **29 applied migrations**, with no pending/conflicting history. Exact function source and both search RPCs are verified in a read-only authenticated-Admin-role transaction. [Search setup/evidence](WORKFLOW_SEARCH.md) distinguishes this from interactive hosted sign-in and normal-session browser acceptance, which remain manual.
+
 The public app key does not authorize CLI management or schema changes. An authorized project maintainer needs a Supabase account with access to this development project, a CLI personal access token/login, and the development database password when prompted. Keep CLI access tokens/database passwords out of web env files, client bundles, command history, source control, and logs. CI credentials belong in an encrypted secret store; `.env.local` is not automatically loaded by the CLI.
 
 Use the pinned local CLI from the repository root:
