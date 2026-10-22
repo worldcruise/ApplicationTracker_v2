@@ -3,7 +3,7 @@
 import { chromium, expect } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 
-export async function testWorkspaceUI({ org, identities, password }) {
+export async function testWorkspaceUI({ org, identities, password, adminPassword }) {
   const browser = await chromium.launch(); let step = "sign in"; let checks = 0;
   const contexts = [];
   const directory = ".tools/ui-review"; mkdirSync(directory, { recursive: true });
@@ -13,7 +13,7 @@ export async function testWorkspaceUI({ org, identities, password }) {
     const page = await context.newPage(); page.setDefaultTimeout(15000);
     await page.goto("http://localhost:3000/sign-in");
     await page.getByLabel("Email", { exact: true }).fill(person.email);
-    await page.getByLabel("Password", { exact: true }).fill(password);
+    await page.getByLabel("Password", { exact: true }).fill(person === identities.adminA ? adminPassword : password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await page.waitForURL("**/workspace"); return page;
   }
@@ -62,6 +62,7 @@ export async function testWorkspaceUI({ org, identities, password }) {
     await page.getByRole("button", { name: "Open navigation", exact: true }).click();
     await page.getByRole("dialog", { name: "Navigation", exact: true }).getByRole("link", { name: "Interviews", exact: true }).click();
     await expect(page.getByRole("searchbox", { name: "Search interviews", exact: true })).toBeVisible();
+    await page.getByRole("list", { name: "Interview results", exact: true }).waitFor({ state: "attached" });
     await noOverflow(page); await page.screenshot({ path: `${directory}/synthetic-interviews-mobile.png` });
     await page.getByRole("button", { name: "Open navigation", exact: true }).click();
     await page.getByRole("dialog", { name: "Navigation", exact: true }).getByRole("link", { name: "Account approvals", exact: true }).click();

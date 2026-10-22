@@ -57,11 +57,11 @@ export function OperationalDashboard({ scope, actorId }: { scope: OrganizationSc
   const actionMetrics: DashboardMetric[] = scope.role === "bidder" ? ["overdue_followups", "awaiting_response", "draft_bids", "open_tasks"] : ["overdue_followups", "awaiting_review", "upcoming_interviews", "document_work"];
   return <div className="operational-dashboard my-5 grid gap-5" data-testid="operational-dashboard">
     <header className={box}><h2 className="text-2xl font-semibold">{titles[scope.role]}</h2><p>{scope.name} · {scope.role === "bidder" ? "Your own currently authorized bid activity" : "Current organization, team and assignment scope"}</p>
-      <nav aria-label="Operational navigation" className="flex flex-wrap gap-4 underline">
+      <details><summary>Workspace shortcuts</summary><nav aria-label="Operational navigation" className="mt-3 flex flex-wrap gap-4 underline">
         <a href={`/dashboard?organizationId=${org}`}>Dashboard</a><a href={`/bids?organizationId=${org}`}>Bids and approvals</a><a href={`/tasks?organizationId=${org}`}>Follow-ups</a><a href={`/documents?organizationId=${org}`}>Document history</a>
         {scope.role !== "bidder" && <><a href={`/candidates?organizationId=${org}`}>Candidates and assignments</a><a href={`/interviews?organizationId=${org}`}>Interviews and feedback</a></>}
         <a href={`/workspace?organizationId=${org}#administration`}>{scope.role === "admin" ? "User, team and permission administration" : "Workspace and current access"}</a>
-      </nav>
+      </nav></details>
     </header>
 
     {reportError && <p role="alert">Report unavailable: {reportError}{report ? " Previous report is stale; refresh before acting." : " No successful empty result is implied."}</p>}

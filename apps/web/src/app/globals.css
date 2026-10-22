@@ -24,6 +24,7 @@
 .app-topbar .ui-button { padding: .45rem; }
 .topbar-breadcrumb { color: #647087; font-size: .73rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .topbar-breadcrumb span { margin: 0 .65rem; color: #bdc4d0; }
+.topbar-breadcrumb .breadcrumb-root { margin: 0; color: #647087; }
 .topbar-breadcrumb strong { font-weight: 500; color: #526078; }
 .topbar-pilot { font-size: .65rem; }
 .notification-link { display: inline-flex; padding: .45rem; color: #647087; border-radius: .4rem; }
